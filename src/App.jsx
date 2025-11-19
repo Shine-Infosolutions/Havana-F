@@ -49,7 +49,7 @@ function App() {
             <Route path="reservation" element={<div>Reservation Component</div>} />
             
             {/* Inventory Routes */}
-            <Route path="inventory" element={<div>Inventory Component</div>} />
+            <Route path="inventory" element={<HotelInventory />} />
             
             {/* Banquet Routes */}
             <Route path="banquet/calendar" element={<LaganCalendar />} />
