@@ -349,10 +349,10 @@ export default function Invoice() {
             </div>
             <div className="text-xs text-center sm:text-left">
               <p className="font-bold text-sm sm:text-base">HAVANA HOTEL</p>
-              <p className="text-xs">Havana Hotel, Premium Location</p>
-              <p className="text-xs">City Center - 123456</p>
+              <p className="text-xs">Deoria Bypass Rd, near LIC Office Gorakhpur</p>
+              <p className="text-xs">Taramandal, Gorakhpur, Uttar Pradesh 273016</p>
               <p className="text-xs">Website: <a href="http://havana-hotel.com" className="text-blue-600">havana-hotel.com</a></p>
-              <p className="text-xs">info@havana-hotel.com</p>
+              <p className="text-xs">contact@hotelhavana.in</p>
             </div>
           </div>
           <div className="contact-info flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
@@ -362,7 +362,7 @@ export default function Invoice() {
             </div>
             <div className="text-xs flex items-center space-x-2">
                 <RiMailFill className="text-lg text-yellow-600" />
-                <span>info@havana-hotel.com</span>
+                <span>contact@hotelhavana.in</span>
             </div>
           </div>
         </div>
