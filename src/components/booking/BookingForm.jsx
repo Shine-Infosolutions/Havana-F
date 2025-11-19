@@ -258,6 +258,9 @@ export const AppProvider = ({ children }) => {
   const [facingMode, setFacingMode] = useState('user'); // 'user' for front, 'environment' for back
   const [stream, setStream] = useState(null);
   const [searchGRC, setSearchGRC] = useState('');
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [customerSearchResults, setCustomerSearchResults] = useState([]);
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
   const [allCategories, setAllCategories] = useState([]);
   const [allRooms, setAllRooms] = useState([]);
   const [selectedRooms, setSelectedRooms] = useState([]);
@@ -453,6 +456,12 @@ export const AppProvider = ({ children }) => {
     setStream,
     searchGRC,
     setSearchGRC,
+    customerSearchQuery,
+    setCustomerSearchQuery,
+    customerSearchResults,
+    setCustomerSearchResults,
+    showCustomerSearch,
+    setShowCustomerSearch,
     allCategories,
     setAllCategories,
     allRooms,
@@ -519,7 +528,9 @@ const App = () => {
   const {
     BASE_URL, loading, setLoading, message, messageType, showMessage,
     isCameraOpen, setIsCameraOpen, facingMode, setFacingMode, stream, setStream,
-    searchGRC, setSearchGRC, allCategories, setAllCategories, allRooms, setAllRooms,
+    searchGRC, setSearchGRC, customerSearchQuery, setCustomerSearchQuery,
+    customerSearchResults, setCustomerSearchResults, showCustomerSearch, setShowCustomerSearch,
+    allCategories, setAllCategories, allRooms, setAllRooms,
     selectedRooms, setSelectedRooms, hasCheckedAvailability, setHasCheckedAvailability,
     formData, setFormData, roomsForSelectedCategory, resetForm, showCompanyDetails, setShowCompanyDetails,
   } = useAppContext();
@@ -589,11 +600,23 @@ const App = () => {
     if (!isNaN(checkIn.getTime()) && !isNaN(checkOut.getTime()) && checkOut > checkIn) {
       const diffTime = Math.abs(checkOut - checkIn);
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      setFormData(prev => ({ ...prev, days: diffDays }));
+      
+      // Calculate total rate based on selected rooms and new days
+      const totalRoomRate = selectedRooms.reduce((sum, room) => {
+        return sum + (room.price || 0);
+      }, 0);
+      
+      const finalRate = totalRoomRate * diffDays;
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        days: diffDays,
+        rate: selectedRooms.length > 0 ? finalRate : prev.rate
+      }));
     } else {
       setFormData(prev => ({ ...prev, days: 0 }));
     }
-  }, [formData.checkInDate, formData.checkOutDate, setFormData]);
+  }, [formData.checkInDate, formData.checkOutDate, selectedRooms, setFormData]);
 
 
   useEffect(() => {
@@ -726,18 +749,18 @@ const App = () => {
 
   const handleFetchBooking = async () => {
     if (!searchGRC.trim()) {
-      showToast.error("Please enter a GRC number to search.");
+      showToast("Please enter a GRC number to search.", 'error');
       return;
     }
     setLoading(true);
     try {
-      const response = await axios.get(`${BASE_URL}/api/bookings/grc/${searchGRC.trim()}`);
+      const response = await axios.get(`${BASE_URL}/api/bookings/customer/${searchGRC.trim()}`);
       console.log("API Response:", response);
-      console.log("Fetched booking data:", response.data); 
+      console.log("Fetched customer data:", response.data); 
 
       // Check if response has data
       if (response.data && response.status === 200) {
-        const fetchedData = response.data.booking;
+        const fetchedData = response.data.customerDetails;
         
         // Helper function to safely format dates
         const formatDate = (dateString) => {
@@ -750,60 +773,116 @@ const App = () => {
           }
         };
         
-        // Directly set the fetched data
+        // Generate new GRC for new booking
+        const newGrcNo = `GRC-${Math.floor(Math.random() * 9000) + 1000}`;
+        
+        // Auto-fill customer details but reset booking-specific fields for new booking
         setFormData({
-          ...fetchedData,
-          categoryId: fetchedData.categoryId?._id || fetchedData.categoryId || '',
-          bookingDate: formatDate(fetchedData.bookingDate),
-          checkInDate: formatDate(fetchedData.checkInDate),
-          checkOutDate: formatDate(fetchedData.checkOutDate),
+          // New booking details
+          grcNo: newGrcNo,
+          reservationId: '',
+          categoryId: '',
+          bookingDate: new Date().toISOString().split('T')[0],
+          numberOfRooms: 1,
+          isActive: true,
+          checkInDate: '',
+          checkOutDate: '',
+          days: 0,
+          timeIn: '12:00',
+          timeOut: '12:00',
+          
+          // Customer details from previous booking
+          salutation: fetchedData.salutation || 'mr.',
+          name: fetchedData.name || '',
+          age: fetchedData.age ? String(fetchedData.age) : '',
+          gender: fetchedData.gender || '',
+          address: fetchedData.address || '',
+          city: fetchedData.city || '',
+          nationality: fetchedData.nationality || '',
+          mobileNo: fetchedData.mobileNo || '',
+          email: fetchedData.email || '',
+          phoneNo: fetchedData.phoneNo || '',
           birthDate: formatDate(fetchedData.birthDate),
           anniversary: formatDate(fetchedData.anniversary),
-          age: fetchedData.age ? String(fetchedData.age) : '',
-          numberOfRooms: Number(fetchedData.numberOfRooms) || 1,
-          noOfAdults: Number(fetchedData.noOfAdults) || 1,
-          noOfChildren: Number(fetchedData.noOfChildren) || 0,
-          rate: Number(fetchedData.rate) || 0,
-          discountPercent: Number(fetchedData.discountPercent) || 0,
-          days: Number(fetchedData.days) || 0,
+          
+          // Company details if available
+          companyName: fetchedData.companyName || '',
+          companyGSTIN: fetchedData.companyGSTIN || '',
+          
+          // ID proof details
+          idProofType: fetchedData.idProofType || '',
+          idProofNumber: fetchedData.idProofNumber || '',
+          idProofImageUrl: fetchedData.idProofImageUrl || '',
+          idProofImageUrl2: fetchedData.idProofImageUrl2 || '',
+          
+          // Reset booking-specific fields
+          photoUrl: '',
+          roomNumber: '',
+          planPackage: '',
+          noOfAdults: 1,
+          noOfChildren: 0,
+          rate: 0,
+          taxIncluded: false,
+          serviceCharge: false,
+          arrivedFrom: '',
+          destination: '',
+          remark: '',
+          businessSource: '',
+          marketSegment: '',
+          purposeOfVisit: '',
+          discountPercent: 0,
+          discountRoomSource: 0,
+          paymentMode: '',
+          paymentStatus: 'Pending',
+          bookingRefNo: '',
+          mgmtBlock: 'No',
+          billingInstruction: '',
+          temperature: '',
+          fromCSV: false,
+          epabx: false,
+          vip: fetchedData.vip || false, // Keep VIP status
+          status: 'Booked', // Always set to Booked for new booking
+          extensionHistory: [],
+          cardNumber: '',
+          cardHolder: '',
+          cardExpiry: '',
+          cardCVV: '',
+          upiId: '',
+          bankName: '',
+          accountNumber: '',
+          ifsc: '',
         });
         
-        // Handle room selection - check if roomNumber is a string of comma-separated values or an array
-        if (fetchedData.roomNumber) {
-          if (typeof fetchedData.roomNumber === 'string') {
-            // If it's a comma-separated string, we need to find the actual room objects
-            const roomNumbers = fetchedData.roomNumber.split(',').map(num => num.trim());
-            const matchingRooms = allRooms.filter(room => 
-              roomNumbers.includes(room.room_number)
-            );
-            setSelectedRooms(matchingRooms);
-          } else if (Array.isArray(fetchedData.roomNumber)) {
-            setSelectedRooms(fetchedData.roomNumber);
-          }
-        }
-
-        // Set photo if available
+        // Clear room selection and availability check for new booking
+        setSelectedRooms([]);
+        setHasCheckedAvailability(false);
+        
+        // Reset categories to show no availability until user checks
+        const resetCategories = allCategories.map(cat => ({ ...cat, availableRoomsCount: 0 }));
+        setAllCategories(resetCategories);
+        setAllRooms([]);
+        
+        // Set photo if available from previous booking
         if (fetchedData.photoUrl) {
           const photo = {
             id: Date.now(),
             data: fetchedData.photoUrl,
-            timestamp: 'Loaded'
+            timestamp: 'From Previous Booking'
           };
           setCapturedPhotos([photo]);
+          setFormData(prev => ({ ...prev, photoUrl: fetchedData.photoUrl }));
+        } else {
+          setCapturedPhotos([]);
         }
 
-        // Set category if available and trigger availability check
-        if (fetchedData.categoryId && fetchedData.checkInDate && fetchedData.checkOutDate) {
-          setHasCheckedAvailability(true);
-          // Automatically check availability for the fetched dates
-          setTimeout(() => {
-            handleCheckAvailability();
-          }, 500);
+        // Show company details if they exist
+        if (fetchedData.companyName || fetchedData.companyGSTIN) {
+          setShowCompanyDetails(true);
         }
 
-        showToast.success("Booking found and form populated successfully!");
+        showToast(`Customer details loaded from GRC ${searchGRC}. New GRC ${newGrcNo} generated for new booking.`, 'success');
       } else {
-        showToast.error("No booking found with that GRC number.");
+        showToast("No booking found with that GRC number.", 'error');
       }
     } catch (error) {
       console.error("Error fetching booking:", error);
@@ -812,25 +891,63 @@ const App = () => {
         const status = error.response.status;
         const message = error.response.data?.message || error.response.data?.error || 'Unknown server error';
         if (status === 404) {
-          showToast.error("No booking found with that GRC number.");
+          showToast("No booking found with that GRC number.", 'error');
         } else {
-          showToast.error(`Server error (${status}): ${message}`);
+          showToast(`Server error (${status}): ${message}`, 'error');
         }
       } else if (error.request) {
         // Network error
-        showToast.error("Network error. Please check your internet connection and try again.");
+        showToast("Network error. Please check your internet connection and try again.", 'error');
       } else {
         // Other error
-        showToast.error(`Error: ${error.message}`);
+        showToast(`Error: ${error.message}`, 'error');
       }
     } finally {
       setLoading(false);
     }
   };
+
+  const handleCustomerSearch = async () => {
+    if (!customerSearchQuery.trim() || customerSearchQuery.trim().length < 2) {
+      showToast("Please enter at least 2 characters to search.", 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await axios.get(`${BASE_URL}/api/bookings/search?query=${encodeURIComponent(customerSearchQuery.trim())}`);
+      
+      if (response.data && response.data.success) {
+        setCustomerSearchResults(response.data.customers || []);
+        setShowCustomerSearch(true);
+        if (response.data.customers.length === 0) {
+          showToast("No customers found matching your search.", 'error');
+        } else {
+          showToast(`Found ${response.data.customers.length} customer(s).`, 'success');
+        }
+      }
+    } catch (error) {
+      console.error("Customer search error:", error);
+      showToast("Failed to search customers. Please try again.", 'error');
+      setCustomerSearchResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectCustomer = (customer) => {
+    setSearchGRC(customer.grcNo);
+    setShowCustomerSearch(false);
+    setCustomerSearchQuery('');
+    setCustomerSearchResults([]);
+    // Auto-trigger GRC search
+    setTimeout(() => {
+      handleFetchBooking();
+    }, 100);
+  };
   
   const handleCheckAvailability = async () => {
     if (!formData.checkInDate || !formData.checkOutDate) {
-      showToast.error("Please select both check-in and check-out dates.");
+      showToast("Please select both check-in and check-out dates.", 'error');
       return;
     }
     setLoading(true);
@@ -884,14 +1001,14 @@ const App = () => {
       console.log('Available rooms:', trulyAvailableRooms);
 
       if (trulyAvailableRooms.length === 0) {
-        showToast.error("No rooms available for the selected dates.");
+        showToast("No rooms available for the selected dates.", 'error');
       } else {
-        showToast.info(`Found ${trulyAvailableRooms.length} available rooms.`);
+        showToast(`Found ${trulyAvailableRooms.length} available rooms.`, 'success');
       }
 
     } catch (error) {
       console.error('Availability check error:', error);
-      showToast.error(`Failed to check availability: ${error.message}`);
+      showToast(`Failed to check availability: ${error.message}`, 'error');
       setAllRooms([]);
       const resetCategories = allCategories.map(cat => ({ ...cat, availableRoomsCount: 0 }));
       setAllCategories(resetCategories);
@@ -908,11 +1025,28 @@ const App = () => {
   const handleRoomSelection = (room) => {
     setSelectedRooms((prev) => {
       const isSelected = prev.some((r) => r._id === room._id);
+      let newSelectedRooms;
       if (isSelected) {
-        return prev.filter((r) => r._id !== room._id);
+        newSelectedRooms = prev.filter((r) => r._id !== room._id);
       } else {
-        return [...prev, room];
+        newSelectedRooms = [...prev, room];
       }
+      
+      // Calculate total rate based on selected rooms and days
+      const totalRate = newSelectedRooms.reduce((sum, selectedRoom) => {
+        return sum + (selectedRoom.price || 0);
+      }, 0);
+      
+      const days = formData.days || 1;
+      const finalRate = totalRate * days;
+      
+      // Update form data with calculated rate
+      setFormData(prevForm => ({
+        ...prevForm,
+        rate: finalRate
+      }));
+      
+      return newSelectedRooms;
     });
   };
 
@@ -1145,13 +1279,13 @@ const App = () => {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="searchGRC">Search by GRC</Label>
+              <Label htmlFor="searchGRC">Search by GRC (Returning Customer)</Label>
               <Input
                 id="searchGRC"
                 name="searchGRC"
                 value={searchGRC}
                 onChange={(e) => setSearchGRC(e.target.value)}
-                placeholder="Enter GRC number to load booking"
+                placeholder="Enter previous GRC to auto-fill customer details"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -1159,24 +1293,84 @@ const App = () => {
                   }
                 }}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                💡 Enter a previous GRC number to auto-fill customer details for a new booking
+              </p>
             </div>
-            <div className="flex items-end gap-2">
+            <div className="space-y-1 md:col-span-2">
+              <Label htmlFor="customerSearch">Or Search by Name/Mobile</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="customerSearch"
+                  name="customerSearch"
+                  value={customerSearchQuery}
+                  onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                  placeholder="Search by customer name or mobile number"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCustomerSearch();
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleCustomerSearch}
+                  disabled={loading || !customerSearchQuery.trim() || customerSearchQuery.trim().length < 2}
+                  variant="outline"
+                >
+                  {loading ? "Searching..." : "Search"}
+                </Button>
+              </div>
+              {showCustomerSearch && customerSearchResults.length > 0 && (
+                <div className="mt-2 border rounded-lg bg-white shadow-sm max-h-48 overflow-y-auto">
+                  <div className="p-2 bg-gray-50 border-b text-sm font-medium text-gray-700">
+                    Found {customerSearchResults.length} customer(s)
+                  </div>
+                  {customerSearchResults.map((customer) => (
+                    <div
+                      key={customer._id}
+                      onClick={() => handleSelectCustomer(customer)}
+                      className="p-3 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-gray-900">{customer.name}</p>
+                          <p className="text-sm text-gray-600">{customer.mobileNo}</p>
+                          {customer.email && <p className="text-xs text-gray-500">{customer.email}</p>}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-mono text-blue-600">{customer.grcNo}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(customer.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-end gap-2 md:col-span-2">
               <Button
                 onClick={handleFetchBooking}
                 disabled={loading || !searchGRC.trim()}
               >
-                {loading ? "Searching..." : "Search Booking"}
+                {loading ? "Loading..." : "Load Customer Details"}
               </Button>
               <Button
                 onClick={() => {
                   setSearchGRC('');
+                  setCustomerSearchQuery('');
+                  setCustomerSearchResults([]);
+                  setShowCustomerSearch(false);
                   resetForm();
                 }}
                 disabled={loading}
                 variant="outline"
                 className="px-3"
               >
-                Clear
+                Clear All
               </Button>
             </div>
           </div>
@@ -1282,7 +1476,7 @@ const App = () => {
                         <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Action</th>
                         <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Room Number</th>
                         <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Room Name</th>
-                        <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Capacity</th>
+                        <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Price/Night</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y" style={{ borderColor: 'hsl(45, 100%, 90%)' }}>
@@ -1312,7 +1506,7 @@ const App = () => {
                           </td>
                           <td className="py-4 px-6 text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>{room.room_number || 'N/A'}</td>
                           <td className="py-4 px-6 text-sm" style={{ color: 'hsl(45, 100%, 40%)' }}>{room.title || 'N/A'}</td>
-                          <td className="py-4 px-6 text-sm" style={{ color: 'hsl(45, 100%, 40%)' }}>{room.capacity || 'N/A'}</td>
+                          <td className="py-4 px-6 text-sm font-semibold" style={{ color: 'hsl(45, 100%, 20%)' }}>₹{room.price || 0}</td>
                         </tr>
                       ))}
                     </tbody>
