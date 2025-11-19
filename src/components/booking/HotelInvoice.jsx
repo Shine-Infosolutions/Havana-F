@@ -390,7 +390,7 @@ export default function Invoice() {
         
         <div className="client-details-grid grid grid-cols-1 lg:grid-cols-2 text-xs border border-black mb-4">
           <div className="client-details-left border-r border-black p-2">
-            <p><span className="font-bold">GSTIN No.:</span>
+            <p><span className="font-bold">GSTIN No. : </span>
               {isEditing ? (
                 <input
                   type="text"
@@ -411,7 +411,7 @@ export default function Invoice() {
             </p>
             <div className="client-info-grid grid grid-cols-3 gap-x-1 gap-y-1">
               <p className="col-span-1">Name</p>
-              <p className="col-span-2">:{isEditing ? (
+              <p className="col-span-2">: {isEditing ? (
                   <input
                     type="text"
                     value={invoiceData.clientDetails?.name || ''}
@@ -423,7 +423,7 @@ export default function Invoice() {
                   />
                 ) : invoiceData.clientDetails?.name}</p>
               <p className="col-span-1">Address</p>
-              <p className="col-span-2">:{isEditing ? (
+              <p className="col-span-2">: {isEditing ? (
                   <input
                     type="text"
                     value={invoiceData.clientDetails?.address || ''}
@@ -435,7 +435,7 @@ export default function Invoice() {
                   />
                 ) : invoiceData.clientDetails?.address}</p>
               <p className="col-span-1">City</p>
-              <p className="col-span-2">:{isEditing ? (
+              <p className="col-span-2">: {isEditing ? (
                   <input
                     type="text"
                     value={invoiceData.clientDetails?.city || ''}
@@ -447,7 +447,7 @@ export default function Invoice() {
                   />
                 ) : invoiceData.clientDetails?.city}</p>
               <p className="col-span-1">Company</p>
-              <p className="col-span-2">:{isEditing ? (
+              <p className="col-span-2">{isEditing ? (
                   <input
                     type="text"
                     value={invoiceData.clientDetails?.company || ''}
@@ -457,9 +457,9 @@ export default function Invoice() {
                     })}
                     className="border px-1 ml-1 text-xs w-32"
                   />
-                ) : invoiceData.clientDetails?.company}</p>
+                ) : (invoiceData.clientDetails?.company?.startsWith(':') ? invoiceData.clientDetails.company : `: ${invoiceData.clientDetails?.company || ''}`)}</p>
               <p className="col-span-1">Mobile No.</p>
-              <p className="col-span-2">:{isEditing ? (
+              <p className="col-span-2">: {isEditing ? (
                   <input
                     type="text"
                     value={invoiceData.clientDetails?.mobileNo || ''}
@@ -476,17 +476,17 @@ export default function Invoice() {
           <div className="client-details-right p-2">
             <div className="invoice-info-grid grid grid-cols-2 gap-y-1">
               <p className="font-bold">Bill No. & Date</p>
-              <p className="font-medium">:{invoiceData.invoiceDetails?.billNo} {invoiceData.invoiceDetails?.billDate}</p>
+              <p className="font-medium">: {invoiceData.invoiceDetails?.billNo} {invoiceData.invoiceDetails?.billDate}</p>
               <p className="font-bold">GRC No.</p>
-              <p className="font-medium">:{invoiceData.invoiceDetails?.grcNo}</p>
+              <p className="font-medium">: {invoiceData.invoiceDetails?.grcNo}</p>
               <p className="font-bold">Room No./Type</p>
-              <p className="font-medium">:{invoiceData.invoiceDetails?.roomNo} {invoiceData.invoiceDetails?.roomType}</p>
+              <p className="font-medium">: {invoiceData.invoiceDetails?.roomNo} {invoiceData.invoiceDetails?.roomType}</p>
               <p className="font-bold">PAX</p>
-              <p className="font-medium">:{invoiceData.invoiceDetails?.pax} Adult: {invoiceData.invoiceDetails?.adult}</p>
+              <p className="font-medium">: {invoiceData.invoiceDetails?.pax} Adult: {invoiceData.invoiceDetails?.adult}</p>
               <p className="font-bold">CheckIn Date</p>
-              <p className="font-medium">:{invoiceData.invoiceDetails?.checkInDate}</p>
+              <p className="font-medium">: {invoiceData.invoiceDetails?.checkInDate}</p>
               <p className="font-bold">CheckOut Date</p>
-              <p className="font-medium">:{invoiceData.invoiceDetails?.checkOutDate}</p>
+              <p className="font-medium">: {invoiceData.invoiceDetails?.checkOutDate}</p>
             </div>
           </div>
         </div>
