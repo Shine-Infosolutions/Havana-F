@@ -20,6 +20,7 @@ import MenuPlanManager from './components/Banquet/components/MenuPlanManager';
 import Invoice from './components/Banquet/pages/Students/Invoice';
 import MenuView from './components/Banquet/pages/Students/MenuView';
 import HotelCheckout from './components/booking/HotelCheckout';
+import HotelInventory from './components/Inventory/HotelInventory';
 import './App.css'
 
 function App() {
@@ -48,7 +49,7 @@ function App() {
             <Route path="reservation" element={<div>Reservation Component</div>} />
             
             {/* Inventory Routes */}
-            <Route path="inventory" element={<div>Inventory Component</div>} />
+            <Route path="inventory" element={<HotelInventory />} />
             
             {/* Banquet Routes */}
             <Route path="banquet/calendar" element={<LaganCalendar />} />
