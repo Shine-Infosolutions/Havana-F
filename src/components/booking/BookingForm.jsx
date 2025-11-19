@@ -357,13 +357,13 @@ export const AppProvider = ({ children }) => {
   // --- Message Handling Logic ---
   const showMessage = (msg, msgType = 'info') => {
     if (msgType === 'success') {
-      showToast.success(msg);
+      showToast(msg, 'success');
     } else if (msgType === 'error') {
-      showToast.error(msg);
+      showToast(msg, 'error');
     } else if (msgType === 'warning') {
-      showToast.warning(msg);
+      showToast(msg, 'warning');
     } else {
-      showToast.info(msg);
+      showToast(msg, 'info');
     }
   };
 
@@ -404,7 +404,7 @@ export const AppProvider = ({ children }) => {
 
     } catch (error) {
       console.error('Error fetching data:', error);
-      showToast.error(`Failed to fetch initial data: ${error.message}. Ensure your server is running.`);
+      showToast(`Failed to fetch initial data: ${error.message}. Ensure your server is running.`, 'error');
     }
   };
 
@@ -497,7 +497,7 @@ export const AppProvider = ({ children }) => {
         // Clear the localStorage after using it
         localStorage.removeItem('selectedRoomForBooking');
         
-        showToast.success(`Room ${roomData.roomNumber} pre-selected for booking!`);
+        showToast(`Room ${roomData.roomNumber} pre-selected for booking!`, 'success');
       } catch (error) {
         console.error('Error parsing selected room data:', error);
         localStorage.removeItem('selectedRoomForBooking');
@@ -853,22 +853,24 @@ const App = () => {
         }
       });
 
-      // Filter rooms that are truly available (in availability response AND have correct status)
-      const trulyAvailableRooms = allRoomsData.filter(room => {
-        const isInAvailabilityList = availableRoomIds.has(room._id);
-        const hasValidStatus = ['available', 'clean'].includes(room.status) || !room.status;
-        const notReserved = !room.is_reserved;
-        
-        return isInAvailabilityList && hasValidStatus && notReserved;
+      // Use rooms directly from availability response as they are already filtered
+      const trulyAvailableRooms = [];
+      availableCategoriesData.forEach(cat => {
+        if (cat.rooms && Array.isArray(cat.rooms)) {
+          cat.rooms.forEach(room => {
+            trulyAvailableRooms.push({
+              ...room,
+              category: { _id: cat.category, name: cat.categoryName },
+              categoryId: cat.category
+            });
+          });
+        }
       });
 
-      // Group available rooms by category
+      // Group available rooms by category using the API response
       const categoryRoomCounts = {};
-      trulyAvailableRooms.forEach(room => {
-        const categoryId = room.category?._id || room.category || room.categoryId;
-        if (categoryId) {
-          categoryRoomCounts[categoryId] = (categoryRoomCounts[categoryId] || 0) + 1;
-        }
+      availableCategoriesData.forEach(cat => {
+        categoryRoomCounts[cat.category] = cat.rooms ? cat.rooms.length : 0;
       });
 
       // Update categories with correct available room counts
@@ -878,20 +880,13 @@ const App = () => {
       }));
       setAllCategories(updatedCategories);
 
-      // Set the truly available rooms with proper category info
-      const roomsWithCategoryInfo = trulyAvailableRooms.map(room => ({
-        ...room,
-        category: room.category || { _id: room.categoryId },
-        categoryId: room.category?._id || room.category || room.categoryId
-      }));
-      
-      setAllRooms(roomsWithCategoryInfo);
-      console.log('Truly available rooms:', roomsWithCategoryInfo);
+      setAllRooms(trulyAvailableRooms);
+      console.log('Available rooms:', trulyAvailableRooms);
 
-      if (roomsWithCategoryInfo.length === 0) {
+      if (trulyAvailableRooms.length === 0) {
         showToast.error("No rooms available for the selected dates.");
       } else {
-        showToast.info(`Found ${roomsWithCategoryInfo.length} available rooms.`);
+        showToast.info(`Found ${trulyAvailableRooms.length} available rooms.`);
       }
 
     } catch (error) {
@@ -924,62 +919,62 @@ const App = () => {
   const validateForm = () => {
     // Required fields
     if (!validateRequired(formData.name)) {
-      showToast.error('Guest name is required');
+      showToast('Guest name is required', 'error');
       return false;
     }
     
     if (!formData.checkInDate || !formData.checkOutDate) {
-      showToast.error('Check-in and check-out dates are required');
+      showToast('Check-in and check-out dates are required', 'error');
       return false;
     }
     
     if (!validateDateRange(formData.checkInDate, formData.checkOutDate)) {
-      showToast.error('Check-out date must be after check-in date');
+      showToast('Check-out date must be after check-in date', 'error');
       return false;
     }
     
     if (selectedRooms.length === 0) {
-      showToast.error('Please select at least one room');
+      showToast('Please select at least one room', 'error');
       return false;
     }
     
     if (!formData.categoryId) {
-      showToast.error('Please select a room category');
+      showToast('Please select a room category', 'error');
       return false;
     }
     
     // Email validation
     if (formData.email && !validateEmail(formData.email)) {
-      showToast.error('Please enter a valid email address');
+      showToast('Please enter a valid email address', 'error');
       return false;
     }
     
     // Phone validation
     if (formData.mobileNo && !validatePhone(formData.mobileNo)) {
-      showToast.error('Please enter a valid 10-digit mobile number');
+      showToast('Please enter a valid 10-digit mobile number', 'error');
       return false;
     }
     
     // Rate validation
     if (formData.rate && !validatePositiveNumber(formData.rate)) {
-      showToast.error('Rate must be a positive number');
+      showToast('Rate must be a positive number', 'error');
       return false;
     }
     
     // GST validation
     if (formData.companyGSTIN && !validateGST(formData.companyGSTIN)) {
-      showToast.error('Please enter a valid GST number');
+      showToast('Please enter a valid GST number', 'error');
       return false;
     }
     
     // ID proof validation
     if (formData.idProofType && formData.idProofNumber) {
       if (formData.idProofType === 'PAN' && !validatePAN(formData.idProofNumber)) {
-        showToast.error('Please enter a valid PAN number');
+        showToast('Please enter a valid PAN number', 'error');
         return false;
       }
       if (formData.idProofType === 'Aadhaar' && !validateAadhaar(formData.idProofNumber)) {
-        showToast.error('Please enter a valid 12-digit Aadhaar number');
+        showToast('Please enter a valid 12-digit Aadhaar number', 'error');
         return false;
       }
     }
@@ -1027,7 +1022,7 @@ const App = () => {
         }
       });
       console.log('Booking response:', response.data);
-      showToast.success("Booking submitted successfully!");
+      showToast("Booking submitted successfully!", 'success');
       alert("🎉 Booking submitted successfully! You will be redirected to the booking page.");
       resetForm();
       // Navigate to booking page after successful submission
@@ -1042,17 +1037,17 @@ const App = () => {
         
         // Handle specific room availability error
         if (errorMsg.includes('Not enough available rooms') || errorMsg.includes('available rooms')) {
-          showToast.error(`${errorMsg}. Please check room availability again and select different rooms.`);
+          showToast(`${errorMsg}. Please check room availability again and select different rooms.`, 'error');
           // Clear selected rooms and suggest re-checking availability
           setSelectedRooms([]);
           setHasCheckedAvailability(false);
         } else {
-          showToast.error(`Failed to submit booking: ${errorMsg}`);
+          showToast(`Failed to submit booking: ${errorMsg}`, 'error');
         }
       } else if (error.request) {
-        showToast.error('Network error. Please check your connection and try again.');
+        showToast('Network error. Please check your connection and try again.', 'error');
       } else {
-        showToast.error(`An unexpected error occurred: ${error.message}`);
+        showToast(`An unexpected error occurred: ${error.message}`, 'error');
       }
     } finally {
       setLoading(false);

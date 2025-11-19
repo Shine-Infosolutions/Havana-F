@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AppProvider } from './context/AppContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -18,12 +19,14 @@ import UpdateBooking from './components/Banquet/pages/Students/UpdateBooking';
 import MenuPlanManager from './components/Banquet/components/MenuPlanManager';
 import Invoice from './components/Banquet/pages/Students/Invoice';
 import MenuView from './components/Banquet/pages/Students/MenuView';
+import HotelCheckout from './components/booking/HotelCheckout';
 import './App.css'
 
 function App() {
   return (
     <AppProvider>
       <Router>
+        <Toaster position="top-right" />
         <Routes>
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
@@ -58,6 +61,9 @@ function App() {
             
             {/* Users Routes */}
             <Route path="users" element={<Users />} />
+            
+            {/* Checkout Routes */}
+            <Route path="hotel-checkout" element={<HotelCheckout />} />
           </Route>
           
           {/* Fallback */}

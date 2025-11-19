@@ -111,8 +111,8 @@ const RoomList = () => {
       if (categoryFilter) {
         filteredRooms = filteredRooms.filter(
           (room) =>
-            room.category === categoryFilter ||
-            (room.category && room.category._id === categoryFilter)
+            room.categoryId === categoryFilter ||
+            (room.categoryId && room.categoryId._id === categoryFilter)
         );
       }
 
@@ -188,7 +188,7 @@ const RoomList = () => {
     setCurrentRoom({
       _id: room._id,
       title: room.title,
-      category: room.category,
+      category: typeof room.categoryId === "object" ? room.categoryId._id : room.categoryId,
       room_number: room.room_number,
       price: room.price,
       exptra_bed: room.exptra_bed,
@@ -231,7 +231,7 @@ const RoomList = () => {
         title: currentRoom.title,
         category: currentRoom.category,
         room_number: currentRoom.room_number,
-        price: currentRoom.price,
+        price: parseFloat(currentRoom.price),
         extra_bed: currentRoom.exptra_bed,
         status: currentRoom.status,
         description: currentRoom.description,
@@ -470,11 +470,9 @@ const RoomList = () => {
                     <div className="flex items-center justify-between mb-3 sm:mb-4">
                       <span className="text-xs sm:text-sm text-dark/70">Category:</span>
                       <span className="font-semibold text-dark text-sm sm:text-base truncate ml-2">
-                        {room.category &&
-                        typeof room.category === "object" &&
-                        room.category.name
-                          ? room.category.name
-                          : categories[room.category] || "Unknown"}
+                        {typeof room.categoryId === "object" && room.categoryId?.name
+                          ? room.categoryId.name
+                          : categories[room.categoryId] || "Unknown"}
                       </span>
                     </div>
 

@@ -4,6 +4,7 @@ import { Edit, XCircle, CheckCircle, Search, X, FileText, Trash2 } from "lucide-
 import { useAppContext } from "../../context/AppContext";
 import Pagination from "../common/Pagination";
 import DashboardLoader from '../DashboardLoader';
+import HotelCheckout from './HotelCheckout';
 
 const BookingEdit = ({ booking, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -217,6 +218,8 @@ const BookingPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [selectedBookingForCheckout, setSelectedBookingForCheckout] = useState(null);
 
   const getAuthToken = () => localStorage.getItem("token");
 
@@ -394,6 +397,20 @@ const BookingPage = () => {
       console.error("Error updating payment status:", err);
       setError(err.response?.data?.message || err.message || "Failed to update payment status");
     }
+  };
+
+  const openCheckout = (bookingId) => {
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (!booking) {
+      setError("Booking not found");
+      return;
+    }
+    setSelectedBookingForCheckout(booking._raw);
+    setShowCheckout(true);
+  };
+
+  const handleCheckoutComplete = () => {
+    fetchData(); // Refresh the bookings list
   };
 
   const generateInvoice = async (bookingId) => {
@@ -720,10 +737,11 @@ const BookingPage = () => {
                           </button>
                         )}
                         <button
-                          onClick={() => navigate('/checkout')}
-                          className="bg-purple-600 text-white px-2 py-1 rounded text-xs transition duration-300"
+                          onClick={() => openCheckout(booking.id)}
+                          disabled={booking.status === 'Checked Out'}
+                          className="bg-purple-600 text-white px-2 py-1 rounded text-xs transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
                         >
-                          Checkout
+                          {booking.status === 'Checked Out' ? 'Checked Out' : 'Checkout'}
                         </button>
                         <button
                           onClick={() => deleteBooking(booking.id)}
@@ -822,11 +840,15 @@ const BookingPage = () => {
                   </button>
                 )}
                 <button
-                  onClick={() => navigate('/checkout')}
-                  className="px-3 py-1 rounded text-sm transition duration-300"
-                  style={{ backgroundColor: 'hsl(45, 71%, 69%)', color: 'hsl(45, 100%, 20%)' }}
+                  onClick={() => openCheckout(booking.id)}
+                  disabled={booking.status === 'Checked Out'}
+                  className="px-3 py-1 rounded text-sm transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  style={{ 
+                    backgroundColor: booking.status === 'Checked Out' ? '#9CA3AF' : 'hsl(45, 71%, 69%)', 
+                    color: booking.status === 'Checked Out' ? '#6B7280' : 'hsl(45, 100%, 20%)' 
+                  }}
                 >
-                  Checkout
+                  {booking.status === 'Checked Out' ? 'Checked Out' : 'Checkout'}
                 </button>
                 <button
                   onClick={() => deleteBooking(booking.id)}
@@ -933,6 +955,18 @@ const BookingPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Checkout Modal */}
+      {showCheckout && selectedBookingForCheckout && (
+        <HotelCheckout
+          booking={selectedBookingForCheckout}
+          onClose={() => {
+            setShowCheckout(false);
+            setSelectedBookingForCheckout(null);
+          }}
+          onCheckoutComplete={handleCheckoutComplete}
+        />
       )}
       </div>
     </div>

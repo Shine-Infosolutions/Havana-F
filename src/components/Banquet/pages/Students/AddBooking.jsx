@@ -1675,7 +1675,6 @@ const AddBooking = () => {
 
   const handleSaveMenu = async (selectedItems, categorizedMenu) => {
     try {
-      // Direct mapping - MenuSelector already sends correct format
       setForm((prev) => ({
         ...prev,
         menuItems: selectedItems.join(", "),
@@ -1737,7 +1736,7 @@ const AddBooking = () => {
             changedAt: new Date().toISOString(),
           },
         ],
-        menuItems: undefined,
+        menuItems: form.menuItems || "",
         categorizedMenu: form.categorizedMenu || {},
         ...(form.statusChangedAt
           ? { statusChangedAt: form.statusChangedAt }
@@ -2738,6 +2737,7 @@ const AddBooking = () => {
                     readOnly
                     placeholder="No menu items selected yet"
                   />
+
                   <button
                     type="button"
                     onClick={() => setShowMenuSelector(true)}
