@@ -238,13 +238,27 @@ export default function Invoice() {
     return total.toFixed(2);
   };
 
+  const calculateRoundOff = () => {
+    if (!invoiceData) return 0;
+    const baseAmount = invoiceData.payment?.taxableAmount || 0;
+    const sgst = invoiceData.payment?.sgst || 0;
+    const cgst = invoiceData.payment?.cgst || 0;
+    const otherChargesTotal = invoiceData.otherCharges?.reduce((sum, charge) => sum + (charge.amount || 0), 0) || 0;
+    const exactTotal = baseAmount + sgst + cgst + otherChargesTotal;
+    console.log('Debug roundoff:', { baseAmount, sgst, cgst, otherChargesTotal, exactTotal });
+    const roundedTotal = Math.round(exactTotal);
+    const roundOff = Math.round((roundedTotal - exactTotal) * 100) / 100;
+    console.log('Roundoff result:', { exactTotal, roundedTotal, roundOff });
+    return roundOff;
+  };
+
   const calculateNetTotal = () => {
     if (!invoiceData) return '0.00';
     const baseAmount = invoiceData.payment?.taxableAmount || 0;
     const sgst = invoiceData.payment?.sgst || 0;
     const cgst = invoiceData.payment?.cgst || 0;
     const otherChargesTotal = invoiceData.otherCharges?.reduce((sum, charge) => sum + (charge.amount || 0), 0) || 0;
-    const roundOff = -0.01;
+    const roundOff = calculateRoundOff();
     return (baseAmount + sgst + cgst + otherChargesTotal + roundOff).toFixed(2);
   };
 
@@ -592,7 +606,7 @@ export default function Invoice() {
                     </tr>
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">Round Off:</td>
-                      <td className="p-0.5 border-l border-black text-right text-xs">-0.01</td>
+                      <td className="p-0.5 border-l border-black text-right text-xs">{calculateRoundOff() >= 0 ? '+' : ''}{calculateRoundOff().toFixed(2)}</td>
                     </tr>
                     <tr className="bg-gray-200">
                       <td className="p-0.5 font-bold text-right text-xs">NET AMOUNT:</td>
