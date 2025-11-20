@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import havanaLogo from '../assets/hawana png11.png';
 
 const Login = () => {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
@@ -7,51 +8,60 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Simple login logic - store dummy data and redirect
     localStorage.setItem('token', 'dummy-token');
     localStorage.setItem('role', 'admin');
     navigate('/dashboard');
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-lg" style={{border: '1px solid hsl(45, 100%, 85%)'}}>
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold" style={{color: 'hsl(45, 100%, 20%)'}}>
-            Sign in to your account
-          </h2>
+    <div className="min-h-screen flex items-center justify-center" style={{backgroundColor: '#d1d5db'}}>
+      <div className="w-full max-w-md bg-white rounded-lg shadow-lg overflow-hidden">
+        {/* Header with Havana branding */}
+        <div className="text-center py-2" style={{backgroundColor: '#D4AF37'}}>
+          <img src={havanaLogo} alt="Havana" className="mx-auto h-40 w-auto -m-8" />
+
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div>
-            <input
-              type="text"
-              placeholder="Username"
-              className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2"
-              style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
-              value={credentials.username}
-              onChange={(e) => setCredentials({...credentials, username: e.target.value})}
-            />
-          </div>
-          <div>
-            <input
-              type="password"
-              placeholder="Password"
-              className="w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2"
-              style={{border: '1px solid hsl(45, 100%, 85%)', focusRingColor: 'hsl(45, 43%, 58%)'}}
-              value={credentials.password}
-              onChange={(e) => setCredentials({...credentials, password: e.target.value})}
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full py-2 px-4 text-white rounded-md transition-colors"
-            style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
-            onMouseEnter={(e) => e.target.style.backgroundColor = 'hsl(45, 32%, 46%)'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'hsl(45, 43%, 58%)'}
-          >
-            Sign In
-          </button>
-        </form>
+        
+        {/* Login Form */}
+        <div className="px-8 py-8">
+          <h2 className="text-2xl font-semibold mb-6 mt-4" style={{color: '#B8860B'}}>Login</h2>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{color: '#B8860B'}}>Username</label>
+              <input
+                type="text"
+                placeholder="Admin123"
+                className="w-full px-4 py-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
+                value={credentials.username}
+                onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{color: '#B8860B'}}>Password</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                className="w-full px-4 py-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
+                value={credentials.password}
+                onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+              />
+            </div>
+            
+            <button
+              type="submit"
+              className="w-full text-white font-semibold py-3 px-4 rounded-md transition-colors duration-200"
+              style={{backgroundColor: '#D4AF37'}}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#B8860B'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#D4AF37'}
+            >
+              Login
+            </button>
+          </form>
+          
+
+        </div>
       </div>
     </div>
   );
