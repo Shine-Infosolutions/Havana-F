@@ -302,6 +302,8 @@ export const AppProvider = ({ children }) => {
     noOfAdults: 1,
     noOfChildren: 0,
     rate: 0,
+    cgstRate: 2.5,
+    sgstRate: 2.5,
     taxIncluded: false,
     serviceCharge: false,
     arrivedFrom: '',
@@ -2054,20 +2056,46 @@ const App = () => {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="cgstRate">CGST Rate (%)</Label>
+              <Input
+                id="cgstRate"
+                name="cgstRate"
+                type="number"
+                step="0.1"
+                min="0"
+                max="50"
+                value={formData.cgstRate}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sgstRate">SGST Rate (%)</Label>
+              <Input
+                id="sgstRate"
+                name="sgstRate"
+                type="number"
+                step="0.1"
+                min="0"
+                max="50"
+                value={formData.sgstRate}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
               <Label>Tax Breakdown</Label>
               <div className="bg-gray-50 p-3 rounded border">
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
                     <span>Taxable Amount:</span>
-                    <span>₹{(formData.rate / 1.05).toFixed(2)}</span>
+                    <span>₹{(formData.rate / (1 + (formData.cgstRate + formData.sgstRate) / 100)).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>CGST (2.5%):</span>
-                    <span>₹{((formData.rate / 1.05) * 0.025).toFixed(2)}</span>
+                    <span>CGST ({formData.cgstRate}%):</span>
+                    <span>₹{((formData.rate / (1 + (formData.cgstRate + formData.sgstRate) / 100)) * (formData.cgstRate / 100)).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>SGST (2.5%):</span>
-                    <span>₹{((formData.rate / 1.05) * 0.025).toFixed(2)}</span>
+                    <span>SGST ({formData.sgstRate}%):</span>
+                    <span>₹{((formData.rate / (1 + (formData.cgstRate + formData.sgstRate) / 100)) * (formData.sgstRate / 100)).toFixed(2)}</span>
                   </div>
                   <hr className="my-1" />
                   <div className="flex justify-between font-semibold">
