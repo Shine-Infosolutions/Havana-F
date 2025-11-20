@@ -23,7 +23,7 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(styleElement);
 }
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FaUser,
   FaPhone,
@@ -542,6 +542,7 @@ const App = () => {
 
   // Navigation hook
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Refs for video and canvas elements to access them in the DOM
   const videoRef = useRef(null);
@@ -658,6 +659,8 @@ const App = () => {
       }
     }
   }, [allRooms, setSelectedRooms, setHasCheckedAvailability]);
+
+
 
   const handleCapturePhoto = async () => {
     const video = videoRef.current;

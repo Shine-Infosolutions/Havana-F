@@ -11,6 +11,7 @@ import CategoryList from './components/category/CategoryList';
 import RoomStatus from './components/room/RoomStatus';
 import Booking from './components/booking/Booking';
 import BookingForm from './components/booking/BookingForm';
+import EditBookingForm from './components/booking/EditBookingForm';
 import Users from './components/Users/Users';
 import LaganCalendar from './components/Banquet/pages/Calendar/LaganCalendar';
 import ListBooking from './components/Banquet/pages/Students/ListBooking';
@@ -47,6 +48,7 @@ function App() {
             {/* Booking Routes */}
             <Route path="booking" element={<Booking />} />
             <Route path="bookingform" element={<BookingForm />} />
+            <Route path="edit-booking" element={<EditBookingForm />} />
             <Route path="reservation" element={<div>Reservation Component</div>} />
             
             {/* Inventory Routes */}
