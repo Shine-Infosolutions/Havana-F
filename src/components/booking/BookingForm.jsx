@@ -2054,6 +2054,30 @@ const App = () => {
               />
             </div>
             <div className="space-y-2">
+              <Label>Tax Breakdown</Label>
+              <div className="bg-gray-50 p-3 rounded border">
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span>Taxable Amount:</span>
+                    <span>₹{(formData.rate / 1.05).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>CGST (2.5%):</span>
+                    <span>₹{((formData.rate / 1.05) * 0.025).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>SGST (2.5%):</span>
+                    <span>₹{((formData.rate / 1.05) * 0.025).toFixed(2)}</span>
+                  </div>
+                  <hr className="my-1" />
+                  <div className="flex justify-between font-semibold">
+                    <span>Total with Tax:</span>
+                    <span>₹{formData.rate}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="paymentMode">Payment Mode</Label>
               <Select
                 id="paymentMode"
