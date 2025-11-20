@@ -517,7 +517,10 @@ const BookingPage = () => {
                       <select
                         value={booking.status}
                         onChange={(e) => updateBookingStatus(booking.id, e.target.value)}
+                        disabled={booking.status === 'Checked Out'}
                         className={`px-2 py-1 rounded border text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                          booking.status === 'Checked Out' ? 'cursor-not-allowed opacity-60' : ''
+                        } ${
                           booking.status === "Booked"
                             ? "bg-green-100 text-green-800 border-green-300"
                             : booking.status === "Cancelled"
@@ -542,7 +545,10 @@ const BookingPage = () => {
                             updateBookingStatus(booking.id, "Checked Out");
                           }
                         }}
-                        className="px-2 py-1 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 w-full"
+                        disabled={booking.status === 'Checked Out'}
+                        className={`px-2 py-1 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 w-full ${
+                          booking.status === 'Checked Out' ? 'cursor-not-allowed opacity-60' : ''
+                        }`}
                       >
                         <option value="Pending">Pending</option>
                         <option value="Paid">Paid</option>
@@ -554,8 +560,13 @@ const BookingPage = () => {
                       <div className="flex space-x-1 justify-center items-center">
                         <button
                           onClick={() => navigate('/edit-booking', { state: { editBooking: booking._raw } })}
-                          title="Edit Booking"
-                          className="p-1.5 rounded-full text-blue-600 transition duration-300"
+                          disabled={booking.status === 'Checked Out'}
+                          title={booking.status === 'Checked Out' ? 'Cannot edit checked out booking' : 'Edit Booking'}
+                          className={`p-1.5 rounded-full transition duration-300 ${
+                            booking.status === 'Checked Out' 
+                              ? 'text-gray-400 cursor-not-allowed' 
+                              : 'text-blue-600 hover:text-blue-800'
+                          }`}
                         >
                           <Edit size={16} />
                         </button>
@@ -654,7 +665,10 @@ const BookingPage = () => {
                   <select
                     value={booking.status === "Checked Out" ? "Paid" : booking.paymentStatus}
                     onChange={(e) => updatePaymentStatus(booking.id, e.target.value)}
-                    className="ml-1 px-2 py-1 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    disabled={booking.status === 'Checked Out'}
+                    className={`ml-1 px-2 py-1 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                      booking.status === 'Checked Out' ? 'cursor-not-allowed opacity-60' : ''
+                    }`}
                   >
                     <option value="Pending">Pending</option>
                     <option value="Paid">Paid</option>
@@ -667,9 +681,18 @@ const BookingPage = () => {
               <div className="flex flex-col sm:flex-row justify-end gap-2 pt-3 border-t" style={{ borderColor: 'hsl(45, 100%, 90%)' }}>
                 <button
                   onClick={() => navigate('/edit-booking', { state: { editBooking: booking._raw } })}
-                  className="p-2 rounded-full transition duration-300"
-                  style={{ color: 'hsl(45, 43%, 58%)' }}
-                  title="Edit"
+                  disabled={booking.status === 'Checked Out'}
+                  className={`p-2 rounded-full transition duration-300 ${
+                    booking.status === 'Checked Out' 
+                      ? 'cursor-not-allowed' 
+                      : ''
+                  }`}
+                  style={{ 
+                    color: booking.status === 'Checked Out' 
+                      ? '#9CA3AF' 
+                      : 'hsl(45, 43%, 58%)' 
+                  }}
+                  title={booking.status === 'Checked Out' ? 'Cannot edit checked out booking' : 'Edit'}
                 >
                   <Edit size={18} />
                 </button>

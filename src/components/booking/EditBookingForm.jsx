@@ -410,16 +410,21 @@ const EditBookingForm = () => {
         newSelectedRooms = [...prev, room];
       }
       
-      const totalRate = newSelectedRooms.reduce((sum, selectedRoom) => {
+      const taxableAmount = newSelectedRooms.reduce((sum, selectedRoom) => {
         return sum + (selectedRoom.price || 0);
       }, 0);
       
       const days = formData.days || 1;
-      const finalRate = totalRate * days;
+      const finalTaxableAmount = taxableAmount * days;
+      
+      // Calculate taxes
+      const cgstAmount = finalTaxableAmount * (formData.cgstRate / 100);
+      const sgstAmount = finalTaxableAmount * (formData.sgstRate / 100);
+      const finalRate = finalTaxableAmount + cgstAmount + sgstAmount;
       
       setFormData(prevForm => ({
         ...prevForm,
-        rate: finalRate,
+        rate: finalTaxableAmount, // Store taxable amount in rate field
         roomNumber: newSelectedRooms.map(r => r.room_number).join(','),
         numberOfRooms: newSelectedRooms.length
       }));
@@ -471,12 +476,12 @@ const EditBookingForm = () => {
         return sum + (room.price || 0);
       }, 0);
       
-      const finalRate = totalRoomRate * diffDays;
+      const finalTaxableAmount = totalRoomRate * diffDays;
       
       setFormData(prev => ({ 
         ...prev, 
         days: diffDays,
-        rate: selectedRooms.length > 0 ? finalRate : prev.rate
+        rate: selectedRooms.length > 0 ? finalTaxableAmount : prev.rate // Store taxable amount
       }));
     } else {
       setFormData(prev => ({ ...prev, days: 0 }));
@@ -512,16 +517,15 @@ const EditBookingForm = () => {
   };
 
   const calculateTaxBreakdown = () => {
-    const totalRate = formData.rate || 0;
-    const totalTaxRate = (formData.cgstRate + formData.sgstRate) / 100;
-    const taxableAmount = totalRate / (1 + totalTaxRate);
+    const taxableAmount = formData.rate || 0; // Rate is the taxable amount
     const cgstAmount = taxableAmount * (formData.cgstRate / 100);
     const sgstAmount = taxableAmount * (formData.sgstRate / 100);
+    const totalWithTax = taxableAmount + cgstAmount + sgstAmount;
     
-    return { taxableAmount, cgstAmount, sgstAmount };
+    return { taxableAmount, cgstAmount, sgstAmount, totalWithTax };
   };
 
-  const { taxableAmount, cgstAmount, sgstAmount } = calculateTaxBreakdown();
+  const { taxableAmount, cgstAmount, sgstAmount, totalWithTax } = calculateTaxBreakdown();
 
   return (
     <div className="min-h-screen" style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>
@@ -861,12 +865,12 @@ const EditBookingForm = () => {
                                     className="px-3 py-1 rounded-md transition-colors"
                                     style={{
                                       backgroundColor: selectedRooms.some(r => r._id === room._id)
-                                        ? 'hsl(120, 60%, 50%)'
-                                        : 'hsl(0, 60%, 50%)',
+                                        ? 'hsl(0, 60%, 50%)'
+                                        : 'hsl(120, 60%, 50%)',
                                       color: 'white'
                                     }}
                                   >
-                                    {selectedRooms.some(r => r._id === room._id) ? 'Unselect' : 'Select'}
+                                    {selectedRooms.some(r => r._id === room._id) ? 'Remove' : 'Add'}
                                   </Button>
                                 </td>
                                 <td className="py-4 px-6 text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>{room.room_number || 'N/A'}</td>
@@ -908,9 +912,26 @@ const EditBookingForm = () => {
                       className="bg-gray-200"
                     />
                     {selectedRooms.length > 0 && (
-                      <p className="text-sm text-gray-600">
-                        Selected: {selectedRooms.map(r => r.room_number).join(', ')}
-                      </p>
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-600">
+                          Selected: {selectedRooms.map(r => r.room_number).join(', ')}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedRooms.map(room => (
+                            <div key={room._id} className="flex items-center bg-blue-100 px-3 py-1 rounded-full text-sm">
+                              <span className="mr-2">Room {room.room_number}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRoomSelection(room)}
+                                className="text-red-600 hover:text-red-800 font-bold"
+                                title="Remove room"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -1078,7 +1099,7 @@ const EditBookingForm = () => {
                         <hr className="my-1" />
                         <div className="flex justify-between font-semibold">
                           <span>Total with Tax:</span>
-                          <span>₹{formData.rate}</span>
+                          <span>₹{totalWithTax.toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
