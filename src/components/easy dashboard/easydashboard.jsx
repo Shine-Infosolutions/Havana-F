@@ -133,9 +133,15 @@ const RoomCard = ({ room, currentStatus, booking, getRoomCategory, navigate, set
                     {statusProps.label}
                 </div>
 
-                <div className="text-xs sm:text-sm text-gray-400 italic mb-1 sm:mb-2 text-center px-1">
-                    {getRoomCategory(room)}
-                </div>
+                {isBooked && booking ? (
+                    <div className="text-xs sm:text-sm text-gray-600 font-medium mb-1 sm:mb-2 text-center px-1">
+                        {booking.name || 'Guest'}
+                    </div>
+                ) : (
+                    <div className="text-xs sm:text-sm text-gray-400 italic mb-1 sm:mb-2 text-center px-1">
+                        {getRoomCategory(room)}
+                    </div>
+                )}
                 
                 {/* Subtle detail text */}
                 {(isBooked) && (
@@ -365,7 +371,15 @@ const EasyDashboard = () => {
 
     const getRoomBooking = useCallback((roomNumber) => {
         return bookings.find(booking => {
-            const isValidStatus = booking.status === 'Confirmed' || booking.status === 'Booked' || booking.status === 'CheckedIn';
+            const isValidStatus = booking.status === 'Confirmed' || booking.status === 'Booked' || booking.status === 'CheckedIn' || booking.status === 'Checked In';
+            
+            // Handle comma-separated room numbers in booking
+            if (booking.roomNumber && booking.roomNumber.includes(',')) {
+                const roomNumbers = booking.roomNumber.split(',').map(num => num.trim());
+                const roomMatch = roomNumbers.includes(roomNumber.toString()) || roomNumbers.includes(roomNumber);
+                return roomMatch && isValidStatus;
+            }
+            
             // Check multiple possible field names for room number
             const roomMatch = booking.roomNumber === roomNumber || 
                              booking.roomNumber === roomNumber.toString() ||
