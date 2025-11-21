@@ -301,6 +301,7 @@ export const AppProvider = ({ children }) => {
     planPackage: '',
     noOfAdults: 1,
     noOfChildren: 0,
+    roomGuestDetails: [],
     extraBed: false,
     extraBedCharge: 0,
     rate: 0,
@@ -425,6 +426,7 @@ export const AppProvider = ({ children }) => {
       phoneNo: '', birthDate: '', anniversary: '', companyName: '', companyGSTIN: '',
       idProofType: '', idProofNumber: '', idProofImageUrl: '', idProofImageUrl2: '',
       photoUrl: '', roomNumber: '', planPackage: '', noOfAdults: 1, noOfChildren: 0,
+      roomGuestDetails: [],
       rate: 0, taxIncluded: false, serviceCharge: false, arrivedFrom: '',
       destination: '', remark: '', businessSource: '', marketSegment: '',
       purposeOfVisit: '', discountPercent: 0, discountRoomSource: 0, paymentMode: '',
@@ -608,7 +610,10 @@ const App = () => {
       
       // Calculate total rate based on selected rooms and new days
       const totalRoomRate = selectedRooms.reduce((sum, room) => {
-        return sum + (room.price || 0);
+        const rate = room.customPrice !== undefined && room.customPrice !== '' 
+          ? Number(room.customPrice) 
+          : (room.price || 0);
+        return sum + rate;
       }, 0);
       
       const finalRate = totalRoomRate * diffDays;
@@ -626,16 +631,25 @@ const App = () => {
 
   useEffect(() => {
     if (Array.isArray(selectedRooms)) {
+      // Create default room guest details for each selected room
+      const roomGuestDetails = selectedRooms.map(room => ({
+        roomNumber: room.room_number,
+        adults: 1,
+        children: 0
+      }));
+      
+
+      
       setFormData(prev => ({
         ...prev,
         roomNumber: selectedRooms.map(r => r.room_number).join(','),
         numberOfRooms: selectedRooms.length > 0 ? selectedRooms.length : 1,
+        roomGuestDetails: roomGuestDetails,
+        noOfAdults: roomGuestDetails.reduce((sum, room) => sum + room.adults, 0),
+        noOfChildren: roomGuestDetails.reduce((sum, room) => sum + room.children, 0)
       }));
       
-      // Show selected rooms info
-      if (selectedRooms.length > 1) {
-        showToast.info(`${selectedRooms.length} rooms selected: ${selectedRooms.map(r => r.room_number).join(', ')}`);
-      }
+
     }
   }, [selectedRooms, setFormData]);
 
@@ -661,6 +675,27 @@ const App = () => {
       }
     }
   }, [allRooms, setSelectedRooms, setHasCheckedAvailability]);
+
+  // Recalculate total when room rates change
+  useEffect(() => {
+    if (selectedRooms.length > 0 && formData.days > 0) {
+      const totalRoomRate = selectedRooms.reduce((sum, room) => {
+        const rate = room.customPrice !== undefined && room.customPrice !== '' 
+          ? Number(room.customPrice) 
+          : (room.price || 0);
+        return sum + rate;
+      }, 0);
+      
+      const roomRate = totalRoomRate * formData.days;
+      const extraBedCharge = formData.extraBed ? (formData.extraBedCharge || 0) : 0;
+      const finalRate = roomRate + extraBedCharge;
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        rate: finalRate
+      }));
+    }
+  }, [selectedRooms.map(r => r.customPrice).join(','), formData.days, formData.extraBed, formData.extraBedCharge]);
 
 
 
@@ -1036,12 +1071,21 @@ const App = () => {
       if (isSelected) {
         newSelectedRooms = prev.filter((r) => r._id !== room._id);
       } else {
-        newSelectedRooms = [...prev, room];
+        // Initialize custom price with the room's default price when selecting
+        const roomWithCustomPrice = {
+          ...room,
+          customPrice: room.customPrice !== undefined ? room.customPrice : room.price || 0
+        };
+        newSelectedRooms = [...prev, roomWithCustomPrice];
+        console.log(`Room selected: ${room.room_number}, initialized customPrice: ${roomWithCustomPrice.customPrice}`);
       }
       
       // Calculate total rate based on selected rooms and days
       const totalRoomRate = newSelectedRooms.reduce((sum, selectedRoom) => {
-        return sum + (selectedRoom.price || 0);
+        const rate = selectedRoom.customPrice !== undefined && selectedRoom.customPrice !== '' 
+          ? Number(selectedRoom.customPrice) 
+          : (selectedRoom.price || 0);
+        return sum + rate;
       }, 0);
       
       const days = formData.days || 1;
@@ -1057,7 +1101,29 @@ const App = () => {
         rate: finalRate
       }));
       
+      console.log('Selected rooms after selection:', newSelectedRooms);
       return newSelectedRooms;
+    });
+  };
+
+  const handleRoomGuestChange = (roomNumber, field, value) => {
+    setFormData(prev => {
+      const updatedRoomGuestDetails = prev.roomGuestDetails.map(room => 
+        room.roomNumber === roomNumber 
+          ? { ...room, [field]: Math.max(0, parseInt(value) || 0) }
+          : room
+      );
+      
+      // Recalculate totals
+      const totalAdults = updatedRoomGuestDetails.reduce((sum, room) => sum + room.adults, 0);
+      const totalChildren = updatedRoomGuestDetails.reduce((sum, room) => sum + room.children, 0);
+      
+      return {
+        ...prev,
+        roomGuestDetails: updatedRoomGuestDetails,
+        noOfAdults: totalAdults,
+        noOfChildren: totalChildren
+      };
     });
   };
 
@@ -1142,8 +1208,21 @@ const App = () => {
       photoUrl: formData.photoUrl || '',
       roomNumber: selectedRooms.map(r => r.room_number).join(','),
       numberOfRooms: selectedRooms.length,
-      selectedRooms: selectedRooms, // Pass the selected rooms array to backend
     };
+    
+    // Add room rates as a simple array
+    if (selectedRooms && selectedRooms.length > 0) {
+      cleanFormData.roomRates = selectedRooms.map(room => ({
+        roomNumber: room.room_number,
+        customRate: room.customPrice !== undefined && room.customPrice !== '' && room.customPrice !== null
+          ? Number(room.customPrice) 
+          : (room.price || 0)
+      }));
+    } else {
+      cleanFormData.roomRates = [];
+    }
+    
+
     
     // Remove any MongoDB-specific fields that might cause issues
     delete cleanFormData._id;
@@ -1161,7 +1240,7 @@ const App = () => {
     cleanFormData.cgstRate = Number(cleanFormData.cgstRate) || 2.5;
     cleanFormData.sgstRate = Number(cleanFormData.sgstRate) || 2.5;
     
-    console.log('Submitting booking data:', cleanFormData);
+
     
     try {
       const response = await axios.post(`${BASE_URL}/api/bookings/book`, cleanFormData, {
@@ -1491,14 +1570,14 @@ const App = () => {
                         <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Room Number</th>
                         <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Room Name</th>
                         <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Price/Night</th>
+                        <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Custom Rate</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y" style={{ borderColor: 'hsl(45, 100%, 90%)' }}>
                       {roomsForSelectedCategory.map(room => (
                         <tr 
                           key={room._id} 
-                          className={`cursor-pointer ${selectedRooms.some(r => r._id === room._id) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-                          onClick={() => handleRoomSelection(room)}
+                          className={`${selectedRooms.some(r => r._id === room._id) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
                         >
                           <td className="py-4 px-6 text-sm">
                             <Button
@@ -1521,6 +1600,40 @@ const App = () => {
                           <td className="py-4 px-6 text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>{room.room_number || 'N/A'}</td>
                           <td className="py-4 px-6 text-sm" style={{ color: 'hsl(45, 100%, 40%)' }}>{room.title || 'N/A'}</td>
                           <td className="py-4 px-6 text-sm font-semibold" style={{ color: 'hsl(45, 100%, 20%)' }}>₹{room.price || 0}</td>
+                          <td className="py-4 px-6 text-sm">
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={room.customPrice !== undefined ? room.customPrice : ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || /^\d+$/.test(value)) {
+                                  const newPrice = value === '' ? '' : Number(value);
+                                  console.log(`Table: Setting custom price for room ${room.room_number}: ${newPrice}`);
+                                  setSelectedRooms(prev => {
+                                    const updated = prev.map(r => 
+                                      r._id === room._id 
+                                        ? { ...r, customPrice: newPrice }
+                                        : r
+                                    );
+                                    console.log('Table: Updated selectedRooms:', updated);
+                                    return updated;
+                                  });
+                                  setAllRooms(prev => 
+                                    prev.map(r => 
+                                      r._id === room._id 
+                                        ? { ...r, customPrice: newPrice }
+                                        : r
+                                    )
+                                  );
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              placeholder="Custom rate"
+                              className="w-24 text-xs"
+                            />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1961,28 +2074,7 @@ const App = () => {
                 </p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="noOfAdults">Adults</Label>
-              <Input
-                id="noOfAdults"
-                name="noOfAdults"
-                type="number"
-                min="1"
-                value={formData.noOfAdults}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="noOfChildren">Children</Label>
-              <Input
-                id="noOfChildren"
-                name="noOfChildren"
-                type="number"
-                min="0"
-                value={formData.noOfChildren}
-                onChange={handleChange}
-              />
-            </div>
+
             <div className="space-y-2 flex items-center gap-2">
               <Checkbox
                 id="extraBed"
@@ -2057,6 +2149,82 @@ const App = () => {
                 onChange={handleChange}
               />
             </div>
+            {/* Room Rates */}
+            {selectedRooms.length > 0 && (
+              <div className="space-y-4 col-span-full">
+                <h3 className="text-lg font-medium text-gray-700">Room Rates (Per Night)</h3>
+                <div className="grid gap-4">
+                  {selectedRooms.map((room, index) => (
+                    <div key={room._id} className="border rounded-lg p-4 bg-blue-50">
+                      <h4 className="font-medium text-gray-800 mb-3">Room {room.room_number}</h4>
+                      <div className="space-y-2">
+                        <Label htmlFor={`room-rate-${room.room_number}`}>Rate per Night (₹)</Label>
+                        <Input
+                          id={`room-rate-${room.room_number}`}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={room.customPrice !== undefined ? room.customPrice : ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || /^\d+$/.test(value)) {
+                              const newPrice = value === '' ? '' : Number(value);
+                              console.log(`Setting custom price for room ${room.room_number}: ${newPrice}`);
+                              setSelectedRooms(prev => {
+                                const updated = prev.map(r => 
+                                  r._id === room._id 
+                                    ? { ...r, customPrice: newPrice }
+                                    : r
+                                );
+                                console.log('Updated selectedRooms:', updated);
+                                return updated;
+                              });
+                            }
+                          }}
+                          placeholder="Enter rate per night"
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Room-specific guest details */}
+            {formData.roomGuestDetails && formData.roomGuestDetails.length > 0 && (
+              <div className="space-y-4 col-span-full">
+                <h3 className="text-lg font-medium text-gray-700">Guest Details per Room</h3>
+                <div className="grid gap-4">
+                  {formData.roomGuestDetails.map((roomGuest, index) => (
+                    <div key={roomGuest.roomNumber} className="border rounded-lg p-4 bg-gray-50">
+                      <h4 className="font-medium text-gray-800 mb-3">Room {roomGuest.roomNumber}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`room-${roomGuest.roomNumber}-adults`}>Adults</Label>
+                          <Input
+                            id={`room-${roomGuest.roomNumber}-adults`}
+                            type="number"
+                            min="1"
+                            value={roomGuest.adults}
+                            onChange={(e) => handleRoomGuestChange(roomGuest.roomNumber, 'adults', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`room-${roomGuest.roomNumber}-children`}>Children</Label>
+                          <Input
+                            id={`room-${roomGuest.roomNumber}-children`}
+                            type="number"
+                            min="0"
+                            value={roomGuest.children}
+                            onChange={(e) => handleRoomGuestChange(roomGuest.roomNumber, 'children', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="space-y-2 col-span-full">
               <Label htmlFor="remark">Remarks</Label>
               <textarea
@@ -2090,8 +2258,10 @@ const App = () => {
                 name="rate"
                 type="number"
                 value={formData.rate}
-                onChange={handleChange}
+                readOnly
+                className="bg-gray-100"
               />
+              <p className="text-xs text-gray-500">Calculated from room rates × days</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="cgstRate">CGST Rate (%)</Label>
@@ -2125,20 +2295,20 @@ const App = () => {
                 <div className="text-sm space-y-1">
                   <div className="flex justify-between">
                     <span>Taxable Amount:</span>
-                    <span>₹{(formData.rate / (1 + (formData.cgstRate + formData.sgstRate) / 100)).toFixed(2)}</span>
+                    <span>₹{Number(formData.rate || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>CGST ({formData.cgstRate}%):</span>
-                    <span>₹{((formData.rate / (1 + (formData.cgstRate + formData.sgstRate) / 100)) * (formData.cgstRate / 100)).toFixed(2)}</span>
+                    <span>₹{(Number(formData.rate || 0) * (formData.cgstRate / 100)).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>SGST ({formData.sgstRate}%):</span>
-                    <span>₹{((formData.rate / (1 + (formData.cgstRate + formData.sgstRate) / 100)) * (formData.sgstRate / 100)).toFixed(2)}</span>
+                    <span>₹{(Number(formData.rate || 0) * (formData.sgstRate / 100)).toFixed(2)}</span>
                   </div>
                   <hr className="my-1" />
                   <div className="flex justify-between font-semibold">
                     <span>Total with Tax:</span>
-                    <span>₹{formData.rate}</span>
+                    <span>₹{(Number(formData.rate || 0) * (1 + (formData.cgstRate + formData.sgstRate) / 100)).toFixed(2)}</span>
                   </div>
                 </div>
               </div>

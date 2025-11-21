@@ -517,7 +517,22 @@ export default function Invoice() {
               <p className="font-bold">Room No./Type</p>
               <p className="font-medium">: {invoiceData.invoiceDetails?.roomNo} {invoiceData.invoiceDetails?.roomType}</p>
               <p className="font-bold">PAX</p>
-              <p className="font-medium">: {invoiceData.invoiceDetails?.pax} Adult: {invoiceData.invoiceDetails?.adult}</p>
+              <p className="font-medium">
+                {bookingData?.roomGuestDetails && bookingData.roomGuestDetails.length > 0 ? (
+                  <>
+                    : {bookingData.roomGuestDetails.reduce((sum, room) => sum + room.adults + room.children, 0)} Adult: {bookingData.roomGuestDetails.reduce((sum, room) => sum + room.adults, 0)} Children: {bookingData.roomGuestDetails.reduce((sum, room) => sum + room.children, 0)}
+                    <div className="text-xs mt-1">
+                      {bookingData.roomGuestDetails.map((room, index) => (
+                        <div key={index}>
+                          Room {room.roomNumber}: {room.adults}A, {room.children}C
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  `: ${invoiceData.invoiceDetails?.pax} Adult: ${invoiceData.invoiceDetails?.adult}`
+                )}
+              </p>
               <p className="font-bold">CheckIn Date</p>
               <p className="font-medium">: {invoiceData.invoiceDetails?.checkInDate}</p>
               <p className="font-bold">CheckOut Date</p>

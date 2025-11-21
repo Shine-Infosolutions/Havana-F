@@ -200,6 +200,7 @@ const EditBookingForm = () => {
     planPackage: '',
     noOfAdults: 1,
     noOfChildren: 0,
+    roomGuestDetails: [],
     rate: 0,
     cgstRate: 2.5,
     sgstRate: 2.5,
@@ -281,6 +282,7 @@ const EditBookingForm = () => {
         planPackage: editBooking.planPackage || '',
         noOfAdults: editBooking.noOfAdults || 1,
         noOfChildren: editBooking.noOfChildren || 0,
+        roomGuestDetails: editBooking.roomGuestDetails || [],
         extraBed: editBooking.extraBed || false,
         extraBedCharge: editBooking.extraBedCharge || 0,
         rate: editBooking.rate || 0,
@@ -413,7 +415,10 @@ const EditBookingForm = () => {
       }
       
       const totalRoomRate = newSelectedRooms.reduce((sum, selectedRoom) => {
-        return sum + (selectedRoom.price || 0);
+        const rate = selectedRoom.customPrice !== undefined && selectedRoom.customPrice !== '' 
+          ? Number(selectedRoom.customPrice) 
+          : (selectedRoom.price || 0);
+        return sum + rate;
       }, 0);
       
       const days = formData.days || 1;
@@ -436,6 +441,27 @@ const EditBookingForm = () => {
       }));
       
       return newSelectedRooms;
+    });
+  };
+
+  const handleRoomGuestChange = (roomNumber, field, value) => {
+    setFormData(prev => {
+      const updatedRoomGuestDetails = prev.roomGuestDetails.map(room => 
+        room.roomNumber === roomNumber 
+          ? { ...room, [field]: Math.max(0, parseInt(value) || 0) }
+          : room
+      );
+      
+      // Recalculate totals
+      const totalAdults = updatedRoomGuestDetails.reduce((sum, room) => sum + room.adults, 0);
+      const totalChildren = updatedRoomGuestDetails.reduce((sum, room) => sum + room.children, 0);
+      
+      return {
+        ...prev,
+        roomGuestDetails: updatedRoomGuestDetails,
+        noOfAdults: totalAdults,
+        noOfChildren: totalChildren
+      };
     });
   };
 
@@ -466,6 +492,34 @@ const EditBookingForm = () => {
       );
       if (realSelectedRooms.length > 0) {
         setSelectedRooms(realSelectedRooms);
+        
+        // Initialize room guest details if not already present
+        if (!formData.roomGuestDetails || formData.roomGuestDetails.length === 0) {
+          const roomGuestDetails = existingRoomNumbers.map(roomNum => ({
+            roomNumber: roomNum,
+            adults: 1,
+            children: 0
+          }));
+          
+          setFormData(prev => ({
+            ...prev,
+            roomGuestDetails: roomGuestDetails,
+            noOfAdults: roomGuestDetails.reduce((sum, room) => sum + room.adults, 0),
+            noOfChildren: roomGuestDetails.reduce((sum, room) => sum + room.children, 0)
+          }));
+        }
+        
+        // Set custom prices from booking data
+        if (editBooking?.roomRates && Array.isArray(editBooking.roomRates)) {
+          const updatedRooms = realSelectedRooms.map(room => {
+            const roomRate = editBooking.roomRates.find(r => r.roomNumber === room.room_number.toString());
+            return {
+              ...room,
+              customPrice: roomRate ? roomRate.customRate : room.price
+            };
+          });
+          setSelectedRooms(updatedRooms);
+        }
       }
     }
   }, [allRooms, editBooking]);
@@ -502,7 +556,7 @@ const EditBookingForm = () => {
   useEffect(() => {
     if (selectedRooms.length > 0 && formData.days > 0) {
       const totalRoomRate = selectedRooms.reduce((sum, room) => {
-        return sum + (room.price || 0);
+        return sum + (room.customPrice || room.price || 0);
       }, 0);
       
       const roomRate = totalRoomRate * formData.days;
@@ -532,7 +586,8 @@ const EditBookingForm = () => {
         ...formData,
         cgstRate: formData.cgstRate / 100,
         sgstRate: formData.sgstRate / 100,
-        selectedRooms: selectedRooms
+        selectedRooms: selectedRooms,
+        roomGuestDetails: formData.roomGuestDetails
       };
 
       await axios.put(`/api/bookings/update/${editBooking._id}`, updateData);
@@ -545,9 +600,9 @@ const EditBookingForm = () => {
   };
 
   const calculateTaxBreakdown = () => {
-    const taxableAmount = formData.rate || 0; // Rate is the taxable amount
-    const cgstAmount = taxableAmount * (formData.cgstRate / 100);
-    const sgstAmount = taxableAmount * (formData.sgstRate / 100);
+    const taxableAmount = Number(formData.rate) || 0; // Rate is the taxable amount
+    const cgstAmount = taxableAmount * (Number(formData.cgstRate) / 100);
+    const sgstAmount = taxableAmount * (Number(formData.sgstRate) / 100);
     const totalWithTax = taxableAmount + cgstAmount + sgstAmount;
     
     return { taxableAmount, cgstAmount, sgstAmount, totalWithTax };
@@ -961,29 +1016,43 @@ const EditBookingForm = () => {
                         </div>
                       </div>
                     )}
+                    {/* Room Rate Editing */}
+                    <div className="space-y-2 mt-4">
+                      <h4 className="font-medium text-gray-700">Room Rates</h4>
+                      <div className="grid gap-3">
+                        {selectedRooms.map(room => (
+                          <div key={room._id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <span className="font-medium">Room {room.room_number}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-500">₹</span>
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={room.customPrice !== undefined ? room.customPrice : ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || /^\d+$/.test(value)) {
+                                    const newPrice = value === '' ? '' : Number(value);
+                                    setSelectedRooms(prev => 
+                                      prev.map(r => 
+                                        r._id === room._id 
+                                          ? { ...r, customPrice: newPrice }
+                                          : r
+                                      )
+                                    );
+                                  }
+                                }}
+                                className="w-24 text-sm"
+                              />
+                              <span className="text-sm text-gray-500">/night</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="noOfAdults">Adults</Label>
-                    <Input
-                      id="noOfAdults"
-                      name="noOfAdults"
-                      type="number"
-                      min="1"
-                      value={formData.noOfAdults}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="noOfChildren">Children</Label>
-                    <Input
-                      id="noOfChildren"
-                      name="noOfChildren"
-                      type="number"
-                      min="0"
-                      value={formData.noOfChildren}
-                      onChange={handleChange}
-                    />
-                  </div>
+
                   <div className="space-y-2 flex items-center gap-2">
                     <Checkbox
                       id="extraBed"
@@ -1072,6 +1141,79 @@ const EditBookingForm = () => {
                       <option value="Cancelled">Cancelled</option>
                     </Select>
                   </div>
+                  {/* Room-specific guest details */}
+                  {formData.roomGuestDetails && formData.roomGuestDetails.length > 0 && (
+                    <div className="space-y-4 col-span-full">
+                      <h3 className="text-lg font-medium text-gray-700">Guest Details per Room</h3>
+                      <div className="grid gap-4">
+                        {formData.roomGuestDetails.map((roomGuest, index) => (
+                          <div key={roomGuest.roomNumber} className="border rounded-lg p-4 bg-gray-50">
+                            <h4 className="font-medium text-gray-800 mb-3">Room {roomGuest.roomNumber}</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`room-${roomGuest.roomNumber}-adults`}>Adults</Label>
+                                <Input
+                                  id={`room-${roomGuest.roomNumber}-adults`}
+                                  type="number"
+                                  min="1"
+                                  value={roomGuest.adults}
+                                  onChange={(e) => handleRoomGuestChange(roomGuest.roomNumber, 'adults', e.target.value)}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor={`room-${roomGuest.roomNumber}-children`}>Children</Label>
+                                <Input
+                                  id={`room-${roomGuest.roomNumber}-children`}
+                                  type="number"
+                                  min="0"
+                                  value={roomGuest.children}
+                                  onChange={(e) => handleRoomGuestChange(roomGuest.roomNumber, 'children', e.target.value)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Room Rates */}
+                  {selectedRooms.length > 0 && (
+                    <div className="space-y-4 col-span-full">
+                      <h3 className="text-lg font-medium text-gray-700">Room Rates (Per Night)</h3>
+                      <div className="grid gap-4">
+                        {selectedRooms.map((room, index) => (
+                          <div key={room._id} className="border rounded-lg p-4 bg-blue-50">
+                            <h4 className="font-medium text-gray-800 mb-3">Room {room.room_number}</h4>
+                            <div className="space-y-2">
+                              <Label htmlFor={`room-rate-${room.room_number}`}>Rate per Night (₹)</Label>
+                              <Input
+                                id={`room-rate-${room.room_number}`}
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={room.customPrice !== undefined ? room.customPrice : ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || /^\d+$/.test(value)) {
+                                    const newPrice = value === '' ? '' : Number(value);
+                                    setSelectedRooms(prev => 
+                                      prev.map(r => 
+                                        r._id === room._id 
+                                          ? { ...r, customPrice: newPrice }
+                                          : r
+                                      )
+                                    );
+                                  }
+                                }}
+                                placeholder="Enter rate per night"
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-2 col-span-full">
                     <Label htmlFor="remark">Remarks</Label>
                     <textarea
@@ -1105,8 +1247,10 @@ const EditBookingForm = () => {
                       name="rate"
                       type="number"
                       value={formData.rate}
-                      onChange={handleChange}
+                      readOnly
+                      className="bg-gray-100"
                     />
+                    <p className="text-xs text-gray-500">Calculated from room rates × days</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="cgstRate">CGST Rate (%)</Label>
