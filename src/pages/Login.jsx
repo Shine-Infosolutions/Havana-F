@@ -18,7 +18,7 @@ const Login = () => {
       <div className="w-full max-w-md bg-white rounded-lg shadow-lg overflow-hidden">
         {/* Header with Havana branding */}
         <div className="text-center py-2" style={{backgroundColor: '#D4AF37'}}>
-          <img src={havanaLogo} alt="Havana" className="mx-auto h-40 w-auto -m-8" />
+          <img src={havanaLogo} alt="Havana" className="mx-auto h-40 w-au                                                                                                                                                 to -m-8" />
 
         </div>
         

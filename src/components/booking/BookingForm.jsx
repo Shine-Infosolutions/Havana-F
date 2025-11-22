@@ -302,8 +302,7 @@ export const AppProvider = ({ children }) => {
     noOfAdults: 1,
     noOfChildren: 0,
     roomGuestDetails: [],
-    extraBed: false,
-    extraBedCharge: 0,
+    extraBedCharge: 500,
     rate: 0,
     cgstRate: 2.5,
     sgstRate: 2.5,
@@ -676,7 +675,9 @@ const App = () => {
       }, 0);
       
       const roomRate = totalRoomRate * formData.days;
-      const extraBedCharge = formData.extraBed ? (formData.extraBedCharge || 0) : 0;
+      const extraBedCharge = selectedRooms.reduce((sum, room) => {
+        return sum + (room.extraBed ? (formData.extraBedCharge || 0) * formData.days : 0);
+      }, 0);
       const finalRate = roomRate + extraBedCharge;
       
       setFormData(prev => ({ 
@@ -1080,8 +1081,10 @@ const App = () => {
       const days = formData.days || 1;
       const roomRate = totalRoomRate * days;
       
-      // Add extra bed charges if applicable
-      const extraBedCharge = formData.extraBed ? (formData.extraBedCharge || 0) : 0;
+      // Add extra bed charges if applicable (per day)
+      const extraBedCharge = newSelectedRooms.reduce((sum, room) => {
+        return sum + (room.extraBed ? (formData.extraBedCharge || 0) * days : 0);
+      }, 0);
       const finalRate = roomRate + extraBedCharge;
       
       // Update form data with calculated rate
@@ -2064,32 +2067,7 @@ const App = () => {
               )}
             </div>
 
-            <div className="space-y-2 flex items-center gap-2">
-              <Checkbox
-                id="extraBed"
-                checked={formData.extraBed || false}
-                onChange={(e) => setFormData(prev => ({ 
-                  ...prev, 
-                  extraBed: e.target.checked,
-                  extraBedCharge: e.target.checked ? 500 : 0
-                }))}
-              />
-              <Label htmlFor="extraBed">Extra Bed Required</Label>
-            </div>
-            {formData.extraBed && (
-              <div className="space-y-2">
-                <Label htmlFor="extraBedCharge">Extra Bed Charge (₹)</Label>
-                <Input
-                  id="extraBedCharge"
-                  name="extraBedCharge"
-                  type="number"
-                  min="0"
-                  value={formData.extraBedCharge || 0}
-                  onChange={handleChange}
-                  placeholder="Enter extra bed charge"
-                />
-              </div>
-            )}
+
             <div className="space-y-2">
               <Label htmlFor="planPackage">Package Plan</Label>
               <Input
@@ -2138,6 +2116,18 @@ const App = () => {
                 onChange={handleChange}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="extraBedCharge">Extra Bed Charge per Day (₹)</Label>
+              <Input
+                id="extraBedCharge"
+                name="extraBedCharge"
+                type="number"
+                min="0"
+                value={formData.extraBedCharge || 0}
+                onChange={handleChange}
+                placeholder="Enter extra bed charge per day"
+              />
+            </div>
             {/* Room Rates */}
             {selectedRooms.length > 0 && (
               <div className="space-y-4 col-span-full">
@@ -2146,33 +2136,61 @@ const App = () => {
                   {selectedRooms.map((room, index) => (
                     <div key={room._id} className="border rounded-lg p-4 bg-blue-50">
                       <h4 className="font-medium text-gray-800 mb-3">Room {room.room_number}</h4>
-                      <div className="space-y-2">
-                        <Label htmlFor={`room-rate-${room.room_number}`}>Rate per Night (₹)</Label>
-                        <Input
-                          id={`room-rate-${room.room_number}`}
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={room.customPrice !== undefined ? room.customPrice : ''}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === '' || /^\d+$/.test(value)) {
-                              const newPrice = value === '' ? '' : Number(value);
-                              console.log(`Setting custom price for room ${room.room_number}: ${newPrice}`);
-                              setSelectedRooms(prev => {
-                                const updated = prev.map(r => 
-                                  r._id === room._id 
-                                    ? { ...r, customPrice: newPrice }
-                                    : r
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`room-rate-${room.room_number}`}>Rate per Night (₹)</Label>
+                          <Input
+                            id={`room-rate-${room.room_number}`}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={room.customPrice !== undefined ? room.customPrice : ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '' || /^\d+$/.test(value)) {
+                                const newPrice = value === '' ? '' : Number(value);
+                                setSelectedRooms(prev => 
+                                  prev.map(r => 
+                                    r._id === room._id 
+                                      ? { ...r, customPrice: newPrice }
+                                      : r
+                                  )
                                 );
-                                console.log('Updated selectedRooms:', updated);
-                                return updated;
-                              });
-                            }
-                          }}
-                          placeholder="Enter rate per night"
-                          className="w-full"
-                        />
+                              }
+                            }}
+                            placeholder="Enter rate per night"
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 mt-6">
+                            <Checkbox
+                              id={`extraBed-${room._id}`}
+                              checked={room.extraBed || false}
+                              onChange={(e) => {
+                                setSelectedRooms(prev => 
+                                  prev.map(r => 
+                                    r._id === room._id 
+                                      ? { ...r, extraBed: e.target.checked }
+                                      : r
+                                  )
+                                );
+                              }}
+                            />
+                            <Label htmlFor={`extraBed-${room._id}`}>Extra Bed (₹{formData.extraBedCharge}/day)</Label>
+                          </div>
+                          {room.extraBed && (
+                            <div className="bg-yellow-50 p-2 rounded border text-sm">
+                              <div className="flex justify-between">
+                                <span>Extra bed cost:</span>
+                                <span>₹{(Number(formData.extraBedCharge || 0) * (formData.days || 1)).toLocaleString()}</span>
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                ₹{Number(formData.extraBedCharge || 0)} × {formData.days || 1} day(s)
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -2279,26 +2297,57 @@ const App = () => {
               />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>Tax Breakdown</Label>
+              <Label>Rate Breakdown</Label>
               <div className="bg-gray-50 p-3 rounded border">
                 <div className="text-sm space-y-1">
-                  <div className="flex justify-between">
-                    <span>Taxable Amount:</span>
-                    <span>₹{Number(formData.rate || 0).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>CGST ({formData.cgstRate}%):</span>
-                    <span>₹{(Number(formData.rate || 0) * (formData.cgstRate / 100)).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>SGST ({formData.sgstRate}%):</span>
-                    <span>₹{(Number(formData.rate || 0) * (formData.sgstRate / 100)).toFixed(2)}</span>
-                  </div>
-                  <hr className="my-1" />
-                  <div className="flex justify-between font-semibold">
-                    <span>Total with Tax:</span>
-                    <span>₹{(Number(formData.rate || 0) * (1 + (formData.cgstRate + formData.sgstRate) / 100)).toFixed(2)}</span>
-                  </div>
+                  {(() => {
+                    const roomRate = selectedRooms.reduce((sum, room) => {
+                      const rate = room.customPrice !== undefined && room.customPrice !== '' && room.customPrice !== null
+                        ? Number(room.customPrice) 
+                        : (room.price || 0);
+                      return sum + rate;
+                    }, 0) * (formData.days || 1);
+                    const extraBedTotal = selectedRooms.reduce((sum, room) => {
+                      return sum + (room.extraBed ? (formData.extraBedCharge || 0) * (formData.days || 1) : 0);
+                    }, 0);
+                    const subtotal = roomRate + extraBedTotal;
+                    const cgstAmount = subtotal * (Number(formData.cgstRate || 0) / 100);
+                    const sgstAmount = subtotal * (Number(formData.sgstRate || 0) / 100);
+                    const totalWithTax = subtotal + cgstAmount + sgstAmount;
+                    
+                    return (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Room Cost ({formData.days} days):</span>
+                          <span>₹{roomRate.toFixed(2)}</span>
+                        </div>
+                        {extraBedTotal > 0 && (
+                          <div className="flex justify-between">
+                            <span>Extra Beds ({selectedRooms.filter(r => r.extraBed).length} beds × {formData.days} days × ₹{formData.extraBedCharge || 0}):</span>
+                            <span>₹{extraBedTotal.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <hr className="my-1" />
+                        <div className="flex justify-between font-medium">
+                          <span>Subtotal:</span>
+                          <span>₹{subtotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>CGST ({Number(formData.cgstRate || 0)}%):</span>
+                          <span>₹{cgstAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>SGST ({Number(formData.sgstRate || 0)}%):</span>
+                          <span>₹{sgstAmount.toFixed(2)}</span>
+                        </div>
+                        <hr className="my-1" />
+                        <div className="flex justify-between font-semibold">
+                          <span>Total with Tax:</span>
+                          <span>₹{totalWithTax.toFixed(2)}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
