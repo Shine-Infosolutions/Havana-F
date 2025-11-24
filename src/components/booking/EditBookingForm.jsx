@@ -521,7 +521,7 @@ const EditBookingForm = () => {
             if (roomRate) {
               roomData.customPrice = roomRate.customRate;
               roomData.extraBed = Boolean(roomRate.extraBed);
-              roomData.extraBedStartDate = roomRate.extraBedStartDate || (roomRate.extraBed ? editBooking.checkInDate : null);
+              roomData.extraBedStartDate = roomRate.extraBedStartDate || formData.checkInDate;
             }
           }
           
@@ -531,14 +531,8 @@ const EditBookingForm = () => {
                                      editBooking.extraBedRooms.includes(room.room_number);
             if (isInExtraBedRooms) {
               roomData.extraBed = true;
-              roomData.extraBedStartDate = roomData.extraBedStartDate || editBooking.checkInDate;
+              roomData.extraBedStartDate = formData.checkInDate;
             }
-          }
-          
-          // Fallback for legacy bookings without roomRates
-          if (roomData.extraBed === undefined && editBooking?.extraBed) {
-            roomData.extraBed = true;
-            roomData.extraBedStartDate = editBooking.checkInDate;
           }
           
           // Default to false if still undefined
