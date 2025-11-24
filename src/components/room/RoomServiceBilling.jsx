@@ -22,32 +22,46 @@ const RoomServiceBilling = () => {
     const navGrcNo = location.state?.grcNo;
     const roomData = localStorage.getItem('selectedRoomService');
     
+    let currentGrcNo = null;
     if (navGrcNo) {
+      currentGrcNo = navGrcNo;
       setGrcNo(navGrcNo);
     } else if (roomData) {
       const parsed = JSON.parse(roomData);
-      setGrcNo(parsed.booking?.grcNo);
+      currentGrcNo = parsed.booking?.grcNo;
+      setGrcNo(currentGrcNo);
     }
     
-    fetchRoomServiceOrders();
-  }, [location.state, grcNo]);
+    // Fetch orders with the current GRC number
+    fetchRoomServiceOrders(currentGrcNo);
+  }, [location.state]);
 
-  const fetchRoomServiceOrders = async () => {
+  // Separate useEffect to refetch when grcNo changes
+  useEffect(() => {
+    if (grcNo) {
+      fetchRoomServiceOrders(grcNo);
+    }
+  }, [grcNo]);
+
+  const fetchRoomServiceOrders = async (filterGrcNo = null) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/room-service/all', {
+      const currentGrcNo = filterGrcNo || grcNo;
+      
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      if (currentGrcNo) {
+        queryParams.append('grcNo', currentGrcNo);
+      }
+      
+      const response = await axios.get(`/api/room-service/all?${queryParams.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      let roomOrders = response.data.orders || [];
-      
-      if (grcNo) {
-        roomOrders = roomOrders.filter(order => order.grcNo === grcNo);
-      }
-      
+      const roomOrders = response.data.orders || [];
       setOrders(roomOrders);
     } catch (error) {
-
+      console.error('Error fetching room service orders:', error);
       setOrders([]);
     }
   };

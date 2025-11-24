@@ -32,6 +32,8 @@ const Dashboard = () => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
+
+
   const [dashboardCards, setDashboardCards] = useState([]);
   const [allServiceData, setAllServiceData] = useState({
     laundry: [],
@@ -73,6 +75,10 @@ const Dashboard = () => {
     }
   };
 
+
+
+
+
   const fetchAllServiceData = async () => {
     const token = localStorage.getItem("token");
     const headers = { Authorization: `Bearer ${token}` };
@@ -104,9 +110,51 @@ const Dashboard = () => {
     }
   };
 
+  const calculateTrends = () => {
+    const now = new Date();
+    const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const currentWeekBookings = bookings.filter(b => new Date(b.createdAt) >= lastWeek);
+    const previousWeekBookings = bookings.filter(b => {
+      const date = new Date(b.createdAt);
+      return date >= new Date(lastWeek.getTime() - 7 * 24 * 60 * 60 * 1000) && date < lastWeek;
+    });
+    
+    const currentRevenue = currentWeekBookings.reduce((sum, b) => {
+      const taxableAmount = Number(b.taxableAmount) || 0;
+      const cgstAmount = Number(b.cgstAmount) || 0;
+      const sgstAmount = Number(b.sgstAmount) || 0;
+      const bookingTotal = taxableAmount + cgstAmount + sgstAmount;
+      if (bookingTotal > 1000000 || bookingTotal < 0) return sum;
+      return sum + bookingTotal;
+    }, 0);
+    const previousRevenue = previousWeekBookings.reduce((sum, b) => {
+      const taxableAmount = Number(b.taxableAmount) || 0;
+      const cgstAmount = Number(b.cgstAmount) || 0;
+      const sgstAmount = Number(b.sgstAmount) || 0;
+      const bookingTotal = taxableAmount + cgstAmount + sgstAmount;
+      if (bookingTotal > 1000000 || bookingTotal < 0) return sum;
+      return sum + bookingTotal;
+    }, 0);
+    
+    const revenueTrend = previousRevenue > 0 ? ((currentRevenue - previousRevenue) / previousRevenue * 100) : 0;
+    const bookingsTrend = previousWeekBookings.length > 0 ? ((currentWeekBookings.length - previousWeekBookings.length) / previousWeekBookings.length * 100) : 0;
+    
+    return { revenueTrend, bookingsTrend };
+  };
+
   const updateDashboardCards = () => {
     const availableRooms = rooms.filter(room => room.status === 'available').length;
-    const roomRevenue = bookings.reduce((total, booking) => total + (booking.rate || 0), 0);
+    const totalBookingRevenue = bookings.reduce((total, booking) => {
+      const taxableAmount = Number(booking.taxableAmount) || 0;
+      const cgstAmount = Number(booking.cgstAmount) || 0;
+      const sgstAmount = Number(booking.sgstAmount) || 0;
+      const bookingTotal = taxableAmount + cgstAmount + sgstAmount;
+      // Skip invalid amounts (too large or negative)
+      if (bookingTotal > 1000000 || bookingTotal < 0) return total;
+      return total + bookingTotal;
+    }, 0);
+    const { revenueTrend, bookingsTrend } = calculateTrends();
     
     const cards = [
       {
@@ -115,8 +163,8 @@ const Dashboard = () => {
         value: bookings.length.toString(),
         icon: "Calendar",
         color: "bg-primary",
-        trend: "+0%",
-        trendUp: true,
+        trend: `${bookingsTrend >= 0 ? '+' : ''}${bookingsTrend.toFixed(1)}%`,
+        trendUp: bookingsTrend >= 0,
       },
       {
         id: "rooms",
@@ -129,12 +177,12 @@ const Dashboard = () => {
       },
       {
         id: "revenue",
-        title: "Room Revenue",
-        value: `₹${roomRevenue.toLocaleString()}`,
+        title: "Booking Revenue",
+        value: `₹${totalBookingRevenue.toLocaleString()}`,
         icon: "FaIndianRupeeSign",
         color: "bg-primary",
-        trend: "+0%",
-        trendUp: true,
+        trend: `${revenueTrend >= 0 ? '+' : ''}${revenueTrend.toFixed(1)}%`,
+        trendUp: revenueTrend >= 0,
       },
       {
         id: "occupancy",
