@@ -35,14 +35,11 @@ const RoomServiceBilling = () => {
   const fetchRoomServiceOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/restaurant-orders/all', {
+      const response = await axios.get('/api/room-service/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Filter room service orders by booking ID if available
-      let roomOrders = response.data.filter(order => 
-        order.tableNo && order.tableNo.startsWith('R')
-      );
+      let roomOrders = response.data.orders || [];
       
       if (grcNo) {
         roomOrders = roomOrders.filter(order => order.grcNo === grcNo);
@@ -50,7 +47,7 @@ const RoomServiceBilling = () => {
       
       setOrders(roomOrders);
     } catch (error) {
-      console.error('Error fetching room service orders:', error);
+
       setOrders([]);
     }
   };
@@ -64,10 +61,10 @@ const RoomServiceBilling = () => {
       // Create bill
       const billData = {
         orderId: showPayment._id,
-        tableNo: showPayment.tableNo,
-        subtotal: showPayment.amount,
-        tax: Math.round(showPayment.amount * 0.18 * 100) / 100,
-        totalAmount: Math.round(showPayment.amount * 1.18 * 100) / 100,
+        tableNo: showPayment.roomNumber || showPayment.tableNo,
+        subtotal: showPayment.subtotal || showPayment.amount,
+        tax: 0,
+        totalAmount: showPayment.totalAmount || showPayment.subtotal || showPayment.amount,
         paymentMethod: paymentData.paymentMethod,
         billNumber: `RS-${Date.now().toString().slice(-6)}`,
         cashierId: user?._id || 'default'
@@ -78,8 +75,8 @@ const RoomServiceBilling = () => {
       });
       
       // Update order status to paid
-      await axios.patch(`/api/restaurant-orders/${showPayment._id}/status`, {
-        status: 'paid'
+      await axios.patch(`/api/room-service/${showPayment._id}/payment`, {
+        paymentStatus: 'paid'
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -88,7 +85,7 @@ const RoomServiceBilling = () => {
       setShowPayment(null);
       fetchRoomServiceOrders();
     } catch (error) {
-      console.error('Error processing payment:', error);
+
       alert('Failed to process payment');
     }
   };
@@ -133,8 +130,8 @@ const RoomServiceBilling = () => {
               <tbody>
                 {orders.map((order, index) => (
                   <tr key={order._id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-3 font-mono">{order._id.slice(-6)}</td>
-                    <td className="px-4 py-3">{order.tableNo}</td>
+                    <td className="px-4 py-3 font-mono">{order.orderNumber || order._id.slice(-6)}</td>
+                    <td className="px-4 py-3">{order.roomNumber || order.tableNo}</td>
                     <td className="px-4 py-3">{order.guestName || 'Guest'}</td>
                     <td className="px-4 py-3">
                       <button
@@ -144,7 +141,7 @@ const RoomServiceBilling = () => {
                         View Items ({order.items?.length || 0})
                       </button>
                     </td>
-                    <td className="px-4 py-3 font-semibold">₹{order.amount}</td>
+                    <td className="px-4 py-3 font-semibold">₹{order.totalAmount || order.amount}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded text-xs ${
                         order.status === 'paid' ? 'bg-green-100 text-green-800' :
@@ -203,7 +200,7 @@ const RoomServiceBilling = () => {
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-xl font-bold">Order Items</h3>
-                  <p className="text-sm text-gray-600">Order #{showItems._id.slice(-6)} - {showItems.tableNo}</p>
+                  <p className="text-sm text-gray-600">Order #{showItems.orderNumber || showItems._id.slice(-6)} - {showItems.roomNumber || showItems.tableNo}</p>
                 </div>
                 <button
                   onClick={() => setShowItems(null)}
@@ -225,8 +222,8 @@ const RoomServiceBilling = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-semibold">₹{item.price} × {item.quantity}</div>
-                      <div className="text-sm text-gray-600">₹{item.price * item.quantity}</div>
+                      <div className="font-semibold">₹{item.unitPrice || item.price} × {item.quantity}</div>
+                      <div className="text-sm text-gray-600">₹{item.totalPrice || (item.unitPrice || item.price) * item.quantity}</div>
                     </div>
                   </div>
                 ))}
@@ -235,7 +232,7 @@ const RoomServiceBilling = () => {
               <div className="mt-6 pt-4 border-t">
                 <div className="flex justify-between items-center font-bold text-lg">
                   <span>Total Amount:</span>
-                  <span>₹{showItems.amount}</span>
+                  <span>₹{showItems.totalAmount || showItems.amount}</span>
                 </div>
               </div>
             </div>
@@ -256,10 +253,10 @@ const RoomServiceBilling = () => {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex justify-between items-center">
                   <span>Total Amount:</span>
-                  <span className="font-bold text-lg">₹{Math.round(showPayment.amount * 1.18)}</span>
+                  <span className="font-bold text-lg">₹{showPayment.totalAmount || showPayment.subtotal || showPayment.amount}</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  Subtotal: ₹{showPayment.amount} + Tax (18%): ₹{Math.round(showPayment.amount * 0.18)}
+                  Total Amount: ₹{showPayment.totalAmount || showPayment.subtotal || showPayment.amount}
                 </div>
               </div>
 

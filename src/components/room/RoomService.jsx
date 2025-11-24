@@ -9,24 +9,26 @@ const RoomService = () => {
   const [availableItems, setAvailableItems] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showCart, setShowCart] = useState(false);
+
 
 
 
   useEffect(() => {
     const storedRoomData = localStorage.getItem('selectedRoomService');
-    console.log('RoomService mounted, localStorage data:', storedRoomData);
+
     
     if (storedRoomData) {
       try {
         const parsedData = JSON.parse(storedRoomData);
-        console.log('Parsed room data:', parsedData);
+
         setRoomData(parsedData);
       } catch (error) {
-        console.error('Error parsing room data:', error);
+
         navigate('/easy-dashboard');
       }
     } else {
-      console.log('No room data found, redirecting...');
+
       setTimeout(() => navigate('/easy-dashboard'), 100);
     }
     fetchItems();
@@ -35,36 +37,33 @@ const RoomService = () => {
   const fetchItems = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('Fetching items from:', `${import.meta.env.VITE_API_BASE_URL}/api/inventory/items`);
+
       
       // Fetch inventory items
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/inventory/items`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      console.log('Response status:', res.status);
+
       
       if (res.ok) {
         const response = await res.json();
-        console.log('Raw inventory response:', response);
         
         const inventoryItems = response.items || response || [];
         const formattedItems = (Array.isArray(inventoryItems) ? inventoryItems : []).map(item => ({
           ...item,
           category: item.category || 'Restaurant',
           name: item.itemName || item.name,
-          price: item.sellingPrice || item.price || 0,
-          stock: item.currentStock || 0,
+          price: item.pricePerUnit || item.sellingPrice || item.salePrice || item.price || item.unitPrice || item.rate || item.cost || item.amount || 0,
+          stock: item.currentStock || item.stock || item.quantity || 0,
           id: item._id
         }));
-        
-        console.log('Formatted items:', formattedItems);
         setAvailableItems(formattedItems);
       } else {
-        console.error('Failed to fetch items:', res.status, res.statusText);
+
       }
     } catch (error) {
-      console.error('Error fetching inventory items:', error);
+
     }
   };
 
@@ -75,28 +74,62 @@ const RoomService = () => {
     }
     
     const totalPrice = quantity * item.price;
-    setOrderItems([...orderItems, {
-      itemName: item.name,
-      quantity,
-      unitPrice: item.price,
-      totalPrice,
-      category: item.category,
-      specialInstructions: '',
-      itemId: item.id,
-      stock: item.stock
-    }]);
+    const existingItem = orderItems.find(oi => oi.itemId === item.id);
+    
+    if (existingItem) {
+      setOrderItems(orderItems.map(oi => 
+        oi.itemId === item.id
+          ? {...oi, quantity: oi.quantity + quantity, totalPrice: (oi.quantity + quantity) * oi.unitPrice}
+          : oi
+      ));
+    } else {
+      setOrderItems([...orderItems, {
+        itemName: item.name,
+        quantity,
+        unitPrice: item.price,
+        totalPrice,
+        category: item.category,
+        specialInstructions: '',
+        itemId: item.id,
+        stock: item.stock
+      }]);
+    }
+  };
+
+
+
+  // Fix cart modal update function name conflict
+  const updateCartItemQuantity = (index, newQuantity) => {
+    if (newQuantity <= 0) {
+      removeItem(index);
+      return;
+    }
+    
+    const item = orderItems[index];
+    if (newQuantity > item.stock) {
+      alert(`Cannot exceed available stock of ${item.stock}`);
+      return;
+    }
+    
+    const updatedItems = [...orderItems];
+    updatedItems[index] = {
+      ...item,
+      quantity: newQuantity,
+      totalPrice: newQuantity * item.unitPrice
+    };
+    setOrderItems(updatedItems);
   };
 
   const removeItem = (index) => {
     setOrderItems(orderItems.filter((_, i) => i !== index));
   };
 
+
+
   const calculateTotals = () => {
     const subtotal = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    const tax = subtotal * 0.18;
-    const serviceCharge = subtotal * 0.10;
-    const totalAmount = subtotal + tax + serviceCharge;
-    return { subtotal, tax, serviceCharge, totalAmount };
+    const totalAmount = subtotal;
+    return { subtotal, totalAmount };
   };
 
   const handleKOTEntry = async () => {
@@ -110,7 +143,7 @@ const RoomService = () => {
       
       // Deduct stock for each item
       for (const item of orderItems) {
-        console.log(`Updating stock for item ${item.itemId}, reducing by ${item.quantity}`);
+
         
         const stockResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/inventory/items/${item.itemId}/stock`, {
           method: 'PUT',
@@ -119,7 +152,7 @@ const RoomService = () => {
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            quantity: -item.quantity,
+            quantity: item.quantity,
             type: 'OUT',
             reason: `Room Service - Room ${roomData.room_number}`,
             notes: `Order by ${roomData.booking?.name || 'Guest'}`
@@ -127,52 +160,41 @@ const RoomService = () => {
         });
         
         if (stockResponse.ok) {
-          console.log(`Stock updated successfully for ${item.itemName}`);
+
         } else {
-          console.error(`Failed to update stock for ${item.itemName}:`, stockResponse.status);
+
         }
       }
       
       const restaurantItems = orderItems.filter(item => item.category === 'Restaurant');
       
-      // Create restaurant order for restaurant items
-      if (restaurantItems.length > 0) {
-        const restaurantOrderData = {
-          staffName: 'Room Service',
-          phoneNumber: roomData.booking?.mobileNo || '',
-          tableNo: `R${roomData.room_number.toString().replace(/\D/g, '').padStart(3, '0')}`,
-          items: restaurantItems.map(item => ({
-            itemId: item.itemId,
-            quantity: item.quantity,
-            price: item.unitPrice
-          })),
-          notes: `Room Service - ${roomData.booking?.name || 'Guest'}`,
-          amount: restaurantItems.reduce((sum, item) => sum + item.totalPrice, 0),
-          discount: 0,
-          isMembership: false,
-          isLoyalty: false,
-          bookingId: roomData.booking?._id,
-          grcNo: roomData.booking?.grcNo,
-          roomNumber: roomData.room_number,
-          guestName: roomData.booking?.name,
-          guestPhone: roomData.booking?.mobileNo
-        };
-        
-        await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/restaurant-orders/create`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(restaurantOrderData)
-        });
-      }
+      // Create room service order
+      const roomServiceOrderData = {
+        serviceType: 'Restaurant',
+        roomNumber: roomData.room_number,
+        guestName: roomData.booking?.name || 'Guest',
+        grcNo: roomData.booking?.grcNo,
+        bookingId: roomData.booking?._id,
+        items: orderItems,
+        notes: `Room Service Order - ${roomData.booking?.name || 'Guest'}`,
+        staffName: 'Room Service',
+        phoneNumber: roomData.booking?.mobileNo || ''
+      };
+      
+      await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/room-service/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(roomServiceOrderData)
+      });
       
       alert('Order created successfully! Stock updated.');
       setOrderItems([]);
       fetchItems(); // Refresh items to show updated stock
     } catch (error) {
-      console.error('Error creating order:', error);
+
       alert('Error creating order');
     }
   };
@@ -340,31 +362,172 @@ const RoomService = () => {
             <div className="col-span-full text-center py-8 text-gray-500">
               No items found
             </div>
-          ) : filteredItems.map((item, index) => (
-            <div key={index} className={`bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow ${item.stock === 0 ? 'opacity-50' : ''}`}>
-              <h5 className="text-lg font-semibold mb-2" style={{color: '#8B4513'}}>{item.name}</h5>
-              <p className="text-sm mb-1" style={{color: '#B8860B'}}>{item.category}</p>
-              <p className="text-sm mb-2" style={{color: item.stock > 0 ? '#22c55e' : '#ef4444'}}>Stock: {item.stock}</p>
-              <p className="text-2xl font-bold mb-4" style={{color: '#8B4513'}}>₹{item.price}</p>
-              <button
-                onClick={() => addItemToOrder(item, 1)}
-                disabled={item.stock === 0}
-                className="w-full py-3 rounded-lg font-medium text-white transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                style={{backgroundColor: item.stock > 0 ? '#D4AF37' : '#9ca3af'}}
-                onMouseEnter={(e) => item.stock > 0 && (e.target.style.backgroundColor = '#B8860B')}
-                onMouseLeave={(e) => item.stock > 0 && (e.target.style.backgroundColor = '#D4AF37')}
-              >
-                {item.stock > 0 ? 'Add to Order' : 'Out of Stock'}
-              </button>
-            </div>
-          ))}
+          ) : filteredItems.map((item, index) => {
+            const isInOrder = orderItems.some(orderItem => orderItem.itemId === item.id);
+            const orderItem = orderItems.find(orderItem => orderItem.itemId === item.id);
+            
+            return (
+              <div key={index} className={`bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow ${item.stock === 0 ? 'opacity-50' : ''}`}>
+                <h5 className="text-lg font-semibold mb-2" style={{color: '#8B4513'}}>{item.name}</h5>
+                <p className="text-sm mb-1" style={{color: '#B8860B'}}>{item.category}</p>
+                <p className="text-sm mb-2" style={{color: item.stock > 0 ? '#22c55e' : '#ef4444'}}>Stock: {item.stock}</p>
+                <p className="text-2xl font-bold mb-4" style={{color: '#8B4513'}}>₹{item.price}</p>
+                
+                {item.stock > 0 ? (
+                  isInOrder ? (
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            const updatedItems = orderItems.map(oi => 
+                              oi.itemId === item.id && oi.quantity > 1
+                                ? {...oi, quantity: oi.quantity - 1, totalPrice: (oi.quantity - 1) * oi.unitPrice}
+                                : oi
+                            ).filter(oi => oi.quantity > 0);
+                            setOrderItems(updatedItems);
+                          }}
+                          className="w-8 h-8 rounded-full border-2 flex items-center justify-center hover:bg-gray-100"
+                          style={{borderColor: '#D4AF37', color: '#B8860B'}}
+                        >
+                          -
+                        </button>
+                        <span className="w-8 text-center font-semibold" style={{color: '#8B4513'}}>
+                          {orderItem?.quantity || 0}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (orderItem && orderItem.quantity < item.stock) {
+                              const updatedItems = orderItems.map(oi => 
+                                oi.itemId === item.id
+                                  ? {...oi, quantity: oi.quantity + 1, totalPrice: (oi.quantity + 1) * oi.unitPrice}
+                                  : oi
+                              );
+                              setOrderItems(updatedItems);
+                            } else {
+                              alert(`Cannot exceed available stock of ${item.stock}`);
+                            }
+                          }}
+                          className="w-8 h-8 rounded-full border-2 flex items-center justify-center hover:bg-gray-100"
+                          style={{borderColor: '#D4AF37', color: '#B8860B'}}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => setOrderItems(orderItems.filter(oi => oi.itemId !== item.id))}
+                        className="text-red-500 hover:text-red-700 text-sm px-2 py-1 rounded"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => addItemToOrder(item, 1)}
+                      className="w-full py-3 rounded-lg font-medium text-white transition-colors"
+                      style={{backgroundColor: '#D4AF37'}}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#B8860B'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#D4AF37'}
+                    >
+                      Add to Order
+                    </button>
+                  )
+                ) : (
+                  <button
+                    disabled
+                    className="w-full py-3 rounded-lg font-medium text-white bg-gray-400 cursor-not-allowed"
+                  >
+                    Out of Stock
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
+
+        {/* Cart Modal */}
+        {showCart && orderItems.length > 0 && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold" style={{color: '#B8860B'}}>Cart Items</h3>
+                <button onClick={() => setShowCart(false)} className="text-gray-500 hover:text-gray-700">
+                  ✕
+                </button>
+              </div>
+              
+              <div className="space-y-3 mb-4">
+                {orderItems.map((item, index) => (
+                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">{item.itemName}</span>
+                      <button
+                        onClick={() => removeItem(index)}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => updateCartItemQuantity(index, item.quantity - 1)}
+                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-200"
+                        >
+                          -
+                        </button>
+                        <span className="w-8 text-center">{item.quantity}</span>
+                        <button
+                          onClick={() => updateCartItemQuantity(index, item.quantity + 1)}
+                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-200"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        ₹{item.unitPrice} × {item.quantity} = ₹{item.totalPrice}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="border-t pt-4 mb-4">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total:</span>
+                    <span>₹{calculateTotals().totalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowCart(false)}
+                  className="flex-1 py-3 rounded-lg font-medium border transition-colors"
+                  style={{borderColor: '#D4AF37', color: '#B8860B'}}
+                >
+                  Continue Shopping
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCart(false);
+                    handleKOTEntry();
+                  }}
+                  className="flex-1 py-3 rounded-lg font-medium text-white transition-colors"
+                  style={{backgroundColor: '#D4AF37'}}
+                >
+                  Place Order
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Floating Cart Button */}
         {orderItems.length > 0 && (
           <div className="fixed bottom-6 right-6">
             <button
-              onClick={handleKOTEntry}
+              onClick={() => setShowCart(true)}
               className="flex items-center justify-center w-16 h-16 rounded-full text-white shadow-lg transition-transform hover:scale-110"
               style={{backgroundColor: '#D4AF37'}}
             >

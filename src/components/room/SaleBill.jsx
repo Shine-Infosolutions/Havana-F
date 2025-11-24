@@ -57,8 +57,8 @@ const SaleBill = () => {
             </div>
 
             <div className="mb-6 text-lg">
-              <div>Order: #{order._id.slice(-6)}</div>
-              <div>Room: {order.tableNo}</div>
+              <div>Order: #{order.orderNumber || order._id.slice(-6)}</div>
+              <div>Room: {order.roomNumber || order.tableNo}</div>
               <div>Guest: {order.guestName || 'Guest'}</div>
               <div>Date: {new Date().toLocaleDateString()}</div>
               <div>Time: {new Date().toLocaleTimeString()}</div>
@@ -71,7 +71,7 @@ const SaleBill = () => {
                 <div key={index} className="mb-3">
                   <div className="flex justify-between text-lg">
                     <span>{item.quantity}x {item.itemName || item.name}</span>
-                    <span>₹{(item.price * item.quantity).toFixed(2)}</span>
+                    <span>₹{(item.totalPrice || (item.price * item.quantity) || (item.unitPrice * item.quantity)).toFixed(2)}</span>
                   </div>
                 </div>
               ))}
@@ -82,15 +82,7 @@ const SaleBill = () => {
             <div className="my-6 space-y-2">
               <div className="flex justify-between text-lg">
                 <span>Subtotal:</span>
-                <span>₹{order.amount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg">
-                <span>Tax (18%):</span>
-                <span>₹{(order.amount * 0.18).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-lg">
-                <span>Service (10%):</span>
-                <span>₹{(order.amount * 0.1).toFixed(2)}</span>
+                <span>₹{(order.subtotal || order.amount).toFixed(2)}</span>
               </div>
             </div>
 
@@ -98,7 +90,7 @@ const SaleBill = () => {
             
             <div className="flex justify-between font-bold text-xl my-4">
               <span>TOTAL:</span>
-              <span>₹{(order.amount * 1.28).toFixed(2)}</span>
+              <span>₹{(order.totalAmount || order.subtotal || order.amount).toFixed(2)}</span>
             </div>
 
             <div className="text-lg">================================</div>

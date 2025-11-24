@@ -38,7 +38,7 @@ const BillLookup = () => {
       setGstData(activeGst);
       setHotelGstNumber(activeGstNumber);
     } catch (error) {
-      console.error('Error fetching GST data:', error);
+      // Error fetching GST data
     }
   };
 
@@ -48,12 +48,12 @@ const BillLookup = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/restaurant-orders/all', {
+      const response = await axios.get('/api/room-service/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const roomOrders = response.data.filter(order => 
-        order.tableNo && order.tableNo.startsWith('R') && order.grcNo === grcNumber
+      const roomOrders = (response.data.orders || []).filter(order => 
+        order.grcNo === grcNumber
       );
       
       if (roomOrders.length > 0) {
@@ -64,18 +64,18 @@ const BillLookup = () => {
           if (order.items) {
             combinedItems.push(...order.items);
           }
-          totalAmount += order.amount;
+          totalAmount += order.subtotal || order.amount || 0;
         });
         
         const consolidatedBill = {
           _id: `combined-${grcNumber}`,
           billNumber: `CB-${grcNumber}`,
           grcNo: grcNumber,
-          tableNo: roomOrders[0].tableNo,
+          tableNo: roomOrders[0].roomNumber || roomOrders[0].tableNo,
           guestName: roomOrders[0].guestName,
           items: combinedItems,
           amount: totalAmount,
-          totalAmount: Math.round(totalAmount * 1.28),
+          totalAmount: totalAmount,
           createdAt: new Date().toISOString(),
           orderCount: roomOrders.length
         };
@@ -87,7 +87,6 @@ const BillLookup = () => {
         setEditableBill(null);
       }
     } catch (error) {
-      console.error('Error fetching bills:', error);
       setBills([]);
     } finally {
       setLoading(false);
@@ -244,8 +243,8 @@ const BillLookup = () => {
                                 onChange={(e) => {
                                   const newItems = [...editableBill.items];
                                   newItems[index].quantity = parseInt(e.target.value) || 0;
-                                  const newAmount = newItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-                                  setEditableBill({...editableBill, items: newItems, amount: newAmount, totalAmount: Math.round(newAmount * 1.28)});
+                                  const newAmount = newItems.reduce((sum, i) => sum + ((i.unitPrice || i.price) * i.quantity), 0);
+                                  setEditableBill({...editableBill, items: newItems, amount: newAmount, totalAmount: newAmount});
                                 }}
                                 className="border rounded px-2 py-1 w-16 text-sm"
                               />
@@ -258,20 +257,22 @@ const BillLookup = () => {
                               <input
                                 type="number"
                                 step="0.01"
-                                value={item.price?.toFixed(2) || '0.00'}
+                                value={(item.unitPrice || item.price)?.toFixed(2) || '0.00'}
                                 onChange={(e) => {
                                   const newItems = [...editableBill.items];
-                                  newItems[index].price = parseFloat(e.target.value) || 0;
-                                  const newAmount = newItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-                                  setEditableBill({...editableBill, items: newItems, amount: newAmount, totalAmount: Math.round(newAmount * 1.28)});
+                                  const newPrice = parseFloat(e.target.value) || 0;
+                                  newItems[index].unitPrice = newPrice;
+                                  newItems[index].price = newPrice;
+                                  const newAmount = newItems.reduce((sum, i) => sum + ((i.unitPrice || i.price) * i.quantity), 0);
+                                  setEditableBill({...editableBill, items: newItems, amount: newAmount, totalAmount: newAmount});
                                 }}
                                 className="border rounded px-2 py-1 w-20 text-sm"
                               />
                             ) : (
-                              `₹${item.price?.toFixed(2) || '0.00'}`
+                              `₹${(item.unitPrice || item.price)?.toFixed(2) || '0.00'}`
                             )}
                           </td>
-                          <td className="px-4 py-3 font-semibold">₹{(item.price * item.quantity).toFixed(2)}</td>
+                          <td className="px-4 py-3 font-semibold">₹{(item.totalPrice || (item.unitPrice || item.price) * item.quantity).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -281,22 +282,6 @@ const BillLookup = () => {
 
               <div className="border-t pt-6">
                 <div className="max-w-md ml-auto space-y-3">
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">Subtotal:</span>
-                    <span>₹{editableBill?.amount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">CGST ({gstData?.cgst || 9}%):</span>
-                    <span>₹{(editableBill?.amount * ((gstData?.cgst || 9) / 100)).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">SGST ({gstData?.sgst || 9}%):</span>
-                    <span>₹{(editableBill?.amount * ((gstData?.sgst || 9) / 100)).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium">Service Charge (10%):</span>
-                    <span>₹{(editableBill?.amount * 0.1).toFixed(2)}</span>
-                  </div>
                   <div className="flex justify-between py-3 border-t-2 text-xl font-bold" style={{color: 'var(--color-primary)'}}>
                     <span>TOTAL:</span>
                     <span>₹{editableBill?.totalAmount.toFixed(2)}</span>

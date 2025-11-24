@@ -110,7 +110,6 @@ export default function Invoice() {
       } else {
         // This is a checkout order, use the existing API
         const response = await axios.get(`/api/checkout/${checkoutId}/invoice`, { headers });
-        console.log('Invoice API Response:', response.data);
         
         // Use the invoice data directly from API response
         const mappedData = response.data.invoice;
@@ -136,7 +135,6 @@ export default function Invoice() {
           }
         }
         
-        console.log('Mapped Invoice Data:', mappedData);
         setInvoiceData(mappedData);
         
         // Fetch GST details if GST number exists
@@ -146,7 +144,7 @@ export default function Invoice() {
       }
       
     } catch (error) {
-      console.error('Invoice API Error:', error);
+      // Handle error silently
     } finally {
       setLoading(false);
     }
@@ -176,7 +174,7 @@ export default function Invoice() {
         }));
       }
     } catch (error) {
-      console.log('GST details not found, using manual entry');
+      // GST details not found, continue with manual entry
     }
   };
 
@@ -228,7 +226,6 @@ export default function Invoice() {
       setIsEditing(false);
       alert('Invoice details saved successfully!');
     } catch (error) {
-      console.error('Error saving invoice details:', error);
       alert('Failed to save invoice details');
     } finally {
       setSaving(false);
@@ -237,8 +234,6 @@ export default function Invoice() {
 
   useEffect(() => {
     if (bookingData) {
-      console.log('Booking Data from Navigation:', bookingData);
-      
       // Use the checkout ID from navigation state or create one for restaurant orders
       const checkoutId = location.state?.checkoutId || bookingData._id || bookingData.id || `REST-${Date.now()}`;
       if (checkoutId) {
@@ -266,10 +261,8 @@ export default function Invoice() {
     const cgst = invoiceData.payment?.cgst || 0;
     const otherChargesTotal = invoiceData.otherCharges?.reduce((sum, charge) => sum + (charge.amount || 0), 0) || 0;
     const exactTotal = baseAmount + sgst + cgst + otherChargesTotal;
-    console.log('Debug roundoff:', { baseAmount, sgst, cgst, otherChargesTotal, exactTotal });
     const roundedTotal = Math.round(exactTotal);
     const roundOff = Math.round((roundedTotal - exactTotal) * 100) / 100;
-    console.log('Roundoff result:', { exactTotal, roundedTotal, roundOff });
     return roundOff;
   };
 
@@ -640,6 +633,12 @@ export default function Invoice() {
                       <td className="p-0.5 text-right text-xs font-medium">CGST:</td>
                       <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.cgst?.toFixed(2) || '0.00'}</td>
                     </tr>
+                    {invoiceData.otherCharges?.filter(charge => charge.particulars === 'ROOM SERVICE').map((charge, index) => (
+                      <tr key={index}>
+                        <td className="p-0.5 text-right text-xs font-medium">Room Service:</td>
+                        <td className="p-0.5 border-l border-black text-right text-xs">₹{charge.amount?.toFixed(2) || '0.00'}</td>
+                      </tr>
+                    ))}
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">Round Off:</td>
                       <td className="p-0.5 border-l border-black text-right text-xs">{calculateRoundOff() >= 0 ? '+' : ''}{calculateRoundOff().toFixed(2)}</td>
