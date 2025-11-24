@@ -357,7 +357,7 @@ export const AppProvider = ({ children }) => {
       return categoryMatch && isAvailable && notReserved;
     });
     
-    console.log(`Rooms for category ${formData.categoryId}:`, filtered);
+
     return filtered;
   }, [allRooms, formData.categoryId]);
 
@@ -388,8 +388,7 @@ export const AppProvider = ({ children }) => {
         axios.get(`${BASE_URL}/api/rooms/all`),
       ]);
 
-      console.log('Categories response:', catRes.data);
-      console.log('Rooms response:', roomRes.data);
+
 
       const categories = Array.isArray(catRes.data) ? catRes.data : [];
       const rooms = Array.isArray(roomRes.data) ? roomRes.data : [];
@@ -493,7 +492,7 @@ export const AppProvider = ({ children }) => {
     if (selectedRoomData) {
       try {
         const roomData = JSON.parse(selectedRoomData);
-        console.log('Pre-selected room data found:', roomData);
+
         
         // Auto-fill form with room data
         setFormData(prev => ({
@@ -652,7 +651,7 @@ const App = () => {
         if (preSelectedRoom) {
           setSelectedRooms([preSelectedRoom]);
           setHasCheckedAvailability(true);
-          console.log('Pre-selected room set:', preSelectedRoom);
+
         }
         
         // Clear the localStorage after using it
@@ -1030,7 +1029,7 @@ const App = () => {
       setAllCategories(updatedCategories);
 
       setAllRooms(trulyAvailableRooms);
-      console.log('Available rooms:', trulyAvailableRooms);
+
 
       if (trulyAvailableRooms.length === 0) {
         showToast("No rooms available for the selected dates.", 'error');
@@ -1202,14 +1201,18 @@ const App = () => {
       numberOfRooms: selectedRooms.length,
     };
     
-    // Add room rates as a simple array
+    // Add room rates with extra bed information
     if (selectedRooms && selectedRooms.length > 0) {
-      cleanFormData.roomRates = selectedRooms.map(room => ({
-        roomNumber: room.room_number,
-        customRate: room.customPrice !== undefined && room.customPrice !== '' && room.customPrice !== null
-          ? Number(room.customPrice) 
-          : (room.price || 0)
-      }));
+      cleanFormData.roomRates = selectedRooms.map(room => {
+        return {
+          roomNumber: room.room_number,
+          customRate: room.customPrice !== undefined && room.customPrice !== '' && room.customPrice !== null
+            ? Number(room.customPrice) 
+            : (room.price || 0),
+          extraBed: Boolean(room.extraBed)
+        };
+      });
+
     } else {
       cleanFormData.roomRates = [];
     }
@@ -1240,7 +1243,7 @@ const App = () => {
           'Content-Type': 'application/json'
         }
       });
-      console.log('Booking response:', response.data);
+
       showToast("Booking submitted successfully!", 'success');
       alert("🎉 Booking submitted successfully! You will be redirected to the booking page.");
       resetForm();
@@ -1602,16 +1605,13 @@ const App = () => {
                                 const value = e.target.value;
                                 if (value === '' || /^\d+$/.test(value)) {
                                   const newPrice = value === '' ? '' : Number(value);
-                                  console.log(`Table: Setting custom price for room ${room.room_number}: ${newPrice}`);
-                                  setSelectedRooms(prev => {
-                                    const updated = prev.map(r => 
+                                  setSelectedRooms(prev => 
+                                    prev.map(r => 
                                       r._id === room._id 
                                         ? { ...r, customPrice: newPrice }
                                         : r
-                                    );
-                                    console.log('Table: Updated selectedRooms:', updated);
-                                    return updated;
-                                  });
+                                    )
+                                  );
                                   setAllRooms(prev => 
                                     prev.map(r => 
                                       r._id === room._id 

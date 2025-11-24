@@ -508,15 +508,23 @@ const EditBookingForm = () => {
           }));
         }
         
-        // Set custom prices from booking data
+        // Set custom prices and extra bed info from booking data
         if (editBooking?.roomRates && Array.isArray(editBooking.roomRates)) {
           const updatedRooms = realSelectedRooms.map(room => {
             const roomRate = editBooking.roomRates.find(r => r.roomNumber === room.room_number.toString());
             return {
               ...room,
-              customPrice: roomRate ? roomRate.customRate : room.price
+              customPrice: roomRate ? roomRate.customRate : room.price,
+              extraBed: roomRate?.extraBed || editBooking.extraBed || false
             };
           });
+          setSelectedRooms(updatedRooms);
+        } else if (editBooking?.extraBed) {
+          // If no roomRates but booking has extraBed, apply to all rooms
+          const updatedRooms = realSelectedRooms.map(room => ({
+            ...room,
+            extraBed: true
+          }));
           setSelectedRooms(updatedRooms);
         }
       }
@@ -612,12 +620,7 @@ const EditBookingForm = () => {
         extraBed: hasExtraBed,
         extraBedCharge: totalExtraBedCharge,
         selectedRooms: selectedRooms,
-        roomGuestDetails: formData.roomGuestDetails,
-        roomRates: selectedRooms.map(room => ({
-          roomNumber: room.room_number,
-          customRate: room.customPrice !== undefined ? room.customPrice : room.price,
-          extraBed: room.extraBed || false
-        }))
+        roomGuestDetails: formData.roomGuestDetails
       };
 
       await axios.put(`/api/bookings/update/${editBooking._id}`, updateData);
@@ -1179,6 +1182,7 @@ const EditBookingForm = () => {
                               <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Action</th>
                               <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Room Number</th>
                               <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Room Name</th>
+                              <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Extra Bed</th>
                               <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>Price/Night</th>
                             </tr>
                           </thead>
@@ -1209,6 +1213,15 @@ const EditBookingForm = () => {
                                 </td>
                                 <td className="py-4 px-6 text-sm font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>{room.room_number || 'N/A'}</td>
                                 <td className="py-4 px-6 text-sm" style={{ color: 'hsl(45, 100%, 40%)' }}>{room.title || 'N/A'}</td>
+                                <td className="py-4 px-6 text-sm">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    room.extra_bed 
+                                      ? "bg-green-100 text-green-800" 
+                                      : "bg-gray-100 text-gray-600"
+                                  }`}>
+                                    {room.extra_bed ? "Yes" : "No"}
+                                  </span>
+                                </td>
                                 <td className="py-4 px-6 text-sm font-semibold" style={{ color: 'hsl(45, 100%, 20%)' }}>₹{room.price || 0}</td>
                               </tr>
                             ))}

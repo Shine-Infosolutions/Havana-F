@@ -469,19 +469,7 @@ const EasyDashboard = () => {
                     <span className="hidden sm:inline">HOSPITALITY MANAGEMENT</span>
                     <span className="sm:hidden">DASHBOARD</span>
                 </h1>
-                <button 
-                    onClick={() => {
-                        console.log('📝 Testing navigation manually...');
-                        const testData = { room_number: '101', booking: { name: 'Test Guest', grcNo: 'GRC001' } };
-                        localStorage.setItem('selectedRoomService', JSON.stringify(testData));
-                        console.log('🚀 Calling navigate function...');
-                        navigate('/room-service');
-                        console.log('✅ Navigate called successfully');
-                    }}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm"
-                >
-                    Test Room Service
-                </button>
+
             </div>
 
 

@@ -26,6 +26,7 @@ const BookingPage = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedBookingForCheckout, setSelectedBookingForCheckout] = useState(null);
+  const [showOnlyExtraBed, setShowOnlyExtraBed] = useState(false);
 
   const getAuthToken = () => localStorage.getItem("token");
 
@@ -54,6 +55,22 @@ const BookingPage = () => {
         const room = roomsData.find(r => r.room_number == b.roomNumber || r.roomNumber == b.roomNumber);
         const category = room ? categoriesData.find(c => c._id == room.categoryId || c.id == room.categoryId) : null;
         
+        // Use extraBedRooms from backend response or fallback to calculation
+        let extraBedRooms = [];
+        if (b.extraBedRooms && Array.isArray(b.extraBedRooms)) {
+          extraBedRooms = b.extraBedRooms;
+        } else {
+          // Fallback: calculate from room master data
+          const roomNumbers = b.roomNumber ? b.roomNumber.split(',').map(r => r.trim()) : [];
+          extraBedRooms = roomNumbers.filter(roomNum => {
+            const roomData = roomsData.find(r => 
+              String(r.room_number) === String(roomNum) || 
+              String(r.roomNumber) === String(roomNum)
+            );
+            return roomData?.extra_bed === true;
+          });
+        }
+        
         return {
           id: b._id || "N/A",
           grcNo: b.grcNo || "N/A",
@@ -70,6 +87,8 @@ const BookingPage = () => {
           status: b.status || "N/A",
           paymentStatus: b.paymentStatus || "Pending",
           vip: b.vip || false,
+          extraBed: b.extraBed || extraBedRooms.length > 0,
+          extraBedRooms: extraBedRooms,
           _raw: b,
         };
       });
@@ -106,10 +125,15 @@ const BookingPage = () => {
   };
 
   const filteredBookings = bookings.filter(
-    (b) =>
-      b.name.toLowerCase().includes(search.toLowerCase()) ||
-      b.roomNumber.toString().includes(search.toString()) ||
-      b.grcNo.toLowerCase().includes(search.toLowerCase())
+    (b) => {
+      const matchesSearch = b.name.toLowerCase().includes(search.toLowerCase()) ||
+        b.roomNumber.toString().includes(search.toString()) ||
+        b.grcNo.toLowerCase().includes(search.toLowerCase());
+      
+      const matchesExtraBed = showOnlyExtraBed ? b.extraBed : true;
+      
+      return matchesSearch && matchesExtraBed;
+    }
   );
 
   const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
@@ -400,6 +424,25 @@ const BookingPage = () => {
         >
           Search GRC
         </button>
+        <button
+          onClick={() => setShowOnlyExtraBed(!showOnlyExtraBed)}
+          className={`font-semibold px-4 py-3 rounded-lg shadow-md transition duration-300 text-sm sm:text-base whitespace-nowrap ${
+            showOnlyExtraBed ? 'ring-2 ring-green-500' : ''
+          }`}
+          style={{ 
+            backgroundColor: showOnlyExtraBed ? 'hsl(120, 60%, 50%)' : 'hsl(45, 43%, 58%)', 
+            color: 'white' 
+          }}
+        >
+          {showOnlyExtraBed ? 'Show All' : 'Extra Bed Only'}
+        </button>
+        <button
+          onClick={fetchData}
+          className="font-semibold px-4 py-3 rounded-lg shadow-md transition duration-300 text-sm sm:text-base whitespace-nowrap"
+          style={{ backgroundColor: 'hsl(200, 60%, 50%)', color: 'white' }}
+        >
+          Refresh
+        </button>
       </div>
 
       {error && (
@@ -461,6 +504,9 @@ const BookingPage = () => {
                     Category
                   </th>
                   <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                    Extra Bed
+                  </th>
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
                     Check In
                   </th>
                   <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
@@ -506,6 +552,19 @@ const BookingPage = () => {
                     </td>
                     <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
                       {booking.category}
+                    </td>
+                    <td className="px-2 sm:px-4 py-3 text-sm hidden lg:table-cell">
+                      {booking.extraBedRooms && booking.extraBedRooms.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {booking.extraBedRooms.map((room, idx) => (
+                            <span key={idx} className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                              {room}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 text-xs">None</span>
+                      )}
                     </td>
                     <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
                       {booking.checkIn}
@@ -651,6 +710,22 @@ const BookingPage = () => {
                 <div>
                   <span style={{ color: 'hsl(45, 100%, 40%)' }}>Category:</span>
                   <span className="ml-1 font-medium" style={{ color: 'hsl(45, 100%, 20%)' }}>{booking.category}</span>
+                </div>
+                <div>
+                  <span style={{ color: 'hsl(45, 100%, 40%)' }}>Extra Bed Rooms:</span>
+                  <div className="ml-1 mt-1">
+                    {booking.extraBedRooms && booking.extraBedRooms.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {booking.extraBedRooms.map((room, idx) => (
+                          <span key={idx} className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                            {room}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500 text-xs">None</span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <span style={{ color: 'hsl(45, 100%, 40%)' }}>Check In:</span>
