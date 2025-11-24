@@ -678,7 +678,7 @@ const App = () => {
         if (!room.extraBed) return sum;
         
         // Calculate extra bed days properly
-        const startDate = new Date(room.extraBedStartDate || formData.checkInDate);
+        const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
         const endDate = new Date(formData.checkOutDate);
         
         // If start date is same or after checkout, no extra bed charge
@@ -1221,7 +1221,8 @@ const App = () => {
           customRate: room.customPrice !== undefined && room.customPrice !== '' && room.customPrice !== null
             ? Number(room.customPrice) 
             : (room.price || 0),
-          extraBed: Boolean(room.extraBed)
+          extraBed: Boolean(room.extraBed),
+          extraBedStartDate: room.extraBed ? room.extraBedStartDate : null
         };
       });
       
@@ -2338,7 +2339,7 @@ const App = () => {
                                       ? { 
                                           ...r, 
                                           extraBed: e.target.checked,
-                                          extraBedStartDate: e.target.checked ? formData.checkInDate : null
+                                          extraBedStartDate: e.target.checked ? '' : null
                                         }
                                       : r
                                   )
@@ -2354,14 +2355,15 @@ const App = () => {
                                 <Input
                                   id={`extraBedStartDate-${room._id}`}
                                   type="date"
-                                  value={room.extraBedStartDate || formData.checkInDate}
+                                  value={room.extraBedStartDate || ''}
                                   min={formData.checkInDate}
                                   max={formData.checkOutDate}
                                   onChange={(e) => {
+                                    const newDate = e.target.value;
                                     setSelectedRooms(prev => 
                                       prev.map(r => 
                                         r._id === room._id 
-                                          ? { ...r, extraBedStartDate: e.target.value }
+                                          ? { ...r, extraBedStartDate: newDate }
                                           : r
                                       )
                                     );
@@ -2372,7 +2374,7 @@ const App = () => {
                               <div className="flex justify-between">
                                 <span>Extra bed cost:</span>
                                 <span>₹{(() => {
-                                  const startDate = new Date(room.extraBedStartDate || formData.checkInDate);
+                                  const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
                                   const endDate = new Date(formData.checkOutDate);
                                   // If start date is same or after checkout, no charge
                                   if (startDate >= endDate) return 0;
@@ -2383,7 +2385,7 @@ const App = () => {
                               </div>
                               <div className="text-xs text-gray-600">
                                 ₹{Number(formData.extraBedCharge || 0)} × {(() => {
-                                  const startDate = new Date(room.extraBedStartDate || formData.checkInDate);
+                                  const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
                                   const endDate = new Date(formData.checkOutDate);
                                   // If start date is same or after checkout, no days
                                   if (startDate >= endDate) return 0;
@@ -2515,7 +2517,7 @@ const App = () => {
                       if (!room.extraBed) return sum;
                       
                       // Calculate extra bed days properly
-                      const startDate = new Date(room.extraBedStartDate || formData.checkInDate);
+                      const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
                       const endDate = new Date(formData.checkOutDate);
                       
                       // If start date is same or after checkout, no extra bed charge

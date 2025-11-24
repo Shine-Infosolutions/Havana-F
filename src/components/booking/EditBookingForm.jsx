@@ -521,7 +521,7 @@ const EditBookingForm = () => {
             if (roomRate) {
               roomData.customPrice = roomRate.customRate;
               roomData.extraBed = Boolean(roomRate.extraBed);
-              roomData.extraBedStartDate = roomRate.extraBedStartDate || formData.checkInDate;
+              roomData.extraBedStartDate = roomRate.extraBed && roomRate.extraBedStartDate ? new Date(roomRate.extraBedStartDate).toISOString().split('T')[0] : '';
             }
           }
           
@@ -529,9 +529,9 @@ const EditBookingForm = () => {
           if (editBooking?.extraBedRooms && Array.isArray(editBooking.extraBedRooms)) {
             const isInExtraBedRooms = editBooking.extraBedRooms.includes(room.room_number.toString()) || 
                                      editBooking.extraBedRooms.includes(room.room_number);
-            if (isInExtraBedRooms) {
+            if (isInExtraBedRooms && !roomData.extraBedStartDate) {
               roomData.extraBed = true;
-              roomData.extraBedStartDate = formData.checkInDate;
+              roomData.extraBedStartDate = '';
             }
           }
           
@@ -581,7 +581,7 @@ const EditBookingForm = () => {
         if (!room.extraBed) return sum;
         
         // Calculate extra bed days properly
-        const startDate = new Date(room.extraBedStartDate || formData.checkInDate);
+        const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
         const endDate = new Date(formData.checkOutDate);
         
         // If start date is same or after checkout, no extra bed charge
@@ -1548,7 +1548,11 @@ const EditBookingForm = () => {
                                       setSelectedRooms(prev => 
                                         prev.map(r => 
                                           r._id === room._id 
-                                            ? { ...r, extraBed: e.target.checked }
+                                            ? { 
+                                                ...r, 
+                                                extraBed: e.target.checked,
+                                                extraBedStartDate: e.target.checked ? '' : null
+                                              }
                                             : r
                                         )
                                       );
@@ -1563,14 +1567,15 @@ const EditBookingForm = () => {
                                       <Input
                                         id={`extraBedStartDate-${room._id}`}
                                         type="date"
-                                        value={room.extraBedStartDate || formData.checkInDate}
+                                        value={room.extraBedStartDate || ''}
                                         min={formData.checkInDate}
                                         max={formData.checkOutDate}
                                         onChange={(e) => {
+                                          const newDate = e.target.value;
                                           setSelectedRooms(prev => 
                                             prev.map(r => 
                                               r._id === room._id 
-                                                ? { ...r, extraBedStartDate: e.target.value }
+                                                ? { ...r, extraBedStartDate: newDate }
                                                 : r
                                             )
                                           );
@@ -1581,7 +1586,7 @@ const EditBookingForm = () => {
                                     <div className="flex justify-between">
                                       <span>Extra bed cost:</span>
                                       <span>₹{(() => {
-                                        const startDate = new Date(room.extraBedStartDate || formData.checkInDate);
+                                        const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
                                         const endDate = new Date(formData.checkOutDate);
                                         // If start date is same or after checkout, no charge
                                         if (startDate >= endDate) return 0;
@@ -1592,7 +1597,7 @@ const EditBookingForm = () => {
                                     </div>
                                     <div className="text-xs text-gray-600">
                                       ₹{Number(formData.extraBedCharge || 0)} × {(() => {
-                                        const startDate = new Date(room.extraBedStartDate || formData.checkInDate);
+                                        const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
                                         const endDate = new Date(formData.checkOutDate);
                                         // If start date is same or after checkout, no days
                                         if (startDate >= endDate) return 0;
@@ -1689,7 +1694,7 @@ const EditBookingForm = () => {
                             if (!room.extraBed) return sum;
                             
                             // Calculate extra bed days properly
-                            const startDate = new Date(room.extraBedStartDate || formData.checkInDate);
+                            const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
                             const endDate = new Date(formData.checkOutDate);
                             
                             // If start date is same or after checkout, no extra bed charge
