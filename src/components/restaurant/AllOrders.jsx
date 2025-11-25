@@ -174,7 +174,7 @@ const AllOrders = () => {
                   Order Details
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer & Table
+                  Customer & Room
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Items
@@ -210,10 +210,10 @@ const AllOrders = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">
-                        {order.customerName || 'Guest'}
+                        {order.customerName || 'N/A'}
                       </div>
                       <div className="text-sm text-gray-500">
-                        Table {order.tableNo || 'N/A'}
+                        Room {order.tableNo || 'N/A'}
                       </div>
                     </div>
                   </td>
@@ -224,7 +224,7 @@ const AllOrders = () => {
                     <div className="text-xs text-gray-500 max-w-xs">
                       {order.items?.slice(0, 2).map((item, index) => (
                         <div key={index}>
-                          {item.itemName || item.name || 'Unknown'} x{item.quantity || 1}
+                          {item.itemName || 'Unknown'} x{item.quantity || 1}
                         </div>
                       ))}
                       {order.items?.length > 2 && (
@@ -238,9 +238,14 @@ const AllOrders = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                      {order.status || 'pending'}
-                    </span>
+                    <select
+                      value={order.status || 'pending'}
+                      onChange={(e) => updateOrderStatus(order._id, e.target.value)}
+                      className={`px-2 py-1 text-xs font-semibold rounded border-0 ${getStatusColor(order.status)}`}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="completed">Completed</option>
+                    </select>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">

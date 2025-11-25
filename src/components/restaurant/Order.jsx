@@ -9,6 +9,7 @@ const Order = () => {
   const [isConnected] = useState(false);
 
   const [menuItems, setMenuItems] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [staff, setStaff] = useState([]);
   const [tables, setTables] = useState([]);
   const [cartItems, setCartItems] = useState([]);
@@ -39,11 +40,23 @@ const Order = () => {
     try {
       // Fetch items
       try {
-        const itemsRes = await axios.get('/api/menu-items');
-        const itemsData = Array.isArray(itemsRes.data) ? itemsRes.data : (itemsRes.data.items || []);
-        setMenuItems(itemsData);
+        const token = localStorage.getItem('token');
+        const itemsRes = await axios.get('/api/menu-items', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const itemsData = itemsRes.data.data || itemsRes.data || [];
+        setMenuItems(Array.isArray(itemsData) ? itemsData : []);
       } catch (error) {
         console.error('Error fetching items:', error);
+        setMenuItems([]);
+      }
+      
+      // Fetch categories
+      try {
+        const categoriesRes = await axios.get('/api/restaurant-categories/all');
+        setCategories(categoriesRes.data || []);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
       }
       
       // Fetch restaurant staff
@@ -154,8 +167,8 @@ const Order = () => {
       return;
     }
     
-    if (!orderData.staffId || !orderData.tableNo) {
-      showToast.error('Please fill in all required fields (Staff, Table)!');
+    if (!orderData.tableNo) {
+      showToast.error('Please select a room!');
       return;
     }
     
@@ -170,12 +183,14 @@ const Order = () => {
       
       const orderItems = cartItems.map(item => ({
         itemId: item._id,
+        itemName: item.name,
+        price: item.Price || 0,
         quantity: item.quantity,
         note: item.note || ''
       }));
       
       const finalOrderData = {
-        staffName: orderData.staffName,
+        staffName: orderData.customerName || 'Restaurant Staff',
         customerName: orderData.customerName,
         tableNo: orderData.tableNo,
         items: orderItems,
@@ -229,7 +244,14 @@ const Order = () => {
             <select 
               id="table-number" 
               value={orderData.tableNo}
-              onChange={(e) => setOrderData({...orderData, tableNo: e.target.value})}
+              onChange={(e) => {
+                const selectedRoom = tables.find(room => room.tableNumber === e.target.value);
+                setOrderData({
+                  ...orderData, 
+                  tableNo: e.target.value,
+                  customerName: selectedRoom?.guestName || ''
+                });
+              }}
               className="w-full rounded-xl p-4 border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 text-gray-700 bg-white/80 backdrop-blur-sm transition-all duration-200"
             >
               <option value="">Select Room</option>
@@ -240,7 +262,7 @@ const Order = () => {
               ))}
             </select>
           </div>
-          <div className="flex flex-col space-y-3">
+          {/* <div className="flex flex-col space-y-3">
             <label htmlFor="staff" className="font-bold text-[#b39b5a]">Staff</label>
             <select 
               id="staff" 
@@ -258,7 +280,7 @@ const Order = () => {
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
           <div className="flex flex-col space-y-3">
             <label htmlFor="customerName" className="font-bold text-[#b39b5a]">Customer Name</label>
             <input
@@ -296,8 +318,8 @@ const Order = () => {
         {filteredMenu.map(item => (
           <div key={item._id} className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border-2 border-[#c3ad6b]/30 hover:border-[#c3ad6b] hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
             <h3 className="text-xl font-bold truncate text-[#b39b5a] mb-2">{item.name}</h3>
-            <p className="text-sm mb-4 text-[#c3ad6b] font-medium">{item.category}</p>
-            <p className="mb-4 font-bold text-lg text-gray-800">₹{(item.Price || item.price || 0).toFixed(2)}</p>
+            <p className="text-sm mb-4 text-[#c3ad6b] font-medium">{item.foodType}</p>
+            <p className="mb-4 font-bold text-lg text-gray-800">₹{(item.Price || 0).toFixed(2)}</p>
 
             {cartItems.some(i => i._id === item._id) ? (
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
@@ -399,7 +421,7 @@ const Order = () => {
                           <td className="py-3">
                             <div>
                               <div className="font-medium text-gray-800">{item.name}</div>
-                              <div className="text-xs text-gray-500">{item.category}</div>
+                              <div className="text-xs text-gray-500">{categories.find(cat => cat._id === item.category)?.name || item.foodType}</div>
                               <div className="text-xs text-[#c3ad6b]">₹{(item.Price || item.price || 0).toFixed(2)} each</div>
                             </div>
                           </td>
