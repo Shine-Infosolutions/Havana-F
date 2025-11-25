@@ -27,6 +27,14 @@ import RoomService from './components/room/RoomService';
 import RoomServiceBilling from './components/room/RoomServiceBilling';
 import BillLookup from './components/room/BillLookup';
 import SaleBill from './components/room/SaleBill';
+
+// Restaurant Components
+import MenuItems from './components/restaurant/MenuItems';
+import Order from './components/restaurant/Order';
+import LiveOrders from './components/restaurant/LiveOrders';
+import AllOrders from './components/restaurant/AllOrders';
+import KOT from './components/restaurant/KOT';
+
 import './App.css'
 
 function App() {
@@ -82,6 +90,13 @@ function App() {
             <Route path="room-service-billing" element={<RoomServiceBilling />} />
             <Route path="bill-lookup" element={<BillLookup />} />
             <Route path="sale-bill" element={<SaleBill />} />
+            
+            {/* Restaurant Routes */}
+            <Route path="restaurant/menu-items" element={<MenuItems />} />
+            <Route path="restaurant/create-order" element={<Order />} />
+            <Route path="restaurant/live-orders" element={<LiveOrders />} />
+            <Route path="restaurant/all-orders" element={<AllOrders />} />
+            <Route path="restaurant/kot" element={<KOT />} />
             
             {/* Checkout Routes */}
             <Route path="hotel-checkout" element={<HotelCheckout />} />

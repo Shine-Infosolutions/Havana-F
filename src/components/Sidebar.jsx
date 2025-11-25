@@ -21,6 +21,9 @@ import {
   Bell,
   Warehouse,
   Book,
+  UtensilsCrossed,
+  ChefHat,
+  ClipboardList,
 } from "lucide-react";
 import logoImage from "../components/Banquet/assets/hawana png11.png";
 
@@ -313,6 +316,21 @@ const Sidebar = () => {
       icon: Warehouse,
       label: "Inventory",
       path: "/inventory",
+    },
+    
+    // Restaurant
+    {
+      icon: UtensilsCrossed,
+      label: "Restaurant",
+      path: "/restaurant",
+      isDropdown: true,
+      children: [
+        { label: "Menu Items", path: "/restaurant/menu-items", icon: FileText },
+        { label: "Create Order", path: "/restaurant/create-order", icon: ShoppingCart },
+        { label: "Live Orders", path: "/restaurant/live-orders", icon: ChefHat },
+        { label: "All Orders", path: "/restaurant/all-orders", icon: ClipboardList },
+        { label: "KOT", path: "/restaurant/kot", icon: ListChecks },
+      ],
     },
     
     // Banquet
