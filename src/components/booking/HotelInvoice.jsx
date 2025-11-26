@@ -1,27 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import ashokaLogo from '../../assets/hawana png11.png';
 import { RiPhoneFill, RiMailFill } from 'react-icons/ri';
-import { FaWhatsapp } from 'react-icons/fa';
+import { FaWhatsapp, FaFilePdf } from 'react-icons/fa';
 import { useAppContext } from '../../context/AppContext';
+import { useReactToPrint } from 'react-to-print';
 
 export default function Invoice() {
   const { axios } = useAppContext();
   const location = useLocation();
   const bookingData = location.state?.bookingData;
+  const invoiceRef = useRef();
   
   const [invoiceData, setInvoiceData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   const [gstRates, setGstRates] = useState({ cgstRate: 2.5, sgstRate: 2.5 });
 
   // Fetch invoice data from checkout API or use restaurant order data
   const fetchInvoiceData = async (checkoutId) => {
-    // Load current GST rates
+    // Load current GST rates - will be updated with booking rates later
     const savedRates = localStorage.getItem('defaultGstRates');
-    const currentGstRates = savedRates ? JSON.parse(savedRates) : { cgstRate: 2.5, sgstRate: 2.5 };
-    setGstRates(currentGstRates);
+    let currentGstRates = savedRates ? JSON.parse(savedRates) : { cgstRate: 2.5, sgstRate: 2.5 };
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -120,7 +122,14 @@ export default function Invoice() {
         // Use the invoice data directly from API response
         const mappedData = response.data.invoice;
         
-        // Extra bed charges are now handled in the backend checkout controller
+        // Update GST rates from booking data if available
+        if (bookingData?.cgstRate && bookingData?.sgstRate) {
+          currentGstRates = {
+            cgstRate: bookingData.cgstRate * 100, // Convert from decimal to percentage
+            sgstRate: bookingData.sgstRate * 100
+          };
+        }
+        setGstRates(currentGstRates);
         
         setInvoiceData(mappedData);
         
@@ -133,6 +142,8 @@ export default function Invoice() {
     } catch (error) {
       // Handle error silently
     } finally {
+      // Set final GST rates
+      setGstRates(currentGstRates);
       setLoading(false);
     }
   };
@@ -270,27 +281,24 @@ export default function Invoice() {
     return (baseAmount + sgst + cgst + otherChargesTotal + roundOff).toFixed(2);
   };
 
-  const shareOnWhatsApp = () => {
-    const message = `🏨 *HAVANA HOTEL INVOICE*
+  const handlePrint = useReactToPrint({
+    contentRef: invoiceRef,
+    documentTitle: `Invoice_${invoiceData?.invoiceDetails?.billNo || 'Unknown'}`,
+    onAfterPrint: () => setGeneratingPdf(false)
+  });
 
-📋 *Bill Details:*
-• Bill No: ${invoiceData.invoiceDetails?.billNo}
-• Date: ${invoiceData.invoiceDetails?.billDate}
-• Room: ${invoiceData.invoiceDetails?.roomNo}
-• Guest: ${invoiceData.clientDetails?.name}
-
-💰 *Amount Summary:*
-• Subtotal: ₹${calculateTotal()}
-• CGST: ₹${invoiceData.payment?.cgst?.toFixed(2) || '0.00'}
-• SGST: ₹${invoiceData.payment?.sgst?.toFixed(2) || '0.00'}
-• *Total Amount: ₹${calculateNetTotal()}*
-
-📞 Contact: +91-XXXX-XXXXXX
-🌐 Website: havana-hotel.com
-
-Thank you for choosing Havana Hotel! 🙏`;
+  const shareInvoicePDF = () => {
+    // Try to get checkout ID from various sources
+    let checkoutId = location.state?.checkoutId;
     
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    // If no checkout ID, try booking ID (might need to create checkout first)
+    if (!checkoutId) {
+      checkoutId = bookingData?._id || bookingData?.id;
+    }
+    
+    console.log('Sharing invoice with ID:', checkoutId);
+    const sharedUrl = `${window.location.origin}/shared-invoice/${checkoutId}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(sharedUrl)}`;
     window.open(whatsappUrl, '_blank');
   };
 
@@ -385,7 +393,7 @@ Thank you for choosing Havana Hotel! 🙏`;
         }
       `}</style>
       <div className="min-h-screen bg-white p-2 sm:p-4">
-      <div className="max-w-7xl mx-auto border-2 border-black p-2 sm:p-4 print-content">
+      <div ref={invoiceRef} className="max-w-7xl mx-auto border-2 border-black p-2 sm:p-4 print-content">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-4 space-y-4 lg:space-y-0">
           <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <div className="border border-black p-2">
@@ -426,11 +434,12 @@ Thank you for choosing Havana Hotel! 🙏`;
               {saving ? 'Saving...' : (isEditing ? 'Save' : 'Edit')}
             </button>
             <button
-              onClick={shareOnWhatsApp}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm flex items-center gap-2"
+              onClick={shareInvoicePDF}
+              disabled={generatingPdf}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm flex items-center gap-2 disabled:opacity-50"
             >
               <FaWhatsapp className="text-lg" />
-              Share
+'Share on WhatsApp'
             </button>
             <button
               onClick={() => window.print()}

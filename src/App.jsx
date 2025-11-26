@@ -36,6 +36,7 @@ import AllOrders from './components/restaurant/AllOrders';
 import KOT from './components/restaurant/KOT';
 import GSTSettings from './components/restaurant/GSTSettings';
 import RestaurantInvoice from './components/restaurant/RestaurantInvoice';
+import SharedHotelInvoice from './components/booking/SharedHotelInvoice';
 
 import './App.css'
 
@@ -52,6 +53,9 @@ function App() {
       <Router>
         <Toaster position="top-right" />
         <Routes>
+          {/* Public Routes */}
+          <Route path="/shared-invoice/:id" element={<SharedHotelInvoice />} />
+          
           {/* Auth Routes - Hidden */}
           {/* <Route path="/login" element={<Login />} /> */}
           
