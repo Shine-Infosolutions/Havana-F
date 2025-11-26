@@ -1896,7 +1896,8 @@ const App = () => {
                 />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="idProofImageUrl">ID Proof Image 1</Label>
+                <Label htmlFor="idProofImageUrl">ID Proof Image 1 (Optional)</Label>
+                <p className="text-xs text-gray-500">Images are optional - you can complete booking without uploading ID proof images</p>
                 <div className="flex gap-2">
                   <Input 
                     id="idProofImageUrl" 
@@ -1963,7 +1964,7 @@ const App = () => {
                 )}
             </div>
             <div className="space-y-2">
-                <Label htmlFor="idProofImageUrl2">ID Proof Image 2</Label>
+                <Label htmlFor="idProofImageUrl2">ID Proof Image 2 (Optional)</Label>
                 <div className="flex gap-2">
                   <Input 
                     id="idProofImageUrl2" 
@@ -2040,12 +2041,15 @@ const App = () => {
           </div>
           <hr className="my-6 border-gray-200" />
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-700">Guest Photo Capture</h3>
+            <h3 className="text-lg font-semibold text-gray-700">Guest Photo Capture (Optional)</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              💡 Photo upload is completely optional. You can proceed with booking without uploading any images.
+            </p>
             
             {/* Photo Upload Options */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div className="space-y-2">
-                    <Label htmlFor="photoUpload">Upload Photo from Device</Label>
+                    <Label htmlFor="photoUpload">Upload Photo from Device (Optional)</Label>
                     <div className="flex gap-2">
                       <Input 
                           id="photoUpload" 
@@ -2123,7 +2127,7 @@ const App = () => {
                     </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                    <Label>Advanced Camera</Label>
+                    <Label>Advanced Camera (Optional)</Label>
                     <Button
                         type="button"
                         onClick={() => setIsCameraOpen(!isCameraOpen)}
