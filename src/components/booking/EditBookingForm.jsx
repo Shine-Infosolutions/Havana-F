@@ -296,11 +296,11 @@ const EditBookingForm = () => {
         roomGuestDetails: editBooking.roomGuestDetails || [],
         extraBedCharge: editBooking.extraBedCharge || 500,
         rate: editBooking.taxableAmount || editBooking.rate || 0,
-        cgstRate: editBooking.cgstRate !== undefined ? editBooking.cgstRate : (() => {
+        cgstRate: editBooking.cgstRate !== undefined ? (editBooking.cgstRate * 100) : (() => {
           const savedRates = localStorage.getItem('defaultGstRates');
           return savedRates ? JSON.parse(savedRates).cgstRate || 2.5 : 2.5;
         })(),
-        sgstRate: editBooking.sgstRate !== undefined ? editBooking.sgstRate : (() => {
+        sgstRate: editBooking.sgstRate !== undefined ? (editBooking.sgstRate * 100) : (() => {
           const savedRates = localStorage.getItem('defaultGstRates');
           return savedRates ? JSON.parse(savedRates).sgstRate || 2.5 : 2.5;
         })(),
@@ -748,8 +748,8 @@ const EditBookingForm = () => {
       
       const updateData = {
         ...formData,
-        cgstRate: formData.cgstRate / 100,
-        sgstRate: formData.sgstRate / 100,
+        cgstRate: formData.cgstRate,
+        sgstRate: formData.sgstRate,
         extraBed: hasExtraBed,
         extraBedCharge: formData.extraBedCharge || 0,
         taxableAmount: taxableAmount,

@@ -618,7 +618,7 @@ export default function Invoice() {
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="p-0.5 border border-black text-center text-xs">{(gstRates.cgstRate + gstRates.sgstRate).toFixed(2)}</td>
+                      <td className="p-0.5 border border-black text-center text-xs">{bookingData?.cgstRate && bookingData?.sgstRate ? ((bookingData.cgstRate + bookingData.sgstRate) * 100).toFixed(1) : (gstRates.cgstRate + gstRates.sgstRate).toFixed(1)}</td>
                       <td className="p-0.5 border border-black text-right text-xs">{invoiceData.payment?.taxableAmount?.toFixed(2)}</td>
                       <td className="p-0.5 border border-black text-center text-xs">1706</td>
                       <td className="p-0.5 border border-black text-center text-xs">CREDIT C</td>
@@ -644,11 +644,11 @@ export default function Invoice() {
                       <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.taxableAmount?.toFixed(2) || '0.00'}</td>
                     </tr>
                     <tr>
-                      <td className="p-0.5 text-right text-xs font-medium">SGST ({gstRates.sgstRate}%):</td>
+                      <td className="p-0.5 text-right text-xs font-medium">SGST ({bookingData?.sgstRate ? (bookingData.sgstRate * 100).toFixed(1) : gstRates.sgstRate}%):</td>
                       <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.sgst?.toFixed(2) || '0.00'}</td>
                     </tr>
                     <tr>
-                      <td className="p-0.5 text-right text-xs font-medium">CGST ({gstRates.cgstRate}%):</td>
+                      <td className="p-0.5 text-right text-xs font-medium">CGST ({bookingData?.cgstRate ? (bookingData.cgstRate * 100).toFixed(1) : gstRates.cgstRate}%):</td>
                       <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.cgst?.toFixed(2) || '0.00'}</td>
                     </tr>
                     {invoiceData.otherCharges?.filter(charge => charge.particulars === 'ROOM SERVICE').map((charge, index) => (
