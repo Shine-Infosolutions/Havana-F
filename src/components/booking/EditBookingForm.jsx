@@ -209,11 +209,11 @@ const EditBookingForm = () => {
     rate: 0,
     cgstRate: (() => {
       const savedRates = localStorage.getItem('defaultGstRates');
-      return savedRates ? JSON.parse(savedRates).cgstRate || 2.5 : 2.5;
+      return savedRates ? JSON.parse(savedRates).cgstRate || 0 : 0;
     })(),
     sgstRate: (() => {
       const savedRates = localStorage.getItem('defaultGstRates');
-      return savedRates ? JSON.parse(savedRates).sgstRate || 2.5 : 2.5;
+      return savedRates ? JSON.parse(savedRates).sgstRate || 0 : 0;
     })(),
     taxIncluded: false,
     serviceCharge: false,
@@ -298,11 +298,11 @@ const EditBookingForm = () => {
         rate: editBooking.taxableAmount || editBooking.rate || 0,
         cgstRate: editBooking.cgstRate !== undefined ? (editBooking.cgstRate * 100) : (() => {
           const savedRates = localStorage.getItem('defaultGstRates');
-          return savedRates ? JSON.parse(savedRates).cgstRate || 2.5 : 2.5;
+          return savedRates ? JSON.parse(savedRates).cgstRate || 0 : 0;
         })(),
         sgstRate: editBooking.sgstRate !== undefined ? (editBooking.sgstRate * 100) : (() => {
           const savedRates = localStorage.getItem('defaultGstRates');
-          return savedRates ? JSON.parse(savedRates).sgstRate || 2.5 : 2.5;
+          return savedRates ? JSON.parse(savedRates).sgstRate || 0 : 0;
         })(),
         taxIncluded: editBooking.taxIncluded || false,
         serviceCharge: editBooking.serviceCharge || false,
