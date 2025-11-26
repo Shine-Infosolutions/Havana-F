@@ -319,27 +319,41 @@ const BookingPage = () => {
     }
   };
 
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
+
   const generateInvoice = async (bookingId) => {
+    if (generatingInvoice) return; // Prevent double execution
+    
     const booking = bookings.find((b) => b.id === bookingId);
     if (!booking) {
       setError("Booking not found");
       return;
     }
     
+    setGeneratingInvoice(true);
     try {
       const token = getAuthToken();
       
-      // Create checkout for this booking if it doesn't exist
+      // Try to get existing checkout first, create only if doesn't exist
       let checkoutId;
       try {
-        const checkoutRes = await axios.post('/api/checkout/create', 
-          { bookingId },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        checkoutId = checkoutRes.data.checkout._id;
+        const existingCheckoutRes = await axios.get(`/api/checkout/booking/${bookingId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        checkoutId = existingCheckoutRes.data.checkout._id;
+        console.log('Using existing checkout:', checkoutId);
       } catch (error) {
-        // If checkout creation fails, use booking ID as fallback
-        checkoutId = bookingId;
+        // Create new checkout if none exists
+        try {
+          const checkoutRes = await axios.post('/api/checkout/create', 
+            { bookingId },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          checkoutId = checkoutRes.data.checkout._id;
+          console.log('Created new checkout:', checkoutId);
+        } catch (createError) {
+          checkoutId = bookingId;
+        }
       }
       
       // Transform booking data to invoice format
@@ -365,6 +379,8 @@ const BookingPage = () => {
     } catch (error) {
       console.error('Error generating invoice:', error);
       setError('Failed to generate invoice');
+    } finally {
+      setTimeout(() => setGeneratingInvoice(false), 2000); // Reset after 2 seconds
     }
   };
 
@@ -744,15 +760,16 @@ const BookingPage = () => {
                           <Calendar size={16} />
                         </button>
 
-                        {booking.status === "Checked Out" && (
-                          <button
-                            onClick={() => generateInvoice(booking.id)}
-                            title="Generate Bill"
-                            className="p-1.5 rounded-full text-green-600 transition duration-300"
-                          >
-                            <FileText size={16} />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => generateInvoice(booking.id)}
+                          disabled={generatingInvoice}
+                          title={generatingInvoice ? "Generating..." : "Generate Bill"}
+                          className={`p-1.5 rounded-full transition duration-300 ${
+                            generatingInvoice ? 'text-gray-400 cursor-not-allowed' : 'text-green-600'
+                          }`}
+                        >
+                          <FileText size={16} />
+                        </button>
                         <button
                           onClick={() => openCheckout(booking.id)}
                           disabled={booking.status === 'Checked Out'}
@@ -929,16 +946,17 @@ const BookingPage = () => {
                   <Calendar size={18} />
                 </button>
 
-                {booking.status === "Checked Out" && (
-                  <button
-                    onClick={() => generateInvoice(booking.id)}
-                    className="p-2 rounded-full transition duration-300"
-                    style={{ color: 'hsl(120, 60%, 40%)' }}
-                    title="Invoice"
-                  >
-                    <FileText size={18} />
-                  </button>
-                )}
+                <button
+                  onClick={() => generateInvoice(booking.id)}
+                  disabled={generatingInvoice}
+                  className={`p-2 rounded-full transition duration-300 ${
+                    generatingInvoice ? 'cursor-not-allowed' : ''
+                  }`}
+                  style={{ color: generatingInvoice ? '#9CA3AF' : 'hsl(120, 60%, 40%)' }}
+                  title={generatingInvoice ? "Generating..." : "Generate Bill"}
+                >
+                  <FileText size={18} />
+                </button>
                 <button
                   onClick={() => openCheckout(booking.id)}
                   disabled={booking.status === 'Checked Out'}

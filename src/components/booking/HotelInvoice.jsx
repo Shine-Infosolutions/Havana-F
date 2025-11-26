@@ -16,14 +16,14 @@ export default function Invoice() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [generatingPdf, setGeneratingPdf] = useState(false);
   const [gstRates, setGstRates] = useState({ cgstRate: 2.5, sgstRate: 2.5 });
 
   // Fetch invoice data from checkout API or use restaurant order data
   const fetchInvoiceData = async (checkoutId) => {
-    // Load current GST rates - will be updated with booking rates later
+    // Load current GST rates
     const savedRates = localStorage.getItem('defaultGstRates');
-    let currentGstRates = savedRates ? JSON.parse(savedRates) : { cgstRate: 2.5, sgstRate: 2.5 };
+    const currentGstRates = savedRates ? JSON.parse(savedRates) : { cgstRate: 2.5, sgstRate: 2.5 };
+    setGstRates(currentGstRates);
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -64,22 +64,22 @@ export default function Invoice() {
               declaredRate: itemPrice,
               hsn: '996331',
               rate: 12,
-              cgstRate: itemPrice * (gstRates.cgstRate / 100),
-              sgstRate: itemPrice * (gstRates.sgstRate / 100),
+              cgstRate: itemPrice * (currentGstRates.cgstRate / 100),
+              sgstRate: itemPrice * (currentGstRates.sgstRate / 100),
               amount: itemPrice,
               isFree: item.isFree || false
             };
           }) || [],
           taxes: [{
             taxableAmount: orderData.amount || orderData.totalAmount || 0,
-            cgst: (orderData.amount || orderData.totalAmount || 0) * (gstRates.cgstRate / 100),
-            sgst: (orderData.amount || orderData.totalAmount || 0) * (gstRates.sgstRate / 100),
+            cgst: (orderData.amount || orderData.totalAmount || 0) * (currentGstRates.cgstRate / 100),
+            sgst: (orderData.amount || orderData.totalAmount || 0) * (currentGstRates.sgstRate / 100),
             amount: orderData.amount || orderData.totalAmount || 0
           }],
           payment: {
             taxableAmount: orderData.amount || orderData.totalAmount || 0,
-            cgst: (orderData.amount || orderData.totalAmount || 0) * (gstRates.cgstRate / 100),
-            sgst: (orderData.amount || orderData.totalAmount || 0) * (gstRates.sgstRate / 100),
+            cgst: (orderData.amount || orderData.totalAmount || 0) * (currentGstRates.cgstRate / 100),
+            sgst: (orderData.amount || orderData.totalAmount || 0) * (currentGstRates.sgstRate / 100),
             total: orderData.amount || orderData.totalAmount || 0
           },
           otherCharges: [
@@ -122,16 +122,18 @@ export default function Invoice() {
         // Use the invoice data directly from API response
         const mappedData = response.data.invoice;
         
-        // Update GST rates from booking data if available
-        if (bookingData?.cgstRate && bookingData?.sgstRate) {
-          currentGstRates = {
-            cgstRate: bookingData.cgstRate * 100, // Convert from decimal to percentage
-            sgstRate: bookingData.sgstRate * 100
-          };
-        }
-        setGstRates(currentGstRates);
+        // Extra bed charges are now handled in the backend checkout controller
         
         setInvoiceData(mappedData);
+        
+        // Update GST rates from booking data if available
+        if (mappedData.cgstRate !== undefined && mappedData.sgstRate !== undefined) {
+          const bookingGstRates = {
+            cgstRate: mappedData.cgstRate * 100, // Convert from decimal to percentage
+            sgstRate: mappedData.sgstRate * 100
+          };
+          setGstRates(bookingGstRates);
+        }
         
         // Fetch GST details if GST number exists
         if (mappedData.clientDetails?.gstin && mappedData.clientDetails.gstin !== 'N/A') {
@@ -231,12 +233,8 @@ export default function Invoice() {
   };
 
   useEffect(() => {
-    // Load GST rates from localStorage
-    const savedRates = localStorage.getItem('defaultGstRates');
-    if (savedRates) {
-      const rates = JSON.parse(savedRates);
-      setGstRates({ cgstRate: rates.cgstRate || 2.5, sgstRate: rates.sgstRate || 2.5 });
-    }
+    // GST rates will be loaded from booking data in fetchInvoiceData
+    // No need to load from localStorage as we want booking-specific rates
     
     if (bookingData) {
       // Use the checkout ID from navigation state or create one for restaurant orders
@@ -640,7 +638,7 @@ export default function Invoice() {
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="p-0.5 border border-black text-center text-xs">{bookingData?.cgstRate && bookingData?.sgstRate ? ((bookingData.cgstRate + bookingData.sgstRate) * 100).toFixed(1) : (gstRates.cgstRate + gstRates.sgstRate).toFixed(1)}</td>
+                      <td className="p-0.5 border border-black text-center text-xs">{bookingData?.cgstRate !== undefined && bookingData?.sgstRate !== undefined ? ((bookingData.cgstRate + bookingData.sgstRate) * 100).toFixed(1) : (gstRates.cgstRate + gstRates.sgstRate).toFixed(1)}</td>
                       <td className="p-0.5 border border-black text-right text-xs">{invoiceData.payment?.taxableAmount?.toFixed(2)}</td>
                       <td className="p-0.5 border border-black text-center text-xs">1706</td>
                       <td className="p-0.5 border border-black text-center text-xs">CREDIT C</td>
@@ -666,11 +664,11 @@ export default function Invoice() {
                       <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.taxableAmount?.toFixed(2) || '0.00'}</td>
                     </tr>
                     <tr>
-                      <td className="p-0.5 text-right text-xs font-medium">SGST ({bookingData?.sgstRate ? (bookingData.sgstRate * 100).toFixed(1) : gstRates.sgstRate}%):</td>
+                      <td className="p-0.5 text-right text-xs font-medium">SGST ({bookingData?.sgstRate !== undefined ? (bookingData.sgstRate * 100).toFixed(1) : gstRates.sgstRate}%):</td>
                       <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.sgst?.toFixed(2) || '0.00'}</td>
                     </tr>
                     <tr>
-                      <td className="p-0.5 text-right text-xs font-medium">CGST ({bookingData?.cgstRate ? (bookingData.cgstRate * 100).toFixed(1) : gstRates.cgstRate}%):</td>
+                      <td className="p-0.5 text-right text-xs font-medium">CGST ({bookingData?.cgstRate !== undefined ? (bookingData.cgstRate * 100).toFixed(1) : gstRates.cgstRate}%):</td>
                       <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.cgst?.toFixed(2) || '0.00'}</td>
                     </tr>
                     {invoiceData.otherCharges?.filter(charge => charge.particulars === 'ROOM SERVICE').map((charge, index) => (

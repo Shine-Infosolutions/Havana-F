@@ -306,11 +306,11 @@ export const AppProvider = ({ children }) => {
     rate: 0,
     cgstRate: (() => {
       const savedRates = localStorage.getItem('defaultGstRates');
-      return savedRates ? JSON.parse(savedRates).cgstRate || 2.5 : 2.5;
+      return savedRates ? JSON.parse(savedRates).cgstRate || 0 : 0;
     })(),
     sgstRate: (() => {
       const savedRates = localStorage.getItem('defaultGstRates');
-      return savedRates ? JSON.parse(savedRates).sgstRate || 2.5 : 2.5;
+      return savedRates ? JSON.parse(savedRates).sgstRate || 0 : 0;
     })(),
     taxIncluded: false,
     serviceCharge: false,
@@ -430,11 +430,11 @@ export const AppProvider = ({ children }) => {
       rate: 0, 
       cgstRate: (() => {
         const savedRates = localStorage.getItem('defaultGstRates');
-        return savedRates ? JSON.parse(savedRates).cgstRate || 2.5 : 2.5;
+        return savedRates ? JSON.parse(savedRates).cgstRate || 0 : 0;
       })(),
       sgstRate: (() => {
         const savedRates = localStorage.getItem('defaultGstRates');
-        return savedRates ? JSON.parse(savedRates).sgstRate || 2.5 : 2.5;
+        return savedRates ? JSON.parse(savedRates).sgstRate || 0 : 0;
       })(),
       taxIncluded: false, serviceCharge: false, arrivedFrom: '',
       destination: '', remark: '', businessSource: '', marketSegment: '',
@@ -878,11 +878,11 @@ const App = () => {
           rate: 0,
           cgstRate: (() => {
             const savedRates = localStorage.getItem('defaultGstRates');
-            return savedRates ? JSON.parse(savedRates).cgstRate || 2.5 : 2.5;
+            return savedRates ? JSON.parse(savedRates).cgstRate || 0 : 0;
           })(),
           sgstRate: (() => {
             const savedRates = localStorage.getItem('defaultGstRates');
-            return savedRates ? JSON.parse(savedRates).sgstRate || 2.5 : 2.5;
+            return savedRates ? JSON.parse(savedRates).sgstRate || 0 : 0;
           })(),
           taxIncluded: false,
           serviceCharge: false,
@@ -1270,14 +1270,8 @@ const App = () => {
     cleanFormData.rate = Number(cleanFormData.rate) || 0;
     cleanFormData.discountPercent = Number(cleanFormData.discountPercent) || 0;
     cleanFormData.days = Number(cleanFormData.days) || 0;
-    cleanFormData.cgstRate = Number(cleanFormData.cgstRate) || (() => {
-      const savedRates = localStorage.getItem('defaultGstRates');
-      return savedRates ? JSON.parse(savedRates).cgstRate || 2.5 : 2.5;
-    })();
-    cleanFormData.sgstRate = Number(cleanFormData.sgstRate) || (() => {
-      const savedRates = localStorage.getItem('defaultGstRates');
-      return savedRates ? JSON.parse(savedRates).sgstRate || 2.5 : 2.5;
-    })();
+    cleanFormData.cgstRate = Number(cleanFormData.cgstRate) || 2.5;
+    cleanFormData.sgstRate = Number(cleanFormData.sgstRate) || 2.5;
     
 
     
