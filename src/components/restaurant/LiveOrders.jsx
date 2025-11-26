@@ -14,34 +14,62 @@ const LiveOrders = () => {
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('/api/kot/all', {
-        headers: { Authorization: `Bearer ${token}` }
+      const [kotResponse, orderResponse] = await Promise.all([
+        axios.get('/api/kot/all', {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get('/api/restaurant-orders/all', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+      
+      console.log('KOT Response:', kotResponse.data);
+      console.log('Order Response:', orderResponse.data);
+      
+      // Create a map of orders by ID for quick lookup
+      const orderMap = new Map();
+      orderResponse.data.forEach(order => {
+        orderMap.set(order._id.toString(), order);
       });
       
-      // Directly use KOT data with minimal processing
-      const activeOrders = response.data
-        .filter(kot => kot.status !== 'completed' && kot.status !== 'cancelled')
-        .map(kot => ({
-          _id: kot._id,
-          kotId: kot._id,
-          tableNo: kot.tableNo,
-          customerName: 'Guest',
-          status: kot.status,
-          createdAt: kot.createdAt,
-          amount: 0,
-          items: kot.items?.map(item => ({
-            name: item.itemName,
-            quantity: item.quantity,
-            price: 0,
-            prepTime: 0,
-            status: 'pending'
-          })) || []
-        }));
+      // Process KOT data with pricing from restaurant orders
+      const activeOrders = kotResponse.data
+        .filter(kot => {
+          console.log('KOT status:', kot.status);
+          return kot.status !== 'completed' && kot.status !== 'cancelled';
+        })
+        .map(kot => {
+          const restaurantOrder = orderMap.get(kot.orderId.toString());
+          console.log('Matching order for KOT:', kot.orderId, restaurantOrder);
+          
+          return {
+            _id: kot._id,
+            kotId: kot._id,
+            tableNo: kot.tableNo,
+            customerName: restaurantOrder?.customerName || 'Guest',
+            status: kot.status,
+            createdAt: kot.createdAt,
+            amount: restaurantOrder?.amount || 0,
+            items: kot.items?.map((item, index) => {
+              const orderItem = restaurantOrder?.items?.find(oi => 
+                oi.itemName === item.itemName
+              );
+              return {
+                name: item.itemName,
+                quantity: item.quantity,
+                price: orderItem?.price || 0,
+                prepTime: 0,
+                status: 'pending'
+              };
+            }) || []
+          };
+        });
       
+      console.log('Active Orders:', activeOrders);
       setOrders(activeOrders);
       setItemStates({});
     } catch (error) {
-      console.error('Error fetching KOT data:', error);
+      console.error('Error fetching orders data:', error);
       setOrders([]);
     }
   };
@@ -52,23 +80,29 @@ const LiveOrders = () => {
   
 
 
-  const updateOrderStatus = async (orderId, newStatus) => {
+  const updateOrderStatus = async (kotId, newStatus) => {
     try {
       const token = localStorage.getItem('token');
       
+      // Find the KOT and its corresponding restaurant order
+      const order = orders.find(o => o._id === kotId);
+      if (!order) return;
+      
+      // Update KOT status
+      await axios.patch(`/api/kot/${kotId}/status`, {
+        status: newStatus
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Update restaurant order status using the orderId from KOT
       const kotResponse = await axios.get('/api/kot/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const kot = kotResponse.data.find(k => k.orderId === orderId);
+      const kot = kotResponse.data.find(k => k._id === kotId);
       
-      if (kot) {
-        await axios.patch(`/api/kot/${kot._id}/status`, {
-          status: newStatus
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        await axios.patch(`/api/restaurant-orders/${orderId}/status`, {
+      if (kot && kot.orderId) {
+        await axios.patch(`/api/restaurant-orders/${kot.orderId}/status`, {
           status: newStatus
         }, {
           headers: { Authorization: `Bearer ${token}` }
