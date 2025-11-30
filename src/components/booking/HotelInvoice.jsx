@@ -414,7 +414,7 @@ export default function Invoice() {
               <p className="font-bold text-sm sm:text-base">HAVANA HOTEL</p>
               <p className="text-xs">Deoria Bypass Rd, near LIC Office Gorakhpur</p>
               <p className="text-xs">Taramandal, Gorakhpur, Uttar Pradesh 273016</p>
-              <p className="text-xs">Website: <a href="http://havana-hotel.com" className="text-blue-600">havana-hotel.com</a></p>
+              <p className="text-xs">Website: <a href="https://hotelhavana.com" className="text-blue-600">hotelhavana.com</a></p>
               <p className="text-xs">contact@hotelhavana.in</p>
               <p className="text-xs font-semibold">GSTIN: 09ACIFA2416J1ZF</p>
             </div>
@@ -461,20 +461,26 @@ export default function Invoice() {
         
         <div className="client-details-grid grid grid-cols-1 lg:grid-cols-2 text-xs border border-black mb-4">
           <div className="client-details-left border-r border-black p-2">
-            <p><span className="font-bold">GSTIN No. : </span>
-              {bookingData?.companyGSTIN || invoiceData.clientDetails?.gstin || ''}
-            </p>
+            {(bookingData?.companyGSTIN && bookingData.companyGSTIN.trim() !== '') && (
+              <p><span className="font-bold">GSTIN No. : </span>
+                {bookingData.companyGSTIN}
+              </p>
+            )}
             <div className="client-info-grid grid grid-cols-3 gap-x-1 gap-y-1">
               <p className="col-span-1">Name</p>
-              <p className="col-span-2">: {invoiceData.clientDetails?.name}</p>
+              <p className="col-span-2">: {bookingData?.name || invoiceData.clientDetails?.name}</p>
               <p className="col-span-1">Address</p>
-              <p className="col-span-2">: {invoiceData.clientDetails?.address}</p>
+              <p className="col-span-2">: {bookingData?.address || invoiceData.clientDetails?.address}</p>
               <p className="col-span-1">City</p>
-              <p className="col-span-2">: {invoiceData.clientDetails?.city}</p>
-              <p className="col-span-1">Company</p>
-              <p className="col-span-2">: {bookingData?.companyName || invoiceData.clientDetails?.company || ''}</p>
+              <p className="col-span-2">: {bookingData?.city || invoiceData.clientDetails?.city}</p>
+              {(bookingData?.companyName && bookingData.companyName.trim() !== '') && (
+                <>
+                  <p className="col-span-1">Company</p>
+                  <p className="col-span-2">: {bookingData.companyName}</p>
+                </>
+              )}
               <p className="col-span-1">Mobile No.</p>
-              <p className="col-span-2">: {invoiceData.clientDetails?.mobileNo}</p>
+              <p className="col-span-2">: {bookingData?.mobileNo || invoiceData.clientDetails?.mobileNo}</p>
             </div>
           </div>
 
@@ -543,8 +549,6 @@ export default function Invoice() {
                 <>
                   <p className="font-bold text-green-600">Total Advance Paid</p>
                   <p className="font-medium text-green-600">: ₹{bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}</p>
-                  <p className="font-bold text-green-600">Payments Count</p>
-                  <p className="font-medium text-green-600">: {bookingData.advancePayments.length} payment(s)</p>
                 </>
               )}
             </div>
