@@ -179,6 +179,12 @@ export default function SharedHotelInvoice() {
                 <p className="font-medium">: {invoiceData.invoiceDetails?.checkInDate}</p>
                 <p className="font-bold">CheckOut Date</p>
                 <p className="font-medium">: {invoiceData.invoiceDetails?.checkOutDate}</p>
+                {invoiceData.bookingData?.advanceAmount > 0 && (
+                  <>
+                    <p className="font-bold text-green-600">Advance Paid</p>
+                    <p className="font-medium text-green-600">: ₹{invoiceData.bookingData.advanceAmount.toFixed(2)}</p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -237,6 +243,18 @@ export default function SharedHotelInvoice() {
                     <td className="p-1 font-bold text-right text-xs">NET AMOUNT:</td>
                     <td className="p-1 border-l border-black text-right font-bold text-xs">₹{calculateNetTotal()}</td>
                   </tr>
+                  {invoiceData.bookingData?.advanceAmount > 0 && (
+                    <>
+                      <tr className="bg-green-50">
+                        <td className="p-1 text-right text-xs font-medium text-green-700">Advance Received:</td>
+                        <td className="p-1 border-l border-black text-right text-xs font-bold text-green-700">₹{invoiceData.bookingData.advanceAmount.toFixed(2)}</td>
+                      </tr>
+                      <tr className="bg-orange-50">
+                        <td className="p-1 font-bold text-right text-xs text-orange-700">BALANCE DUE:</td>
+                        <td className="p-1 border-l border-black text-right font-bold text-xs text-orange-700">₹{(parseFloat(calculateNetTotal()) - invoiceData.bookingData.advanceAmount).toFixed(2)}</td>
+                      </tr>
+                    </>
+                  )}
                 </tbody>
               </table>
             </div>

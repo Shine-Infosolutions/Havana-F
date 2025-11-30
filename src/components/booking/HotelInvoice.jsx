@@ -18,6 +18,7 @@ export default function Invoice() {
   const [saving, setSaving] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [gstRates, setGstRates] = useState({ cgstRate: 2.5, sgstRate: 2.5 });
+  const [showPaxDetails, setShowPaxDetails] = useState(false);
 
   // Fetch invoice data from checkout API or use restaurant order data
   const fetchInvoiceData = async (checkoutId) => {
@@ -413,14 +414,15 @@ export default function Invoice() {
               <p className="font-bold text-sm sm:text-base">HAVANA HOTEL</p>
               <p className="text-xs">Deoria Bypass Rd, near LIC Office Gorakhpur</p>
               <p className="text-xs">Taramandal, Gorakhpur, Uttar Pradesh 273016</p>
-              <p className="text-xs">Website: <a href="http://havana-hotel.com" className="text-blue-600">havana-hotel.com</a></p>
+              <p className="text-xs">Website: <a href="https://hotelhavana.com" className="text-blue-600">hotelhavana.com</a></p>
               <p className="text-xs">contact@hotelhavana.in</p>
+              <p className="text-xs font-semibold">GSTIN: 09ACIFA2416J1ZF</p>
             </div>
           </div>
           <div className="contact-info flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
             <div className="text-xs flex items-center space-x-2">
                 <RiPhoneFill className="text-lg text-yellow-600" />
-                <span>+91-XXXX-XXXXXX</span>
+                <span>+91-9451903390</span>
             </div>
             <div className="text-xs flex items-center space-x-2">
                 <RiMailFill className="text-lg text-yellow-600" />
@@ -435,11 +437,10 @@ export default function Invoice() {
           </div>
           <div className="flex gap-2 no-print">
             <button
-              onClick={isEditing ? saveInvoiceUpdates : () => setIsEditing(true)}
-              disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm disabled:opacity-50"
+              onClick={() => setShowPaxDetails(!showPaxDetails)}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
             >
-              {saving ? 'Saving...' : (isEditing ? 'Save' : 'Edit')}
+              {showPaxDetails ? 'Hide PAX' : 'Show PAX'}
             </button>
             <button
               onClick={shareInvoicePDF}
@@ -447,7 +448,7 @@ export default function Invoice() {
               className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm flex items-center gap-2 disabled:opacity-50"
             >
               <FaWhatsapp className="text-lg" />
-'Share on WhatsApp'
+              Share on WhatsApp
             </button>
             <button
               onClick={() => window.print()}
@@ -460,86 +461,26 @@ export default function Invoice() {
         
         <div className="client-details-grid grid grid-cols-1 lg:grid-cols-2 text-xs border border-black mb-4">
           <div className="client-details-left border-r border-black p-2">
-            <p><span className="font-bold">GSTIN No. : </span>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={invoiceData.clientDetails?.gstin || ''}
-                  onChange={(e) => {
-                    const newGstin = e.target.value;
-                    setInvoiceData({
-                      ...invoiceData,
-                      clientDetails: {...invoiceData.clientDetails, gstin: newGstin}
-                    });
-                    if (newGstin.length >= 15) {
-                      fetchGSTDetails(newGstin);
-                    }
-                  }}
-                  className="border px-1 ml-1 text-xs w-32"
-                />
-              ) : invoiceData.clientDetails?.gstin}
-            </p>
+            {(bookingData?.companyGSTIN && bookingData.companyGSTIN.trim() !== '') && (
+              <p><span className="font-bold">GSTIN No. : </span>
+                {bookingData.companyGSTIN}
+              </p>
+            )}
             <div className="client-info-grid grid grid-cols-3 gap-x-1 gap-y-1">
               <p className="col-span-1">Name</p>
-              <p className="col-span-2">: {isEditing ? (
-                  <input
-                    type="text"
-                    value={invoiceData.clientDetails?.name || ''}
-                    onChange={(e) => setInvoiceData({
-                      ...invoiceData,
-                      clientDetails: {...invoiceData.clientDetails, name: e.target.value}
-                    })}
-                    className="border px-1 ml-1 text-xs w-32"
-                  />
-                ) : invoiceData.clientDetails?.name}</p>
+              <p className="col-span-2">: {bookingData?.name || invoiceData.clientDetails?.name}</p>
               <p className="col-span-1">Address</p>
-              <p className="col-span-2">: {isEditing ? (
-                  <input
-                    type="text"
-                    value={invoiceData.clientDetails?.address || ''}
-                    onChange={(e) => setInvoiceData({
-                      ...invoiceData,
-                      clientDetails: {...invoiceData.clientDetails, address: e.target.value}
-                    })}
-                    className="border px-1 ml-1 text-xs w-32"
-                  />
-                ) : invoiceData.clientDetails?.address}</p>
+              <p className="col-span-2">: {bookingData?.address || invoiceData.clientDetails?.address}</p>
               <p className="col-span-1">City</p>
-              <p className="col-span-2">: {isEditing ? (
-                  <input
-                    type="text"
-                    value={invoiceData.clientDetails?.city || ''}
-                    onChange={(e) => setInvoiceData({
-                      ...invoiceData,
-                      clientDetails: {...invoiceData.clientDetails, city: e.target.value}
-                    })}
-                    className="border px-1 ml-1 text-xs w-32"
-                  />
-                ) : invoiceData.clientDetails?.city}</p>
-              <p className="col-span-1">Company</p>
-              <p className="col-span-2">{isEditing ? (
-                  <input
-                    type="text"
-                    value={invoiceData.clientDetails?.company || ''}
-                    onChange={(e) => setInvoiceData({
-                      ...invoiceData,
-                      clientDetails: {...invoiceData.clientDetails, company: e.target.value}
-                    })}
-                    className="border px-1 ml-1 text-xs w-32"
-                  />
-                ) : (invoiceData.clientDetails?.company?.startsWith(':') ? invoiceData.clientDetails.company : `: ${invoiceData.clientDetails?.company || ''}`)}</p>
+              <p className="col-span-2">: {bookingData?.city || invoiceData.clientDetails?.city}</p>
+              {(bookingData?.companyName && bookingData.companyName.trim() !== '') && (
+                <>
+                  <p className="col-span-1">Company</p>
+                  <p className="col-span-2">: {bookingData.companyName}</p>
+                </>
+              )}
               <p className="col-span-1">Mobile No.</p>
-              <p className="col-span-2">: {isEditing ? (
-                  <input
-                    type="text"
-                    value={invoiceData.clientDetails?.mobileNo || ''}
-                    onChange={(e) => setInvoiceData({
-                      ...invoiceData,
-                      clientDetails: {...invoiceData.clientDetails, mobileNo: e.target.value}
-                    })}
-                    className="border px-1 ml-1 text-xs w-32"
-                  />
-                ) : invoiceData.clientDetails?.mobileNo}</p>
+              <p className="col-span-2">: {bookingData?.mobileNo || invoiceData.clientDetails?.mobileNo}</p>
             </div>
           </div>
 
@@ -551,31 +492,63 @@ export default function Invoice() {
               <p className="font-medium">: {invoiceData.invoiceDetails?.grcNo}</p>
               <p className="font-bold">Room No./Type</p>
               <p className="font-medium">: {invoiceData.invoiceDetails?.roomNo} {invoiceData.invoiceDetails?.roomType}</p>
-              <p className="font-bold">PAX</p>
+              {showPaxDetails && (
+                <>
+                  <p className="font-bold">PAX</p>
+                  <p className="font-medium">
+                    {bookingData?.roomGuestDetails && bookingData.roomGuestDetails.length > 0 ? (
+                      <>
+                        : {bookingData.roomGuestDetails.reduce((sum, room) => sum + room.adults + room.children, 0)} Adult: {bookingData.roomGuestDetails.reduce((sum, room) => sum + room.adults, 0)} Children: {bookingData.roomGuestDetails.reduce((sum, room) => sum + room.children, 0)}
+                      </>
+                    ) : (
+                      `: ${invoiceData.invoiceDetails?.pax} Adult: ${invoiceData.invoiceDetails?.adult}`
+                    )}
+                  </p>
+                </>
+              )}
+              <p className="font-bold">Rooms</p>
               <p className="font-medium">
                 {bookingData?.roomGuestDetails && bookingData.roomGuestDetails.length > 0 ? (
                   <>
-                    : {bookingData.roomGuestDetails.reduce((sum, room) => sum + room.adults + room.children, 0)} Adult: {bookingData.roomGuestDetails.reduce((sum, room) => sum + room.adults, 0)} Children: {bookingData.roomGuestDetails.reduce((sum, room) => sum + room.children, 0)}
-                    <div className="text-xs mt-1">
-                      {bookingData.roomGuestDetails.map((room, index) => (
-                        <div key={index}>
-                          Room {room.roomNumber}: {room.adults}A, {room.children}C
-                        </div>
-                      ))}
-                    </div>
+                    : {bookingData.roomGuestDetails.map((room, index) => (
+                      <span key={index}>
+                        Room {room.roomNumber}{index < bookingData.roomGuestDetails.length - 1 ? ', ' : ''}
+                      </span>
+                    ))}
                   </>
                 ) : (
-                  `: ${invoiceData.invoiceDetails?.pax} Adult: ${invoiceData.invoiceDetails?.adult}`
+                  `: ${invoiceData.invoiceDetails?.roomNo}`
                 )}
               </p>
               <p className="font-bold">CheckIn Date</p>
               <p className="font-medium">: {invoiceData.invoiceDetails?.checkInDate}</p>
               <p className="font-bold">CheckOut Date</p>
               <p className="font-medium">: {invoiceData.invoiceDetails?.checkOutDate}</p>
+              {bookingData?.planPackage && (
+                <>
+                  <p className="font-bold">Package Plan</p>
+                  <p className="font-medium">: {(() => {
+                    const planMap = {
+                      'EP': 'EP – Room Only',
+                      'CP': 'CP – Room + Breakfast',
+                      'MAP': 'MAP – Room + Breakfast + Lunch/Dinner',
+                      'AP': 'AP – Room + All Meals',
+                      'AI': 'AI – All Inclusive'
+                    };
+                    return planMap[bookingData.planPackage] || bookingData.planPackage;
+                  })()}</p>
+                </>
+              )}
               {bookingData?.amendmentHistory && bookingData.amendmentHistory.length > 0 && (
                 <>
                   <p className="font-bold text-red-600">Amended</p>
                   <p className="font-medium text-red-600">: {bookingData.amendmentHistory.length} time(s)</p>
+                </>
+              )}
+              {bookingData?.advancePayments && bookingData.advancePayments.length > 0 && (
+                <>
+                  <p className="font-bold text-green-600">Total Advance Paid</p>
+                  <p className="font-medium text-green-600">: ₹{bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}</p>
                 </>
               )}
             </div>
@@ -690,6 +663,18 @@ export default function Invoice() {
                       <td className="p-0.5 font-bold text-right text-xs">NET AMOUNT:</td>
                       <td className="p-0.5 border-l border-black text-right font-bold text-xs">₹{calculateNetTotal()}</td>
                     </tr>
+                    {bookingData?.advancePayments && bookingData.advancePayments.length > 0 && (
+                      <>
+                        <tr className="bg-green-50">
+                          <td className="p-0.5 text-right text-xs font-medium text-green-700">Total Advance Received:</td>
+                          <td className="p-0.5 border-l border-black text-right text-xs font-bold text-green-700">₹{bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}</td>
+                        </tr>
+                        <tr className="bg-orange-50">
+                          <td className="p-0.5 font-bold text-right text-xs text-orange-700">BALANCE DUE:</td>
+                          <td className="p-0.5 border-l border-black text-right font-bold text-xs text-orange-700">₹{(parseFloat(calculateNetTotal()) - bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0)).toFixed(2)}</td>
+                        </tr>
+                      </>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -752,6 +737,44 @@ export default function Invoice() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Multiple Advance Payments Details */}
+        {bookingData?.advancePayments && bookingData.advancePayments.length > 0 && (
+          <div className="mb-4 text-xs">
+            <p className="font-bold mb-2">Advance Payment Details ({bookingData.advancePayments.length} payment(s)):</p>
+            <div className="border border-black bg-green-50">
+              <table className="w-full">
+                <thead className="bg-green-100">
+                  <tr>
+                    <th className="p-1 border border-black text-xs">#</th>
+                    <th className="p-1 border border-black text-xs">Amount</th>
+                    <th className="p-1 border border-black text-xs">Mode</th>
+                    <th className="p-1 border border-black text-xs">Date</th>
+                    <th className="p-1 border border-black text-xs">Reference</th>
+                    <th className="p-1 border border-black text-xs">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookingData.advancePayments.map((payment, index) => (
+                    <tr key={index}>
+                      <td className="p-1 border border-black text-xs text-center">{index + 1}</td>
+                      <td className="p-1 border border-black text-xs text-right font-bold text-green-700">₹{payment.amount.toFixed(2)}</td>
+                      <td className="p-1 border border-black text-xs text-center">{payment.paymentMode}</td>
+                      <td className="p-1 border border-black text-xs text-center">{new Date(payment.paymentDate).toLocaleDateString()}</td>
+                      <td className="p-1 border border-black text-xs text-center">{payment.reference || '-'}</td>
+                      <td className="p-1 border border-black text-xs">{payment.notes || '-'}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-green-200">
+                    <td colSpan="1" className="p-1 border border-black font-bold text-xs text-right">Total:</td>
+                    <td className="p-1 border border-black text-xs text-right font-bold text-green-700">₹{bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}</td>
+                    <td colSpan="4" className="p-1 border border-black text-xs"></td>
+                  </tr>
                 </tbody>
               </table>
             </div>
