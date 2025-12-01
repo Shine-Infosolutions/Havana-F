@@ -345,7 +345,14 @@ const BookingDetails = () => {
                 <div className="border-t pt-3">
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total Amount:</span>
-                    <span>₹{booking.totalAmount || booking.taxableAmount || booking.rate || 0}</span>
+                    <span>₹{(() => {
+                      const baseAmount = booking.taxableAmount || booking.rate || 0;
+                      const extraBed = booking.extraBedCharge || 0;
+                      const cgst = booking.cgstAmount || 0;
+                      const sgst = booking.sgstAmount || 0;
+                      const calculatedTotal = baseAmount + extraBed + cgst + sgst;
+                      return booking.totalAmount || calculatedTotal;
+                    })()}</span>
                   </div>
                 </div>
               </div>

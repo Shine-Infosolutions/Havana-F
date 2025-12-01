@@ -20,6 +20,32 @@ export default function Invoice() {
   const [gstRates, setGstRates] = useState({ cgstRate: 2.5, sgstRate: 2.5 });
   const [showPaxDetails, setShowPaxDetails] = useState(false);
 
+  // Generate or retrieve existing invoice number
+  const getOrGenerateInvoiceNumber = async (orderId, prefix) => {
+    const storageKey = `invoice_${prefix}_${orderId}`;
+    const existing = localStorage.getItem(storageKey);
+    
+    if (existing) {
+      return existing;
+    }
+    
+    // Generate new invoice number
+    const timestamp = Date.now().toString().slice(-6);
+    const invoiceNumber = `${prefix}-${timestamp}`;
+    
+    // Store in localStorage
+    localStorage.setItem(storageKey, invoiceNumber);
+    
+    return invoiceNumber;
+  };
+
+  useEffect(() => {
+    const checkoutId = location.state?.checkoutId || bookingData?._id;
+    if (checkoutId) {
+      fetchInvoiceData(checkoutId);
+    }
+  }, [location.state]);
+
   // Fetch invoice data from checkout API or use restaurant order data
   const fetchInvoiceData = async (checkoutId) => {
     // Load current GST rates
@@ -47,9 +73,9 @@ export default function Invoice() {
             gstin: orderData.gstin || 'N/A'
           },
           invoiceDetails: {
-            billNo: `REST-${(orderData._id || checkoutId).slice(-6)}`,
+            billNo: await getOrGenerateInvoiceNumber(orderData._id || checkoutId, 'REST'),
             billDate: new Date().toLocaleDateString(),
-            grcNo: `GRC-${(orderData._id || checkoutId).slice(-6)}`,
+            grcNo: await getOrGenerateInvoiceNumber(orderData._id || checkoutId, 'GRC'),
             roomNo: `Table ${orderData.tableNo || 'N/A'}`,
             roomType: 'Restaurant',
             pax: orderData.pax || 1,
@@ -123,6 +149,14 @@ export default function Invoice() {
         
         // Use the invoice data directly from API response
         const mappedData = response.data.invoice;
+        
+        // Ensure invoice numbers are persistent
+        if (mappedData.invoiceDetails) {
+          const billNo = await getOrGenerateInvoiceNumber(checkoutId, 'HH');
+          const grcNo = await getOrGenerateInvoiceNumber(checkoutId, 'GRC');
+          mappedData.invoiceDetails.billNo = billNo;
+          mappedData.invoiceDetails.grcNo = grcNo;
+        }
         
         // Extra bed charges are now handled in the backend checkout controller
         
@@ -261,12 +295,15 @@ export default function Invoice() {
 
   const calculateRoundOff = () => {
     if (!invoiceData) return 0;
-    const baseAmount = invoiceData.payment?.taxableAmount || 0;
-    const sgst = invoiceData.payment?.sgst || 0;
-    const cgst = invoiceData.payment?.cgst || 0;
-    // Only add other charges that are NOT room service (since room service is already in taxable amount)
+    const baseAmount = invoiceData.items?.reduce((sum, item) => {
+      return sum + (item.isFree ? 0 : (item.amount || 0));
+    }, 0) || 0;
+    const sgstRate = bookingData?.sgstRate !== undefined ? bookingData.sgstRate : (gstRates.sgstRate / 100);
+    const cgstRate = bookingData?.cgstRate !== undefined ? bookingData.cgstRate : (gstRates.cgstRate / 100);
+    const sgst = baseAmount * sgstRate;
+    const cgst = baseAmount * cgstRate;
     const otherChargesTotal = invoiceData.otherCharges?.reduce((sum, charge) => {
-      if (charge.particulars === 'ROOM SERVICE') return sum; // Skip room service to avoid double counting
+      if (charge.particulars === 'ROOM SERVICE') return sum;
       return sum + (charge.amount || 0);
     }, 0) || 0;
     const exactTotal = baseAmount + sgst + cgst + otherChargesTotal;
@@ -277,12 +314,15 @@ export default function Invoice() {
 
   const calculateNetTotal = () => {
     if (!invoiceData) return '0.00';
-    const baseAmount = invoiceData.payment?.taxableAmount || 0;
-    const sgst = invoiceData.payment?.sgst || 0;
-    const cgst = invoiceData.payment?.cgst || 0;
-    // Only add other charges that are NOT room service (since room service is already in taxable amount)
+    const baseAmount = invoiceData.items?.reduce((sum, item) => {
+      return sum + (item.isFree ? 0 : (item.amount || 0));
+    }, 0) || 0;
+    const sgstRate = bookingData?.sgstRate !== undefined ? bookingData.sgstRate : (gstRates.sgstRate / 100);
+    const cgstRate = bookingData?.cgstRate !== undefined ? bookingData.cgstRate : (gstRates.cgstRate / 100);
+    const sgst = baseAmount * sgstRate;
+    const cgst = baseAmount * cgstRate;
     const otherChargesTotal = invoiceData.otherCharges?.reduce((sum, charge) => {
-      if (charge.particulars === 'ROOM SERVICE') return sum; // Skip room service to avoid double counting
+      if (charge.particulars === 'ROOM SERVICE') return sum;
       return sum + (charge.amount || 0);
     }, 0) || 0;
     const roundOff = calculateRoundOff();
@@ -486,7 +526,7 @@ export default function Invoice() {
 
           <div className="client-details-right p-2">
             <div className="invoice-info-grid grid grid-cols-2 gap-y-1">
-              <p className="font-bold">Bill No. & Date</p>
+              <p className="font-bold">Invoice No. & Date</p>
               <p className="font-medium">: {invoiceData.invoiceDetails?.billNo} {invoiceData.invoiceDetails?.billDate}</p>
               <p className="font-bold">GRC No.</p>
               <p className="font-medium">: {invoiceData.invoiceDetails?.grcNo}</p>
@@ -594,6 +634,14 @@ export default function Invoice() {
               <tr className="border border-black bg-gray-100">
                 <td colSpan="2" className="p-1 text-right font-bold border border-black">SUB TOTAL :</td>
                 <td className="p-1 text-right border border-black font-bold">₹{invoiceData.taxes?.[0]?.taxableAmount?.toFixed(2)}</td>
+                <td colSpan="3" className="p-1 text-right font-bold border border-black">SUB TOTAL :</td>
+                <td className="p-1 text-right border border-black font-bold">₹{(() => {
+                  if (!invoiceData?.items) return '0.00';
+                  const declaredRateTotal = invoiceData.items.reduce((sum, item) => {
+                    return sum + (item.isFree ? 0 : (item.declaredRate || 0));
+                  }, 0);
+                  return declaredRateTotal.toFixed(2);
+                })()}</td>
                 <td className="p-1 border border-black font-bold"></td>
                 <td className="p-1 text-right border border-black font-bold">₹{calculateTotal()}</td>
               </tr>
@@ -620,7 +668,13 @@ export default function Invoice() {
                   <tbody>
                     <tr>
                       <td className="p-0.5 border border-black text-center text-xs">{bookingData?.cgstRate !== undefined && bookingData?.sgstRate !== undefined ? ((bookingData.cgstRate + bookingData.sgstRate) * 100).toFixed(1) : (gstRates.cgstRate + gstRates.sgstRate).toFixed(1)}</td>
-                      <td className="p-0.5 border border-black text-right text-xs">{invoiceData.payment?.taxableAmount?.toFixed(2)}</td>
+                      <td className="p-0.5 border border-black text-right text-xs">{(() => {
+                        if (!invoiceData?.items) return '0.00';
+                        const taxableAmount = invoiceData.items.reduce((sum, item) => {
+                          return sum + (item.isFree ? 0 : (item.amount || 0));
+                        }, 0);
+                        return taxableAmount.toFixed(2);
+                      })()}</td>
                       <td className="p-0.5 border border-black text-center text-xs">1706</td>
                       <td className="p-0.5 border border-black text-center text-xs">CREDIT C</td>
                       <td className="p-0.5 border border-black text-center text-xs">11/08/25</td>
@@ -642,15 +696,35 @@ export default function Invoice() {
                   <tbody>
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">Amount:</td>
-                      <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.taxableAmount?.toFixed(2) || '0.00'}</td>
+                      <td className="p-0.5 border-l border-black text-right text-xs">₹{(() => {
+                        if (!invoiceData?.items) return '0.00';
+                        const taxableAmount = invoiceData.items.reduce((sum, item) => {
+                          return sum + (item.isFree ? 0 : (item.amount || 0));
+                        }, 0);
+                        return taxableAmount.toFixed(2);
+                      })()}</td>
                     </tr>
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">SGST ({bookingData?.sgstRate !== undefined ? (bookingData.sgstRate * 100).toFixed(1) : gstRates.sgstRate}%):</td>
-                      <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.sgst?.toFixed(2) || '0.00'}</td>
+                      <td className="p-0.5 border-l border-black text-right text-xs">₹{(() => {
+                        if (!invoiceData?.items) return '0.00';
+                        const taxableAmount = invoiceData.items.reduce((sum, item) => {
+                          return sum + (item.isFree ? 0 : (item.amount || 0));
+                        }, 0);
+                        const sgstRate = bookingData?.sgstRate !== undefined ? bookingData.sgstRate : (gstRates.sgstRate / 100);
+                        return (taxableAmount * sgstRate).toFixed(2);
+                      })()}</td>
                     </tr>
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">CGST ({bookingData?.cgstRate !== undefined ? (bookingData.cgstRate * 100).toFixed(1) : gstRates.cgstRate}%):</td>
-                      <td className="p-0.5 border-l border-black text-right text-xs">₹{invoiceData.payment?.cgst?.toFixed(2) || '0.00'}</td>
+                      <td className="p-0.5 border-l border-black text-right text-xs">₹{(() => {
+                        if (!invoiceData?.items) return '0.00';
+                        const taxableAmount = invoiceData.items.reduce((sum, item) => {
+                          return sum + (item.isFree ? 0 : (item.amount || 0));
+                        }, 0);
+                        const cgstRate = bookingData?.cgstRate !== undefined ? bookingData.cgstRate : (gstRates.cgstRate / 100);
+                        return (taxableAmount * cgstRate).toFixed(2);
+                      })()}</td>
                     </tr>
                     {/* Room service charges are already included in taxable amount, no need to show separately */}
                     <tr>
