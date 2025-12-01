@@ -620,7 +620,6 @@ export default function Invoice() {
               <tr className="border border-black bg-gray-200">
                 <th className="p-1 border border-black whitespace-nowrap">Date</th>
                 <th className="p-1 border border-black whitespace-nowrap">Particulars</th>
-                <th className="p-1 border border-black text-center whitespace-nowrap">PAX</th>
                 <th className="p-1 border border-black text-right whitespace-nowrap">Declared Rate</th>
                 <th className="p-1 border border-black text-center whitespace-nowrap">HSN/SAC Code</th>
                 <th className="p-1 border border-black text-right whitespace-nowrap">Amount</th>
@@ -631,7 +630,6 @@ export default function Invoice() {
                 <tr key={index} className="border border-black">
                   <td className="p-1 border border-black">{typeof item === 'object' ? (item.date || 'N/A') : 'N/A'}</td>
                   <td className="p-1 border border-black">{typeof item === 'object' ? (item.particulars || 'N/A') : String(item)}</td>
-                  <td className="p-1 border border-black text-center">{typeof item === 'object' ? (item.pax || 1) : 1}</td>
                   <td className="p-1 border border-black text-right">
                     {item.isFree ? (
                       <div>
@@ -653,6 +651,8 @@ export default function Invoice() {
                 </tr>
               ))}
               <tr className="border border-black bg-gray-100">
+                <td colSpan="2" className="p-1 text-right font-bold border border-black">SUB TOTAL :</td>
+                <td className="p-1 text-right border border-black font-bold">₹{invoiceData.taxes?.[0]?.taxableAmount?.toFixed(2)}</td>
                 <td colSpan="3" className="p-1 text-right font-bold border border-black">SUB TOTAL :</td>
                 <td className="p-1 text-right border border-black font-bold">₹{(() => {
                   if (!invoiceData?.items) return '0.00';
