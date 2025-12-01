@@ -327,13 +327,13 @@ const Sidebar = () => {
             )}
           </div>
         ))}
-        {/* <button
+        <button
           onClick={handleLogout}
-          className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg w-full text-left text-sm sm:text-base"
+          className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg w-full text-left text-sm sm:text-base hover:bg-red-600 hover:text-white transition-colors duration-200"
         >
           <LogOut className="w-4 sm:w-5 h-4 sm:h-5 mr-2 sm:mr-3" />
           <span className="truncate">Logout</span>
-        </button> */}
+        </button>
       </div>
 
       </aside>
