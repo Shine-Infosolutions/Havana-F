@@ -384,10 +384,19 @@ export const AppProvider = ({ children }) => {
   };
 
   // --- Data Fetching Functions ---
-  const fetchNewGRCNo = () => {
-    const random = Math.floor(Math.random() * 9000) + 1000;
-    const grcNo = `GRC-${random}`;
-    setFormData(prev => ({ ...prev, grcNo }));
+  const fetchNewGRCNo = async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/api/bookings/next-grc`);
+      if (response.data && response.data.grcNo) {
+        setFormData(prev => ({ ...prev, grcNo: response.data.grcNo }));
+      } else {
+        showMessage('Failed to generate GRC number from server', 'error');
+        console.error('Invalid response from GRC API:', response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching GRC:', error);
+      showMessage(`Failed to fetch GRC from server: ${error.message}`, 'error');
+    }
   };
 
   const fetchAllData = async () => {
@@ -452,8 +461,11 @@ export const AppProvider = ({ children }) => {
     setHasCheckedAvailability(false);
     setCapturedPhotos([]);
     setIsCameraOpen(false);
-    fetchNewGRCNo();
-    fetchAllData();
+    const initializeReset = async () => {
+      await fetchNewGRCNo();
+      await fetchAllData();
+    };
+    initializeReset();
   };
 
   // --- Context Value ---
@@ -498,8 +510,11 @@ export const AppProvider = ({ children }) => {
     setShowCompanyDetails,
   };
   useEffect(() => {
-    fetchNewGRCNo();
-    fetchAllData();
+    const initializeForm = async () => {
+      await fetchNewGRCNo();
+      await fetchAllData();
+    };
+    initializeForm();
     
     // Check for pre-selected room from easy dashboard
     const selectedRoomData = localStorage.getItem('selectedRoomForBooking');
@@ -831,7 +846,19 @@ const App = () => {
         };
         
         // Generate new GRC for new booking
-        const newGrcNo = `GRC-${Math.floor(Math.random() * 9000) + 1000}`;
+        let newGrcNo;
+        try {
+          const grcResponse = await axios.get(`${BASE_URL}/api/bookings/next-grc`);
+          if (grcResponse.data?.grcNo) {
+            newGrcNo = grcResponse.data.grcNo;
+          } else {
+            showToast.error('Failed to generate new GRC number from server');
+            return;
+          }
+        } catch (error) {
+          showToast.error(`Failed to fetch new GRC from server: ${error.message}`);
+          return;
+        }
         
         // Auto-fill customer details but reset booking-specific fields for new booking
         setFormData({
