@@ -323,6 +323,7 @@ export const AppProvider = ({ children }) => {
     purposeOfVisit: '',
     discountPercent: 0,
     discountRoomSource: 0,
+    discountNotes: '',
     paymentMode: '',
     paymentStatus: 'Pending',
     bookingRefNo: '',
@@ -462,7 +463,7 @@ export const AppProvider = ({ children }) => {
       })(),
       taxIncluded: false, serviceCharge: false, arrivedFrom: '',
       destination: '', remark: '', businessSource: '', marketSegment: '',
-      purposeOfVisit: '', discountPercent: 0, discountRoomSource: 0, paymentMode: '',
+      purposeOfVisit: '', discountPercent: 0, discountRoomSource: 0, discountNotes: '', paymentMode: '',
       paymentStatus: 'Pending', bookingRefNo: '', mgmtBlock: 'No', billingInstruction: '',
       temperature: '', fromCSV: false, epabx: false, vip: false, status: 'Booked',
       extensionHistory: [],
@@ -950,6 +951,7 @@ const App = () => {
           purposeOfVisit: '',
           discountPercent: 0,
           discountRoomSource: 0,
+          discountNotes: '',
           paymentMode: '',
           paymentStatus: 'Pending',
           bookingRefNo: '',
@@ -1269,6 +1271,12 @@ const App = () => {
         showToast.error('Please enter a valid 12-digit Aadhaar number');
         return false;
       }
+    }
+    
+    // Discount validation
+    if (formData.discountPercent > 0 && !formData.discountNotes?.trim()) {
+      showToast.error('Discount notes are required when discount is applied');
+      return false;
     }
     
     return true;
@@ -2705,6 +2713,25 @@ const App = () => {
                 onChange={handleChange}
               />
             </div>
+            {formData.discountPercent > 0 && (
+              <div className="space-y-2 col-span-full">
+                <Label htmlFor="discountNotes">
+                  Discount Notes <span className="text-red-500">*</span>
+                </Label>
+                <textarea
+                  id="discountNotes"
+                  name="discountNotes"
+                  value={formData.discountNotes || ''}
+                  onChange={handleChange}
+                  className="flex w-full rounded-md bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ border: '1px solid hsl(45, 100%, 85%)', color: 'hsl(45, 100%, 20%)' }}
+                  rows="3"
+                  placeholder="Please provide reason for discount (mandatory when discount is applied)"
+                  required
+                />
+                <p className="text-xs text-red-600">Note: Discount notes are mandatory when discount is applied</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="paymentStatus">Payment Status</Label>
               <Select

@@ -314,6 +314,7 @@ const CheckoutPage = () => {
       }));
       
       showToast.success(`💰 Payment of ₹${paymentAmount} processed successfully via ${paymentMethod}!`);
+      alert(`🎉 Payment of ₹${paymentAmount} processed successfully via ${paymentMethod}! Guest checkout completed.`);
       
       setShowPaymentForm(false);
       setPaymentAmount('');

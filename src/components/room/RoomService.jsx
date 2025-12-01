@@ -190,7 +190,7 @@ const RoomService = () => {
         body: JSON.stringify(roomServiceOrderData)
       });
       
-      alert('Order created successfully! Stock updated.');
+      alert('🎉 Order created successfully! Stock updated and room service notified.');
       setOrderItems([]);
       fetchItems(); // Refresh items to show updated stock
     } catch (error) {

@@ -773,6 +773,7 @@ const EditBookingForm = () => {
       const response = await axios.put(`/api/bookings/update/${editBooking._id}`, updateData);
       console.log('Update response:', response.data);
       showToast.success('Booking updated successfully!');
+      alert("🎉 Booking updated successfully! You will be redirected to the booking page.");
       navigate('/booking');
     } catch (error) {
       console.error('Error updating booking:', error);

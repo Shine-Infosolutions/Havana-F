@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
+import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -32,73 +33,21 @@ const Sidebar = () => {
   const [showSettingsSlider, setShowSettingsSlider] = useState(false);
 
 
-  const { isSidebarOpen, closeSidebar, axios } = useAppContext();
+  const { isSidebarOpen, closeSidebar } = useAppContext();
+  const { user, hasRole, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [isLaundaryDropdownOpen, setIsLaundaryDropdownOpen] = useState(false);
-
-  const [userRole, setUserRole] = useState("");
-  const [restaurantRole, setRestaurantRole] = useState("");
   const [taskCount, setTaskCount] = useState(0);
 
   useEffect(() => {
-    const role = localStorage.getItem("role");
-    const restRole = localStorage.getItem("restaurantRole");
-    console.log('Debug - role:', role, 'restaurantRole:', restRole);
-    setUserRole(role ? role.toUpperCase() : "");
-    setRestaurantRole(restRole ? restRole.toUpperCase() : "");
-  }, []);
-
-  useEffect(() => {
-    const role = localStorage.getItem("role");
-    const restRole = localStorage.getItem("restaurantRole");
-    const departments = localStorage.getItem("departments");
-    const userId = localStorage.getItem("userId");
-    const token = localStorage.getItem("token");
-    
-    console.log('=== USER DATA ===');
-    console.log('Role:', role);
-    console.log('Restaurant Role:', restRole);
-    console.log('Departments:', departments);
-    console.log('User ID:', userId);
-    console.log('Token:', token);
-    console.log('================');
-    
-    setUserRole(role ? role.toUpperCase() : "");
-    setRestaurantRole(restRole ? restRole.toUpperCase() : "");
-
-    // Remove task fetching since not using tasks
     setTaskCount(0);
   }, []);
 
-  const fetchTaskCount = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const userId = localStorage.getItem("userId");
 
-      if (!token || !userId) return;
-
-      const { data } = await axios.get("/api/housekeeping/tasks", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (data.success && Array.isArray(data.tasks)) {
-        const userPendingTasks = data.tasks.filter(
-          (task) =>
-            task.assignedTo &&
-            task.assignedTo._id === userId &&
-            task.status === "pending"
-        );
-        setTaskCount(userPendingTasks.length);
-      }
-    } catch (err) {
-      console.error("Error fetching task count:", err);
-    }
-  };
 
   const handleLogout = () => {
-    localStorage.clear();
+    logout();
     navigate("/login");
   };
 
@@ -136,238 +85,85 @@ const Sidebar = () => {
   }, [isSidebarOpen]);
 
 
-  const getAuthorizedNavItems = () => {
-    const role = localStorage.getItem("role");
-    const restaurantRole = localStorage.getItem("restaurantRole");
-    let userDepartments = [];
-    try {
-      const departmentData = localStorage.getItem("department") || localStorage.getItem("departments");
-      userDepartments = departmentData && departmentData !== 'undefined' ? JSON.parse(departmentData) : [];
-    } catch (e) {
-      userDepartments = [];
-    }
-    const hasHousekeeping = userDepartments.some(dept => dept && dept.name === "housekeeping");
-    const hasReception = userDepartments.some(dept => dept && dept.name === "reception");
-    const hasLaundry = userDepartments.some(dept => dept && dept.name === "laundry");
-    const hasPantryAccess = role === "staff" && userDepartments.some(dept => dept && dept.name === "pantry");
-    const hasAccounts = userDepartments.some(dept => dept && dept.name === "accounts");
-    
-    console.log('=== DEPARTMENT CHECK ===');
-    console.log('Role:', role);
-    console.log('Restaurant Role:', restaurantRole);
-    console.log('User Departments:', userDepartments);
-    console.log('Has Housekeeping:', hasHousekeeping);
-    console.log('Has Reception:', hasReception);
-    console.log('Has Laundry:', hasLaundry);
-    console.log('Has Pantry:', hasPantryAccess);
-    console.log('Has Accounts:', hasAccounts);
-    console.log('=======================');
-    
-    const items = [];
 
-    // If accounts staff, return only cash management (attendance added separately)
-    if (role === "staff" && hasAccounts && userDepartments.length === 1) {
-      items.push({ icon: BarChart2, label: "Cash Management", path: "/cash-management" });
-      return items;
+
+  const getNavItems = () => {
+    const items = [
+      // Dashboard - All roles
+      { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+    ];
+
+    // Easy Dashboard - Admin only
+    if (hasRole('ADMIN')) {
+      items.push({ icon: ChartBarStacked, label: "Easy Dashboard", path: "/easy-dashboard" });
     }
 
-    // If chef role, return empty - only kitchen items will be added separately
-    if (role === "chef") {
-      return items;
-    }
-    
-    // If restaurant chef, add Chef Dashboard directly
-    if (role === "restaurant" && restaurantRole === "chef") {
-      items.push({ icon: LayoutDashboard, label: "Chef Dashboard", path: "/chef-dashboard" });
-      return items;
-    }
-    
-    // If restaurant staff, add direct menu items
-    if (role === "restaurant" && restaurantRole === "staff") {
-      items.push(
-        { icon: ShoppingCart, label: "Create Order", path: "/resturant/order-table" },
-        { icon: ListChecks, label: "All Orders", path: "/resturant/all-orders" },
-        { icon: FileText, label: "Reservation", path: "/resturant/reservation" },
-        { icon: UserRound, label: "Available Tables", path: "/restaurant/available-tables" }
-      );
-      return items;
-    }
-    
-    // If restaurant cashier, add direct menu items
-    if (role === "restaurant" && restaurantRole === "cashier") {
-      items.push(
-        { icon: ShoppingCart, label: "Create Order", path: "/resturant/order-table" },
-        { icon: ListChecks, label: "All Orders", path: "/resturant/all-orders" },
-        { icon: FileText, label: "Billing", path: "/billing" },
-        { icon: ListChecks, label: "KOT", path: "/kot" },
-        { icon: UserRound, label: "Available Tables", path: "/restaurant/available-tables" }
-      );
-      return items;
+    // Booking - Admin, GM, Front Desk
+    if (hasRole(['ADMIN', 'GM', 'FRONT DESK'])) {
+      items.push({ icon: Book, label: "Booking", path: "/booking" });
     }
 
-    // If staff has only pantry department, return empty (attendance added separately)
-    if (role === "staff" && userDepartments.length === 1 && hasPantryAccess) {
-      return items;
-    }
-
-    // Dashboard - accessible to non-pantry users
-    if (!hasPantryAccess) {
-      items.push({ icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" });
-    }
-    
-    // Easy Dashboard - admin only
-    if (role === "admin") {
-      items.push({ icon: LayoutDashboard, label: "Easy Dashboard", path: "/easy-dashboard" });
-    }
-    
-    // If restaurant role chef, return empty (no dashboard)
-    if (role === "restaurant" && restaurantRole === "chef") {
-      return [];
-    }
-    
-    // If restaurant role staff, return empty (no dashboard)
-    if (role === "restaurant" && restaurantRole === "staff") {
-      return [];
-    }
-    
-    // If restaurant role cashier, return only dashboard items
-    if (role === "restaurant" && restaurantRole === "cashier") {
-      return items;
-    }
-    
-    // If staff has only laundry department, return only dashboard items
-    if (role === "staff" && userDepartments.length === 1 && hasLaundry) {
-      return items;
-    }
-    
-    // Cash Management - accessible to admin and accounts staff (already handled above for accounts-only staff)
-    if (role === "admin" || (role === "staff" && hasAccounts && userDepartments.length > 1)) {
-      items.push({ icon: BarChart2, label: "Cash Management", path: "/cash-management" });
-    }
-
-    // Admin only items
-    if (role === "admin") {
-      items.push({ icon: FileText, label: "Room Inspection", path: "/room-inspection" });
-    }
-
-    // Reception and Admin items - Book dropdown
-    if (role === "admin" || (role === "staff" && hasReception)) {
+    // Room Management - Admin, GM, Front Desk
+    if (hasRole(['ADMIN', 'GM', 'FRONT DESK'])) {
       items.push({
-        icon: Book,
-        label: "Book",
-        path: "/booking",
+        icon: BedDouble,
+        label: "Room Management",
+        path: "/rooms",
         isDropdown: true,
         children: [
-          { label: "Booking", path: "/booking", icon: FileText },
-          { label: "Reservation", path: "/reservation", icon: FileText },
+          { label: "Room List", path: "/rooms", icon: BedDouble },
+          { label: "Room Categories", path: "/room-categories", icon: Settings },
+          { label: "Room Status", path: "/room-status", icon: BarChart2 },
         ],
       });
     }
 
-    // Task management - admin and housekeeping staff
-    if (role === "admin" || (role === "staff" && hasHousekeeping)) {
-      items.push({ icon: UserCheck, label: "Task Assigned", path: "/tasks" });
+    // Hotel Inventory - Admin, GM
+    if (hasRole(['ADMIN', 'GM'])) {
+      items.push({ icon: Warehouse, label: "Hotel Inventory", path: "/inventory" });
     }
-    if (role === "staff" && hasHousekeeping) {
-      items.push({ icon: Bell, label: "My Task", path: "/staff-work", count: taskCount });
+
+    // In-Room Dine In - Admin, GM, Staff
+    if (hasRole(['ADMIN', 'GM', 'STAFF'])) {
+      items.push({
+        icon: UtensilsCrossed,
+        label: "In-Room Dine In",
+        path: "/restaurant",
+        isDropdown: true,
+        children: [
+          { label: "Menu Items", path: "/restaurant/menu-items", icon: FileText },
+          { label: "Create Order", path: "/restaurant/create-order", icon: ShoppingCart },
+          { label: "Live Orders", path: "/restaurant/live-orders", icon: ChefHat },
+          { label: "All Orders", path: "/restaurant/all-orders", icon: ClipboardList },
+          { label: "KOT", path: "/restaurant/kot", icon: ListChecks },
+        ],
+      });
     }
-    
+
+    // Banquet - Admin, GM
+    if (hasRole(['ADMIN', 'GM'])) {
+      items.push({
+        icon: UserRound,
+        label: "Banquet",
+        path: "/banquet",
+        isDropdown: true,
+        children: [
+          { label: "Calendar", path: "/banquet/calendar", icon: FileText },
+          { label: "List Bookings", path: "/banquet/list-booking", icon: Package },
+          { label: "Menu & Plans", path: "/banquet/menu-plan-manager", icon: Settings },
+        ],
+      });
+    }
+
+    // Users - Admin only
+    if (hasRole('ADMIN')) {
+      items.push({ icon: Users, label: "All Users", path: "/users" });
+    }
+
     return items;
   };
 
-  // Add attendance link for all staff and restaurant users (outside getAuthorizedNavItems)
-  const getAttendanceItem = () => {
-    const role = localStorage.getItem("role");
-    if (role === "staff" || role === "restaurant") {
-      return [{ icon: UserCheck, label: "My Attendance", path: "/staff/clock-dashboard" }];
-    }
-    return [];
-  };
-
-  const navItems = [
-    // Dashboard
-    { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-    
-    // Easy Dashboard
-    { icon: ChartBarStacked, label: "Easy Dashboard", path: "/easy-dashboard" },
-    
-    // Booking
-    {
-      icon: Book,
-      label: "Booking",
-      path: "/booking",
-    },
-    
-    // Room Management
-    {
-      icon: BedDouble,
-      label: "Room Management",
-      path: "/rooms",
-      isDropdown: true,
-      children: [
-        { label: "Room List", path: "/rooms", icon: BedDouble },
-        { label: "Room Categories", path: "/room-categories", icon: Settings },
-        { label: "Room Status", path: "/room-status", icon: BarChart2 },
-      ],
-    },
-    
-    // Inventory
-    {
-      icon: Warehouse,
-      label: "Inventory",
-      path: "/inventory",
-    },
-    
-    // In-Room Dine In
-    {
-      icon: UtensilsCrossed,
-      label: "In-Room Dine In",
-      path: "/restaurant",
-      isDropdown: true,
-      children: [
-        { label: "Menu Items", path: "/restaurant/menu-items", icon: FileText },
-        { label: "Create Order", path: "/restaurant/create-order", icon: ShoppingCart },
-        { label: "Live Orders", path: "/restaurant/live-orders", icon: ChefHat },
-        { label: "All Orders", path: "/restaurant/all-orders", icon: ClipboardList },
-        { label: "KOT", path: "/restaurant/kot", icon: ListChecks },
-      ],
-    },
-    
-    // Banquet
-    {
-      icon: UserRound,
-      label: "Banquet",
-      path: "/banquet",
-      isDropdown: true,
-      children: [
-        { label: "Calendar", path: "/banquet/calendar", icon: FileText },
-        { label: "List Bookings", path: "/banquet/list-booking", icon: Package },
-        { label: "Menu & Plans", path: "/banquet/menu-plan-manager", icon: Settings },
-      ],
-    },
-    
-    // Users - Hidden
-    // { icon: Users, label: "All Users", path: "/users" }
-    
-    // Commented out sections:
-    /*
-    ...getAuthorizedNavItems(),
-    ...getAttendanceItem(),
-    ...(localStorage.getItem("role") === "admin" ? [{
-      icon: UserRound,
-      label: "Staff Management",
-      path: "/staff",
-      isDropdown: true,
-      children: [
-        { label: "Staff List", path: "/staff", icon: Users },
-        { label: "Staff Dashboard", path: "/staff-dashboard", icon: LayoutDashboard },
-        { label: "Attendance", path: "/staff/attendance", icon: UserCheck },
-        { label: "Payroll", path: "/staff/payroll", icon: BarChart2 },
-        { label: "Attendance Manager", path: "/staff/attendance-manager", icon: FileText },
-      ],
-    }] : []),
-    */
-  ];
+  const navItems = getNavItems();
 
   const settingsItems = [
     { label: "General Settings", path: "/settings/general" },
@@ -413,7 +209,7 @@ const Sidebar = () => {
           </svg>
         </button>
       </div>
-      <div className="text-center mt-2 font-bold text-base sm:text-lg">{userRole}</div>
+      <div className="text-center mt-2 font-bold text-base sm:text-lg">{user?.role}</div>
 
       <nav className="flex-1 p-3 sm:p-4 space-y-1 sm:space-y-2">
         {navItems.map((item, index) => (

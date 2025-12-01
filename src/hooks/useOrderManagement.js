@@ -275,6 +275,7 @@ export const useOrderManagement = (location) => {
       });
       
       showToast.success('🎉 Order placed successfully!');
+      alert('🎉 Order placed successfully! KOT has been generated and sent to kitchen.');
       setCartItems([]);
       setOrderData({ staffName: '', staffId: '', customerName: '', tableNo: '', items: [], amount: 0 });
       setIsCartOpen(false);

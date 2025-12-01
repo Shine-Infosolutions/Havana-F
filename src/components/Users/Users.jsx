@@ -34,57 +34,15 @@ const Users = () => {
   const fetchUsers = async (page = 1) => {
     try {
       const token = localStorage.getItem('token');
-      // Try different endpoints based on user role
-      let endpoint = `/api/auth/all-users?page=${page}&limit=15`;
-      
-      // Fallback endpoints if main one fails
-      const fallbackEndpoints = [
-        `/api/users?page=${page}&limit=15`,
-        `/api/auth/users?page=${page}&limit=15`,
-        `/api/search/universal?query=&type=users`,
-        `/api/search/field?model=users&field=role&value=restaurant`,
-        `/api/search/field?model=users&field=role&value=admin`
-      ];
-      
-      let response;
-      try {
-        response = await axios.get(endpoint, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      } catch (error) {
-        if (error.response?.status === 403) {
-          // Try fallback endpoints
-          for (const fallback of fallbackEndpoints) {
-            try {
-              response = await axios.get(fallback, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              break;
-            } catch (fallbackError) {
-              console.log(`Fallback ${fallback} failed:`, fallbackError.response?.status);
-            }
-          }
-        }
-        if (!response) throw error;
-      }
+      const response = await axios.get('/api/users/all');
       
       console.log('API Response:', response.data);
       
-      // Handle different response structures
-      let usersData = [];
-      if (Array.isArray(response.data)) {
-        usersData = response.data;
-      } else if (response.data.users && Array.isArray(response.data.users)) {
-        usersData = response.data.users;
-      } else if (response.data.data && Array.isArray(response.data.data)) {
-        usersData = response.data.data;
-      }
-
-      
-      setUsers(usersData);``
+      const usersData = response.data.users || [];
+      setUsers(usersData);
       setFilteredUsers(usersData);
-      setTotalPages(response.data.totalPages || Math.ceil(usersData.length / itemsPerPage));
-      setTotalUsers(response.data.totalUsers || usersData.length);
+      setTotalPages(Math.ceil(usersData.length / itemsPerPage));
+      setTotalUsers(usersData.length);
     } catch (error) {
       console.error('Error fetching users:', error);
       showToast.error('Failed to fetch users');
@@ -93,21 +51,15 @@ const Users = () => {
     }
   };
 
-  const handleSearch = async (e) => {
+  const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`/api/search/universal?query=${searchQuery}&type=users`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const searchResults = Array.isArray(response.data.users) ? response.data.users : [];
-        setFilteredUsers(searchResults);
-        setCurrentPage(1);
-      } catch (error) {
-        console.error('Error searching users:', error);
-        showToast.error('Failed to search users');
-      }
+      const filtered = users.filter(user => 
+        user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.role?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredUsers(filtered);
     } else {
       setFilteredUsers(users);
     }
@@ -130,12 +82,7 @@ const Users = () => {
 
   const handleStatusToggle = async (userId, currentStatus) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`/api/users/${userId}/status`, {
-        isActive: !currentStatus
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.patch(`/api/users/toggle-status/${userId}`);
       showToast.success('User status updated successfully!');
       fetchUsers(currentPage);
     } catch (error) {
@@ -158,10 +105,7 @@ const Users = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`/api/auth/users/${editUser._id}`, editUser, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.put(`/api/users/update/${editUser._id}`, editUser);
       showToast.success('User updated successfully!');
       setShowEdit(false);
       fetchUsers(currentPage);
@@ -174,10 +118,7 @@ const Users = () => {
   const handleDelete = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`/api/auth/users/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.delete(`/api/users/delete/${userId}`);
         showToast.success('User deleted successfully!');
         fetchUsers(currentPage);
       } catch (error) {
@@ -377,6 +318,30 @@ const Users = () => {
                   </span>
                 </div>
                 
+                {showDetails.bankDetails && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600">Bank Details</label>
+                    <div className="text-gray-800 text-sm space-y-1">
+                      <p><strong>Account:</strong> {showDetails.bankDetails.accountNumber || 'N/A'}</p>
+                      <p><strong>IFSC:</strong> {showDetails.bankDetails.ifscCode || 'N/A'}</p>
+                      <p><strong>Bank:</strong> {showDetails.bankDetails.bankName || 'N/A'}</p>
+                      <p><strong>Holder:</strong> {showDetails.bankDetails.accountHolderName || 'N/A'}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {showDetails.salaryDetails && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600">Salary Details</label>
+                    <div className="text-gray-800 text-sm space-y-1">
+                      <p><strong>Basic:</strong> ₹{showDetails.salaryDetails.basicSalary || 0}</p>
+                      <p><strong>Allowances:</strong> ₹{showDetails.salaryDetails.allowances || 0}</p>
+                      <p><strong>Deductions:</strong> ₹{showDetails.salaryDetails.deductions || 0}</p>
+                      <p><strong>Net Salary:</strong> ₹{showDetails.salaryDetails.netSalary || 0}</p>
+                    </div>
+                  </div>
+                )}
+                
                 <div>
                   <label className="block text-sm font-medium text-gray-600">Created At</label>
                   <p className="text-gray-800">
@@ -476,6 +441,74 @@ const Users = () => {
                   placeholder="Leave blank to keep current password"
                 />
                 <p className="text-xs text-gray-500 mt-1">Leave empty if you don't want to change the password</p>
+              </div>
+              
+              <div className="border-t pt-4">
+                <h4 className="font-medium text-gray-700 mb-3">Bank Details</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Account Number"
+                    value={editUser.bankDetails?.accountNumber || ''}
+                    onChange={(e) => setEditUser({...editUser, bankDetails: {...editUser.bankDetails, accountNumber: e.target.value}})}
+                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="IFSC Code"
+                    value={editUser.bankDetails?.ifscCode || ''}
+                    onChange={(e) => setEditUser({...editUser, bankDetails: {...editUser.bankDetails, ifscCode: e.target.value}})}
+                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Bank Name"
+                    value={editUser.bankDetails?.bankName || ''}
+                    onChange={(e) => setEditUser({...editUser, bankDetails: {...editUser.bankDetails, bankName: e.target.value}})}
+                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Account Holder Name"
+                    value={editUser.bankDetails?.accountHolderName || ''}
+                    onChange={(e) => setEditUser({...editUser, bankDetails: {...editUser.bankDetails, accountHolderName: e.target.value}})}
+                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="border-t pt-4">
+                <h4 className="font-medium text-gray-700 mb-3">Salary Details</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="number"
+                    placeholder="Basic Salary"
+                    value={editUser.salaryDetails?.basicSalary || ''}
+                    onChange={(e) => setEditUser({...editUser, salaryDetails: {...editUser.salaryDetails, basicSalary: e.target.value}})}
+                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Allowances"
+                    value={editUser.salaryDetails?.allowances || ''}
+                    onChange={(e) => setEditUser({...editUser, salaryDetails: {...editUser.salaryDetails, allowances: e.target.value}})}
+                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Deductions"
+                    value={editUser.salaryDetails?.deductions || ''}
+                    onChange={(e) => setEditUser({...editUser, salaryDetails: {...editUser.salaryDetails, deductions: e.target.value}})}
+                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Net Salary"
+                    value={editUser.salaryDetails?.netSalary || ''}
+                    onChange={(e) => setEditUser({...editUser, salaryDetails: {...editUser.salaryDetails, netSalary: e.target.value}})}
+                    className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">

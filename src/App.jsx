@@ -1,7 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AppProvider } from './context/AppContext';
+import { AuthProvider } from './context/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './components/Dashboard';
@@ -42,26 +44,22 @@ import SharedHotelInvoice from './components/booking/SharedHotelInvoice';
 import './App.css'
 
 function App() {
-  // Initialize dummy token for bypassing authentication
-  useEffect(() => {
-    if (!localStorage.getItem('token')) {
-      localStorage.setItem('token', 'bypass-token');
-      localStorage.setItem('role', 'admin');
-    }
-  }, []);
   return (
-    <AppProvider>
-      <Router>
-        <Toaster position="top-right" />
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/shared-invoice/:id" element={<SharedHotelInvoice />} />
-          
-          {/* Auth Routes - Hidden */}
-          {/* <Route path="/login" element={<Login />} /> */}
-          
-          {/* Protected Routes */}
-          <Route path="/" element={<Layout />}>
+    <AuthProvider>
+      <AppProvider>
+        <Router>
+          <Toaster position="top-right" />
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/shared-invoice/:id" element={<SharedHotelInvoice />} />
+            <Route path="/login" element={<Login />} />
+            
+            {/* Protected Routes */}
+            <Route path="/" element={
+              <PrivateRoute>
+                <Layout />
+              </PrivateRoute>
+            }>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="easy-dashboard" element={<EasyDashboard />} />
@@ -90,8 +88,12 @@ function App() {
             <Route path="banquet/invoice/:id" element={<Invoice />} />
             <Route path="banquet/menu-view/:id" element={<MenuView />} />
             
-            {/* Users Routes */}
-            <Route path="users" element={<Users />} />
+            {/* Users Routes - Admin Only */}
+            <Route path="users" element={
+              <PrivateRoute requiredRoles={['ADMIN']}>
+                <Users />
+              </PrivateRoute>
+            } />
             
             {/* Room Service Routes */}
             <Route path="room-service" element={<RoomService />} />
@@ -118,6 +120,7 @@ function App() {
         </Routes>
       </Router>
     </AppProvider>
+    </AuthProvider>
   );
 }
 

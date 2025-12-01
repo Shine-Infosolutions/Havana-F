@@ -13,7 +13,7 @@ const DEPARTMENTS = [
 
 const departmentOptions = DEPARTMENTS.map(dep => ({ value: dep, label: `${dep.name} (${dep.id})` }));
 
-const Register = () => {
+const Register = ({ onSuccess }) => {
   const [form, setForm] = useState({
     username: '',
     email: '',
@@ -45,8 +45,10 @@ const Register = () => {
         // Store as array of objects with id and name
         payload.department = form.department.map(dep => dep.value);
       }
-      await axios.post('/api/auth/register', payload);
-      navigate('/staff');
+      await axios.post('/api/users/add', payload);
+      if (typeof onSuccess === 'function') {
+        onSuccess();
+      }
     } catch (err) {
       setError(
         err.response?.data?.message || 'Registration failed. Please try again.'
@@ -106,9 +108,11 @@ const Register = () => {
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
           >
             <option value="">Select role</option>
-            <option value="admin">Admin</option>
-            <option value="staff">Staff</option>
-            <option value="restaurant">Restaurant</option>
+            <option value="ADMIN">Admin</option>
+            <option value="GM">General Manager</option>
+            <option value="FRONT DESK">Front Desk</option>
+            <option value="ACCOUNTS">Accounts</option>
+            <option value="STAFF">Staff</option>
           </select>
         </div>
         {form.role === 'staff' && (

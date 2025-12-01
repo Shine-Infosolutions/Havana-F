@@ -18,9 +18,18 @@ export const AppProvider = ({ children }) => {
   const closeSidebar = () => setIsSidebarOpen(false);
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  // Configure axios with base URL
+  // Configure axios with base URL and auth token
   const axiosInstance = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL
+  });
+
+  // Add token to all requests
+  axiosInstance.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
   });
 
   const value = {
