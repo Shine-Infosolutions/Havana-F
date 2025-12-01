@@ -16,7 +16,7 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     try {
-      const newSocket = io(process.env.VITE_API_BASE_URL || 'http://localhost:5000');
+      const newSocket = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000');
       setSocket(newSocket);
 
       return () => {
