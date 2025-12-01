@@ -268,6 +268,7 @@ export const AppProvider = ({ children }) => {
   const [showCompanyDetails, setShowCompanyDetails] = useState(false);
   const [formData, setFormData] = useState({
     grcNo: '',
+    invoiceNumber: '',
     reservationId: '',
     categoryId: '',
     bookingDate: new Date().toISOString().split('T')[0],
@@ -385,10 +386,30 @@ export const AppProvider = ({ children }) => {
   };
 
   // --- Data Fetching Functions ---
-  const fetchNewGRCNo = () => {
-    const random = Math.floor(Math.random() * 9000) + 1000;
-    const grcNo = `GRC-${random}`;
-    setFormData(prev => ({ ...prev, grcNo }));
+  const fetchNewGRCNo = async () => {
+    try {
+      const [grcResponse, invoiceResponse] = await Promise.all([
+        axios.get(`${BASE_URL}/api/bookings/next-grc`),
+        axios.get(`${BASE_URL}/api/invoices/next-invoice-number?format=monthly&preview=true`)
+      ]);
+      
+      if (grcResponse.data && grcResponse.data.grcNo) {
+        setFormData(prev => ({ ...prev, grcNo: grcResponse.data.grcNo }));
+      } else {
+        showMessage('Failed to generate GRC number from server', 'error');
+        console.error('Invalid response from GRC API:', grcResponse.data);
+      }
+      
+      if (invoiceResponse.data && invoiceResponse.data.invoiceNumber) {
+        setFormData(prev => ({ ...prev, invoiceNumber: invoiceResponse.data.invoiceNumber }));
+      } else {
+        showMessage('Failed to preview invoice number from server', 'error');
+        console.error('Invalid response from Invoice API:', invoiceResponse.data);
+      }
+    } catch (error) {
+      console.error('Error fetching GRC/Invoice:', error);
+      showMessage(`Failed to fetch GRC/Invoice from server: ${error.message}`, 'error');
+    }
   };
 
   const fetchAllData = async () => {
@@ -423,7 +444,7 @@ export const AppProvider = ({ children }) => {
   // --- Form Reset Logic ---
   const resetForm = () => {
     setFormData({
-      grcNo: '', reservationId: '', categoryId: '', bookingDate: new Date().toISOString().split('T')[0],
+      grcNo: '', invoiceNumber: '', reservationId: '', categoryId: '', bookingDate: new Date().toISOString().split('T')[0],
       numberOfRooms: 1, isActive: true, checkInDate: '', checkOutDate: '', days: 0,
       timeIn: '12:00', timeOut: '12:00', salutation: 'mr.', name: '', age: '',
       gender: '', address: '', city: '', nationality: '', mobileNo: '', email: '',
@@ -446,6 +467,7 @@ export const AppProvider = ({ children }) => {
       paymentStatus: 'Pending', bookingRefNo: '', mgmtBlock: 'No', billingInstruction: '',
       temperature: '', fromCSV: false, epabx: false, vip: false, status: 'Booked',
       extensionHistory: [],
+      invoiceNumber: '',
     });
     setSelectedRooms([]);
     setSearchGRC('');
@@ -453,8 +475,11 @@ export const AppProvider = ({ children }) => {
     setHasCheckedAvailability(false);
     setCapturedPhotos([]);
     setIsCameraOpen(false);
-    fetchNewGRCNo();
-    fetchAllData();
+    const initializeReset = async () => {
+      await fetchNewGRCNo();
+      await fetchAllData();
+    };
+    initializeReset();
   };
 
   // --- Context Value ---
@@ -499,8 +524,11 @@ export const AppProvider = ({ children }) => {
     setShowCompanyDetails,
   };
   useEffect(() => {
-    fetchNewGRCNo();
-    fetchAllData();
+    const initializeForm = async () => {
+      await fetchNewGRCNo();
+      await fetchAllData();
+    };
+    initializeForm();
     
     // Check for pre-selected room from easy dashboard
     const selectedRoomData = localStorage.getItem('selectedRoomForBooking');
@@ -831,13 +859,37 @@ const App = () => {
           }
         };
         
-        // Generate new GRC for new booking
-        const newGrcNo = `GRC-${Math.floor(Math.random() * 9000) + 1000}`;
+        // Generate new GRC and preview Invoice for new booking
+        let newGrcNo, newInvoiceNumber;
+        try {
+          const [grcResponse, invoiceResponse] = await Promise.all([
+            axios.get(`${BASE_URL}/api/bookings/next-grc`),
+            axios.get(`${BASE_URL}/api/invoices/next-invoice-number?format=monthly&preview=true`)
+          ]);
+          
+          if (grcResponse.data?.grcNo) {
+            newGrcNo = grcResponse.data.grcNo;
+          } else {
+            showToast.error('Failed to generate new GRC number from server');
+            return;
+          }
+          
+          if (invoiceResponse.data?.invoiceNumber) {
+            newInvoiceNumber = invoiceResponse.data.invoiceNumber;
+          } else {
+            showToast.error('Failed to preview new invoice number from server');
+            return;
+          }
+        } catch (error) {
+          showToast.error(`Failed to fetch new GRC/Invoice from server: ${error.message}`);
+          return;
+        }
         
         // Auto-fill customer details but reset booking-specific fields for new booking
         setFormData({
           // New booking details
           grcNo: newGrcNo,
+          invoiceNumber: newInvoiceNumber,
           reservationId: '',
           categoryId: '',
           bookingDate: new Date().toISOString().split('T')[0],
@@ -880,6 +932,7 @@ const App = () => {
           noOfAdults: 1,
           noOfChildren: 0,
           rate: 0,
+          invoiceNumber: newInvoiceNumber,
           cgstRate: (() => {
             const savedRates = localStorage.getItem('defaultGstRates');
             return savedRates ? JSON.parse(savedRates).cgstRate || 2.5 : 2.5;
@@ -950,7 +1003,7 @@ const App = () => {
           setShowCompanyDetails(true);
         }
 
-        showToast.success(`Customer details loaded from GRC ${searchGRC}. New GRC ${newGrcNo} generated for new booking.`);
+        showToast.success(`Customer details loaded from GRC ${searchGRC}. New GRC ${newGrcNo} and Invoice ${newInvoiceNumber} generated for new booking.`);
       } else {
         showToast.error("No booking found with that GRC number.");
       }
@@ -1290,6 +1343,15 @@ const App = () => {
 
     
     try {
+      // Generate actual invoice number for the booking
+      const invoiceResponse = await axios.post(`${BASE_URL}/api/invoices/generate-for-booking`, {
+        format: 'monthly'
+      });
+      
+      if (invoiceResponse.data?.invoiceNumber) {
+        cleanFormData.invoiceNumber = invoiceResponse.data.invoiceNumber;
+      }
+      
       const response = await axios.post(`${BASE_URL}/api/bookings/book`, cleanFormData, {
         headers: {
           'Content-Type': 'application/json'
@@ -1417,6 +1479,19 @@ const App = () => {
                 readOnly
                 className="bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed"
               />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="invoiceNumber">Invoice No. (Preview)</Label>
+              <Input
+                id="invoiceNumber"
+                name="invoiceNumber"
+                value={formData.invoiceNumber}
+                readOnly
+                className="bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                💡 Final invoice number will be assigned when booking is submitted
+              </p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="searchGRC">Search by GRC (Returning Customer)</Label>

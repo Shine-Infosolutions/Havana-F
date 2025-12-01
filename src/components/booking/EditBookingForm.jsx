@@ -173,6 +173,7 @@ const EditBookingForm = () => {
 
   const [formData, setFormData] = useState({
     grcNo: '',
+    invoiceNumber: '',
     reservationId: '',
     categoryId: '',
     bookingDate: new Date().toISOString().split('T')[0],
@@ -263,6 +264,7 @@ const EditBookingForm = () => {
       
       setFormData({
         grcNo: editBooking.grcNo || '',
+        invoiceNumber: editBooking.invoiceNumber || '',
         reservationId: editBooking.reservationId || '',
         categoryId: categoryId || '',
         bookingDate: editBooking.bookingDate ? new Date(editBooking.bookingDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
@@ -822,6 +824,16 @@ const EditBookingForm = () => {
                       id="grcNo"
                       name="grcNo"
                       value={formData.grcNo}
+                      readOnly
+                      className="bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="invoiceNumber">Invoice No.</Label>
+                    <Input
+                      id="invoiceNumber"
+                      name="invoiceNumber"
+                      value={formData.invoiceNumber}
                       readOnly
                       className="bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed"
                     />

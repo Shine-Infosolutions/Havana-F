@@ -20,6 +20,65 @@ export default function Invoice() {
   const [gstRates, setGstRates] = useState({ cgstRate: 2.5, sgstRate: 2.5 });
   const [showPaxDetails, setShowPaxDetails] = useState(false);
 
+  // Generate or retrieve existing invoice number
+  const getOrGenerateInvoiceNumber = async (orderId, prefix) => {
+    console.log('getOrGenerateInvoiceNumber called with:', { orderId, prefix });
+    const storageKey = `invoice_${prefix}_${orderId}`;
+    
+
+    
+    const existing = localStorage.getItem(storageKey);
+    
+    // Return existing invoice number if already generated
+    if (existing) {
+      console.log('Using existing invoice number:', existing);
+      return existing;
+    }
+    
+    console.log('No existing invoice number found, calling backend API...');
+    try {
+      const response = await axios.get(`/api/invoices/next-invoice-number?bookingId=${orderId}`);
+      console.log('Backend response:', response.data);
+      if (response.data && response.data.invoiceNumber) {
+        const invoiceNumber = response.data.invoiceNumber;
+        localStorage.setItem(storageKey, invoiceNumber);
+        console.log('Generated new invoice number from backend:', invoiceNumber);
+        return invoiceNumber;
+      } else {
+        console.error('Invalid response from backend:', response.data);
+      }
+    } catch (error) {
+      console.error('Failed to get invoice number from backend:', error);
+      console.error('Error details:', error.response?.data);
+    }
+    
+    // Fallback to local generation if backend fails
+    console.log('Using fallback invoice number generation');
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const sequence = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+    const invoiceNumber = `HH/${month}/${sequence}`;
+    localStorage.setItem(storageKey, invoiceNumber);
+    
+    return invoiceNumber;
+  };
+
+  // Format date as DD/MM/YYYY
+  const formatDate = (date = new Date()) => {
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  useEffect(() => {
+    const checkoutId = location.state?.checkoutId || bookingData?._id;
+    if (checkoutId) {
+      fetchInvoiceData(checkoutId);
+    }
+  }, [location.state]);
+
   // Fetch invoice data from checkout API or use restaurant order data
   const fetchInvoiceData = async (checkoutId) => {
     // Load current GST rates
@@ -47,20 +106,20 @@ export default function Invoice() {
             gstin: orderData.gstin || 'N/A'
           },
           invoiceDetails: {
-            billNo: `REST-${(orderData._id || checkoutId).slice(-6)}`,
-            billDate: new Date().toLocaleDateString(),
-            grcNo: `GRC-${(orderData._id || checkoutId).slice(-6)}`,
+            billNo: await getOrGenerateInvoiceNumber(orderData._id || checkoutId, 'REST'),
+            billDate: formatDate(),
+            grcNo: orderData.grcNo || 'N/A',
             roomNo: `Table ${orderData.tableNo || 'N/A'}`,
             roomType: 'Restaurant',
             pax: orderData.pax || 1,
             adult: orderData.adult || 1,
-            checkInDate: new Date().toLocaleDateString(),
-            checkOutDate: new Date().toLocaleDateString()
+            checkInDate: formatDate(),
+            checkOutDate: formatDate()
           },
           items: orderData.items?.map((item, index) => {
             const itemPrice = item.isFree ? 0 : (typeof item === 'object' ? (item.price || item.Price || 0) : 0);
             return {
-              date: new Date().toLocaleDateString(),
+              date: formatDate(),
               particulars: typeof item === 'string' ? item : (item.name || item.itemName || 'Unknown Item'),
               pax: 1,
               declaredRate: itemPrice,
@@ -123,6 +182,23 @@ export default function Invoice() {
         
         // Use the invoice data directly from API response
         const mappedData = response.data.invoice;
+        
+        // Ensure invoice numbers are persistent and dates are formatted
+        if (mappedData.invoiceDetails) {
+          const billNo = await getOrGenerateInvoiceNumber(checkoutId, 'HH');
+          mappedData.invoiceDetails.billNo = billNo;
+          // Keep the original GRC from booking data
+          if (!mappedData.invoiceDetails.grcNo && bookingData?.grcNo) {
+            mappedData.invoiceDetails.grcNo = bookingData.grcNo;
+          }
+          mappedData.invoiceDetails.billDate = formatDate(mappedData.invoiceDetails.billDate);
+          if (mappedData.invoiceDetails.checkInDate) {
+            mappedData.invoiceDetails.checkInDate = formatDate(mappedData.invoiceDetails.checkInDate);
+          }
+          if (mappedData.invoiceDetails.checkOutDate) {
+            mappedData.invoiceDetails.checkOutDate = formatDate(mappedData.invoiceDetails.checkOutDate);
+          }
+        }
         
         // Extra bed charges are now handled in the backend checkout controller
         
@@ -492,7 +568,7 @@ export default function Invoice() {
 
           <div className="client-details-right p-2">
             <div className="invoice-info-grid grid grid-cols-2 gap-y-1">
-              <p className="font-bold">Bill No. & Date</p>
+              <p className="font-bold">Invoice No. & Date</p>
               <p className="font-medium">: {invoiceData.invoiceDetails?.billNo} {invoiceData.invoiceDetails?.billDate}</p>
               <p className="font-bold">GRC No.</p>
               <p className="font-medium">: {invoiceData.invoiceDetails?.grcNo}</p>
@@ -567,7 +643,6 @@ export default function Invoice() {
               <tr className="border border-black bg-gray-200">
                 <th className="p-1 border border-black whitespace-nowrap">Date</th>
                 <th className="p-1 border border-black whitespace-nowrap">Particulars</th>
-                <th className="p-1 border border-black text-center whitespace-nowrap">PAX</th>
                 <th className="p-1 border border-black text-right whitespace-nowrap">Declared Rate</th>
                 <th className="p-1 border border-black text-center whitespace-nowrap">HSN/SAC Code</th>
                 <th className="p-1 border border-black text-right whitespace-nowrap">Amount</th>
@@ -578,7 +653,6 @@ export default function Invoice() {
                 <tr key={index} className="border border-black">
                   <td className="p-1 border border-black">{typeof item === 'object' ? (item.date || 'N/A') : 'N/A'}</td>
                   <td className="p-1 border border-black">{typeof item === 'object' ? (item.particulars || 'N/A') : String(item)}</td>
-                  <td className="p-1 border border-black text-center">{typeof item === 'object' ? (item.pax || 1) : 1}</td>
                   <td className="p-1 border border-black text-right">
                     {item.isFree ? (
                       <div>
@@ -600,7 +674,7 @@ export default function Invoice() {
                 </tr>
               ))}
               <tr className="border border-black bg-gray-100">
-                <td colSpan="3" className="p-1 text-right font-bold border border-black">SUB TOTAL :</td>
+                <td colSpan="2" className="p-1 text-right font-bold border border-black">SUB TOTAL :</td>
                 <td className="p-1 text-right border border-black font-bold">₹{(() => {
                   if (!invoiceData?.items) return '0.00';
                   const declaredRateTotal = invoiceData.items.reduce((sum, item) => {
