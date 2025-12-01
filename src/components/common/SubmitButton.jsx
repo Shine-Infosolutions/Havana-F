@@ -14,6 +14,7 @@ const SubmitButton = ({
 
   const getDefaultMessage = () => {
     switch(buttonType) {
+      case 'create': return 'Do you want to create again?';
       case 'update': return 'Do you want to update again?';
       case 'add': return 'Do you want to add again?';
       case 'stay': return 'Do you want to stay and resubmit?';
@@ -23,6 +24,7 @@ const SubmitButton = ({
 
   const getLoadingText = () => {
     switch(buttonType) {
+      case 'create': return 'Creating...';
       case 'update': return 'Updating...';
       case 'add': return 'Adding...';
       case 'stay': return 'Processing...';
@@ -50,6 +52,7 @@ const SubmitButton = ({
 export default SubmitButton;
 
 // Quick button variants
+export const CreateButton = (props) => <SubmitButton buttonType="create" {...props} />;
 export const UpdateButton = (props) => <SubmitButton buttonType="update" {...props} />;
 export const AddButton = (props) => <SubmitButton buttonType="add" {...props} />;
 export const StayButton = (props) => <SubmitButton buttonType="stay" {...props} />;
