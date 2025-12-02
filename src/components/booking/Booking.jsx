@@ -483,7 +483,7 @@ const BookingPage = () => {
                         </button>
 
                         <button
-                          onClick={() => navigate('/edit-booking', { state: { editBooking: booking._raw } })}
+                          onClick={() => navigate(`/edit-booking/${booking._raw?.grcNo || booking.id}`, { state: { editBooking: booking._raw } })}
                           disabled={booking.status === 'Checked Out'}
                           title={booking.status === 'Checked Out' ? 'Cannot edit checked out booking' : 'Edit Booking'}
                           className={`p-1.5 rounded-full transition duration-300 ${
@@ -518,13 +518,30 @@ const BookingPage = () => {
                         >
                           <FileText size={16} />
                         </button>
-                        <button
-                          onClick={() => openCheckout(booking.id)}
-                          disabled={booking.status === 'Checked Out'}
-                          className="bg-purple-600 text-white px-2 py-1 rounded text-xs transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        >
-                          {booking.status === 'Checked Out' ? 'Checked Out' : 'Checkout'}
-                        </button>
+                        {booking.status === 'Booked' && (
+                          <button
+                            onClick={() => updateBookingStatus(booking.id, 'Checked In')}
+                            className="bg-blue-600 text-white px-2 py-1 rounded text-xs transition duration-300"
+                          >
+                            Check In
+                          </button>
+                        )}
+                        {booking.status === 'Checked In' && (
+                          <button
+                            onClick={() => openCheckout(booking.id)}
+                            className="bg-purple-600 text-white px-2 py-1 rounded text-xs transition duration-300"
+                          >
+                            Checkout
+                          </button>
+                        )}
+                        {booking.status === 'Checked Out' && (
+                          <button
+                            disabled
+                            className="bg-gray-400 text-white px-2 py-1 rounded text-xs cursor-not-allowed"
+                          >
+                            Checked Out
+                          </button>
+                        )}
                         <button
                           onClick={() => deleteBooking(booking.id)}
                           title="Delete Booking"
@@ -668,7 +685,7 @@ const BookingPage = () => {
                 </button>
 
                 <button
-                  onClick={() => navigate('/edit-booking', { state: { editBooking: booking._raw } })}
+                  onClick={() => navigate(`/edit-booking/${booking._raw?.grcNo || booking.id}`, { state: { editBooking: booking._raw } })}
                   disabled={booking.status === 'Checked Out'}
                   className={`p-2 rounded-full transition duration-300 ${
                     booking.status === 'Checked Out' 
@@ -714,17 +731,33 @@ const BookingPage = () => {
                 >
                   <FileText size={18} />
                 </button>
-                <button
-                  onClick={() => openCheckout(booking.id)}
-                  disabled={booking.status === 'Checked Out'}
-                  className="px-3 py-1 rounded text-sm transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  style={{ 
-                    backgroundColor: booking.status === 'Checked Out' ? '#9CA3AF' : 'hsl(45, 71%, 69%)', 
-                    color: booking.status === 'Checked Out' ? '#6B7280' : 'hsl(45, 100%, 20%)' 
-                  }}
-                >
-                  {booking.status === 'Checked Out' ? 'Checked Out' : 'Checkout'}
-                </button>
+                {booking.status === 'Booked' && (
+                  <button
+                    onClick={() => updateBookingStatus(booking.id, 'Checked In')}
+                    className="px-3 py-1 rounded text-sm transition duration-300"
+                    style={{ backgroundColor: 'hsl(200, 60%, 50%)', color: 'white' }}
+                  >
+                    Check In
+                  </button>
+                )}
+                {booking.status === 'Checked In' && (
+                  <button
+                    onClick={() => openCheckout(booking.id)}
+                    className="px-3 py-1 rounded text-sm transition duration-300"
+                    style={{ backgroundColor: 'hsl(45, 71%, 69%)', color: 'hsl(45, 100%, 20%)' }}
+                  >
+                    Checkout
+                  </button>
+                )}
+                {booking.status === 'Checked Out' && (
+                  <button
+                    disabled
+                    className="px-3 py-1 rounded text-sm cursor-not-allowed"
+                    style={{ backgroundColor: '#9CA3AF', color: '#6B7280' }}
+                  >
+                    Checked Out
+                  </button>
+                )}
                 <button
                   onClick={() => deleteBooking(booking.id)}
                   className="p-2 rounded-full transition duration-300"

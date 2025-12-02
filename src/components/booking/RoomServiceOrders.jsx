@@ -8,7 +8,8 @@ const RoomServiceOrders = ({
   onEditOrder, 
   onSaveOrder, 
   onCancelEdit, 
-  onUpdateItemQuantity 
+  onUpdateItemQuantity,
+  onRemoveItem
 }) => {
   if (serviceCharges.length === 0) return null;
 
@@ -62,6 +63,13 @@ const RoomServiceOrders = ({
                       </button>
                     </div>
                     <div className="ml-4 font-semibold">₹{item.totalPrice}</div>
+                    <button
+                      onClick={() => onRemoveItem(itemIndex)}
+                      className="ml-2 p-1 text-red-600 hover:bg-red-50 rounded"
+                      title="Remove item"
+                    >
+                      <X size={16} />
+                    </button>
                   </div>
                 ))}
                 <div className="flex justify-end space-x-2 mt-4">

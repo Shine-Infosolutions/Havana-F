@@ -1046,9 +1046,17 @@ const UpdateBooking = () => {
                 <label className="block text-sm font-medium text-gray-700">
                   Booking Status <span className="text-red-500">*</span>
                 </label>
-                <div className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 px-3 text-gray-700">
-                  {booking.bookingStatus}
-                </div>
+                <select
+                  name="bookingStatus"
+                  className="w-full rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 py-2 px-3"
+                  onChange={handleInputChange}
+                  value={booking.bookingStatus}
+                >
+                  <option value="Tentative">Tentative</option>
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Enquiry">Enquiry</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
               </div>
 
               {/* Rate Plan */}

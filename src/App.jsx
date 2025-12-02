@@ -80,7 +80,7 @@ function App() {
             {/* Booking Routes */}
             <Route path="booking" element={<Booking />} />
             <Route path="bookingform" element={<BookingForm />} />
-            <Route path="edit-booking" element={<EditBookingForm />} />
+            <Route path="edit-booking/:bookingId" element={<EditBookingForm />} />
             <Route path="booking-details/:bookingId" element={<BookingDetails />} />
             <Route path="reservation" element={<div>Reservation Component</div>} />
             

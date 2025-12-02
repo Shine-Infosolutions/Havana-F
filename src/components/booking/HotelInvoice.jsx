@@ -37,7 +37,7 @@ export default function Invoice() {
     
     console.log('No existing invoice number found, calling backend API...');
     try {
-      const response = await axios.get(`/api/invoices/next-invoice-number?bookingId=${orderId}`);
+      const response = await axios.get(`/api/invoices/next-invoice-number?bookingId=${orderId}&preview=true`);
       console.log('Backend response:', response.data);
       if (response.data && response.data.invoiceNumber) {
         const invoiceNumber = response.data.invoiceNumber;
@@ -341,15 +341,21 @@ export default function Invoice() {
     const baseAmount = invoiceData.items?.reduce((sum, item) => {
       return sum + (item.isFree ? 0 : (item.amount || 0));
     }, 0) || 0;
+    
+    // Apply discount to base amount
+    const discountPercent = bookingData?.discountPercent || 0;
+    const discountAmount = baseAmount * (discountPercent / 100);
+    const discountedAmount = baseAmount - discountAmount;
+    
     const sgstRate = bookingData?.sgstRate !== undefined ? bookingData.sgstRate : (gstRates.sgstRate / 100);
     const cgstRate = bookingData?.cgstRate !== undefined ? bookingData.cgstRate : (gstRates.cgstRate / 100);
-    const sgst = baseAmount * sgstRate;
-    const cgst = baseAmount * cgstRate;
+    const sgst = discountedAmount * sgstRate;
+    const cgst = discountedAmount * cgstRate;
     const otherChargesTotal = invoiceData.otherCharges?.reduce((sum, charge) => {
       if (charge.particulars === 'ROOM SERVICE') return sum;
       return sum + (charge.amount || 0);
     }, 0) || 0;
-    const exactTotal = baseAmount + sgst + cgst + otherChargesTotal;
+    const exactTotal = discountedAmount + sgst + cgst + otherChargesTotal;
     const roundedTotal = Math.round(exactTotal);
     const roundOff = Math.round((roundedTotal - exactTotal) * 100) / 100;
     return roundOff;
@@ -363,17 +369,22 @@ export default function Invoice() {
       return sum + (item.isFree ? 0 : (item.amount || 0));
     }, 0) || 0;
     
-    // Calculate taxes on the taxable amount
+    // Apply discount to taxable amount
+    const discountPercent = bookingData?.discountPercent || 0;
+    const discountAmount = taxableAmount * (discountPercent / 100);
+    const discountedAmount = taxableAmount - discountAmount;
+    
+    // Calculate taxes on the discounted amount
     const sgstRate = bookingData?.sgstRate !== undefined ? bookingData.sgstRate : (gstRates.sgstRate / 100);
     const cgstRate = bookingData?.cgstRate !== undefined ? bookingData.cgstRate : (gstRates.cgstRate / 100);
-    const sgst = taxableAmount * sgstRate;
-    const cgst = taxableAmount * cgstRate;
+    const sgst = discountedAmount * sgstRate;
+    const cgst = discountedAmount * cgstRate;
     
     // Calculate round off
     const roundOff = calculateRoundOff();
     
-    // Net total = taxable amount + taxes + round off
-    const netTotal = taxableAmount + sgst + cgst + roundOff;
+    // Net total = discounted amount + taxes + round off
+    const netTotal = discountedAmount + sgst + cgst + roundOff;
     
     return netTotal.toFixed(2);
   };
@@ -630,14 +641,14 @@ export default function Invoice() {
               )}
               {bookingData?.amendmentHistory && bookingData.amendmentHistory.length > 0 && (
                 <>
-                  <p className="font-bold text-red-600">Amended</p>
-                  <p className="font-medium text-red-600">: {bookingData.amendmentHistory.length} time(s)</p>
+                  <p className="font-bold">Amended</p>
+                  <p className="font-medium">: {bookingData.amendmentHistory.length} time(s)</p>
                 </>
               )}
               {bookingData?.advancePayments && bookingData.advancePayments.length > 0 && (
                 <>
-                  <p className="font-bold text-green-600">Total Advance Paid</p>
-                  <p className="font-medium text-green-600">: ₹{bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}</p>
+                  <p className="font-bold">Total Advance Paid</p>
+                  <p className="font-medium">: ₹{bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}</p>
                 </>
               )}
             </div>
@@ -723,7 +734,7 @@ export default function Invoice() {
                         return taxableAmount.toFixed(2);
                       })()}</td>
                       <td className="p-0.5 border border-black text-center text-xs">1706</td>
-                      <td className="p-0.5 border border-black text-center text-xs">CREDIT C</td>
+                      <td className="p-0.5 border border-black text-center text-xs">{bookingData?.paymentMode || ''}</td>
                       <td className="p-0.5 border border-black text-center text-xs">11/08/25</td>
                       <td className="p-0.5 border border-black text-right text-xs">{invoiceData.payment?.total?.toFixed(2)}</td>
                     </tr>
@@ -751,6 +762,34 @@ export default function Invoice() {
                         return taxableAmount.toFixed(2);
                       })()}</td>
                     </tr>
+                    {(() => {
+                      const discountPercent = bookingData?.discountPercent || 0;
+                      if (discountPercent > 0) {
+                        const taxableAmount = invoiceData?.items?.reduce((sum, item) => {
+                          return sum + (item.isFree ? 0 : (item.amount || 0));
+                        }, 0) || 0;
+                        const discountAmount = taxableAmount * (discountPercent / 100);
+                        return (
+                          <tr>
+                            <td className="p-0.5 text-right text-xs font-medium">Discount ({discountPercent}%):</td>
+                            <td className="p-0.5 border-l border-black text-right text-xs">-₹{discountAmount.toFixed(2)}</td>
+                          </tr>
+                        );
+                      }
+                      return null;
+                    })()}
+                    <tr>
+                      <td className="p-0.5 text-right text-xs font-medium">After Discount:</td>
+                      <td className="p-0.5 border-l border-black text-right text-xs">₹{(() => {
+                        if (!invoiceData?.items) return '0.00';
+                        const taxableAmount = invoiceData.items.reduce((sum, item) => {
+                          return sum + (item.isFree ? 0 : (item.amount || 0));
+                        }, 0);
+                        const discountPercent = bookingData?.discountPercent || 0;
+                        const discountAmount = taxableAmount * (discountPercent / 100);
+                        return (taxableAmount - discountAmount).toFixed(2);
+                      })()}</td>
+                    </tr>
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">SGST ({bookingData?.sgstRate !== undefined ? (bookingData.sgstRate * 100).toFixed(1) : gstRates.sgstRate}%):</td>
                       <td className="p-0.5 border-l border-black text-right text-xs">₹{(() => {
@@ -758,8 +797,11 @@ export default function Invoice() {
                         const taxableAmount = invoiceData.items.reduce((sum, item) => {
                           return sum + (item.isFree ? 0 : (item.amount || 0));
                         }, 0);
+                        const discountPercent = bookingData?.discountPercent || 0;
+                        const discountAmount = taxableAmount * (discountPercent / 100);
+                        const discountedAmount = taxableAmount - discountAmount;
                         const sgstRate = bookingData?.sgstRate !== undefined ? bookingData.sgstRate : (gstRates.sgstRate / 100);
-                        return (taxableAmount * sgstRate).toFixed(2);
+                        return (discountedAmount * sgstRate).toFixed(2);
                       })()}</td>
                     </tr>
                     <tr>
@@ -769,10 +811,14 @@ export default function Invoice() {
                         const taxableAmount = invoiceData.items.reduce((sum, item) => {
                           return sum + (item.isFree ? 0 : (item.amount || 0));
                         }, 0);
+                        const discountPercent = bookingData?.discountPercent || 0;
+                        const discountAmount = taxableAmount * (discountPercent / 100);
+                        const discountedAmount = taxableAmount - discountAmount;
                         const cgstRate = bookingData?.cgstRate !== undefined ? bookingData.cgstRate : (gstRates.cgstRate / 100);
-                        return (taxableAmount * cgstRate).toFixed(2);
+                        return (discountedAmount * cgstRate).toFixed(2);
                       })()}</td>
                     </tr>
+
                     {/* Room service charges are already included in taxable amount, no need to show separately */}
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">Round Off:</td>
@@ -782,15 +828,19 @@ export default function Invoice() {
                       <td className="p-0.5 font-bold text-right text-xs">NET AMOUNT:</td>
                       <td className="p-0.5 border-l border-black text-right font-bold text-xs">₹{calculateNetTotal()}</td>
                     </tr>
+                    <tr className="bg-yellow-100">
+                      <td className="p-0.5 font-bold text-right text-xs">GRAND TOTAL:</td>
+                      <td className="p-0.5 border-l border-black text-right font-bold text-xs">₹{calculateNetTotal()}</td>
+                    </tr>
                     {bookingData?.advancePayments && bookingData.advancePayments.length > 0 && (
                       <>
-                        <tr className="bg-green-50">
-                          <td className="p-0.5 text-right text-xs font-medium text-green-700">Total Advance Received:</td>
-                          <td className="p-0.5 border-l border-black text-right text-xs font-bold text-green-700">₹{bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}</td>
+                        <tr>
+                          <td className="p-0.5 text-right text-xs font-medium">Total Advance Received:</td>
+                          <td className="p-0.5 border-l border-black text-right text-xs font-bold">₹{bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}</td>
                         </tr>
-                        <tr className="bg-orange-50">
-                          <td className="p-0.5 font-bold text-right text-xs text-orange-700">BALANCE DUE:</td>
-                          <td className="p-0.5 border-l border-black text-right font-bold text-xs text-orange-700">₹{(parseFloat(calculateNetTotal()) - bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0)).toFixed(2)}</td>
+                        <tr>
+                          <td className="p-0.5 font-bold text-right text-xs">BALANCE DUE:</td>
+                          <td className="p-0.5 border-l border-black text-right font-bold text-xs">₹{(parseFloat(calculateNetTotal()) - bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0)).toFixed(2)}</td>
                         </tr>
                       </>
                     )}
@@ -866,9 +916,9 @@ export default function Invoice() {
         {bookingData?.advancePayments && bookingData.advancePayments.length > 0 && (
           <div className="mb-4 text-xs">
             <p className="font-bold mb-2">Advance Payment Details ({bookingData.advancePayments.length} payment(s)):</p>
-            <div className="border border-black bg-green-50">
+            <div className="border border-black">
               <table className="w-full">
-                <thead className="bg-green-100">
+                <thead className="bg-gray-200">
                   <tr>
                     <th className="p-1 border border-black text-xs">#</th>
                     <th className="p-1 border border-black text-xs">Amount</th>
@@ -882,17 +932,40 @@ export default function Invoice() {
                   {bookingData.advancePayments.map((payment, index) => (
                     <tr key={index}>
                       <td className="p-1 border border-black text-xs text-center">{index + 1}</td>
-                      <td className="p-1 border border-black text-xs text-right font-bold text-green-700">₹{payment.amount.toFixed(2)}</td>
+                      <td className="p-1 border border-black text-xs text-right font-bold">₹{payment.amount.toFixed(2)}</td>
                       <td className="p-1 border border-black text-xs text-center">{payment.paymentMode}</td>
                       <td className="p-1 border border-black text-xs text-center">{new Date(payment.paymentDate).toLocaleDateString()}</td>
                       <td className="p-1 border border-black text-xs text-center">{payment.reference || '-'}</td>
                       <td className="p-1 border border-black text-xs">{payment.notes || '-'}</td>
                     </tr>
                   ))}
-                  <tr className="bg-green-200">
+                  <tr className="bg-gray-200">
                     <td colSpan="1" className="p-1 border border-black font-bold text-xs text-right">Total:</td>
-                    <td className="p-1 border border-black text-xs text-right font-bold text-green-700">₹{bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}</td>
+                    <td className="p-1 border border-black text-xs text-right font-bold">₹{bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}</td>
                     <td colSpan="4" className="p-1 border border-black text-xs"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Discount Information */}
+        {bookingData?.discountPercent > 0 && (
+          <div className="mb-4 text-xs">
+            <p className="font-bold mb-2">Discount Information:</p>
+            <div className="border border-black">
+              <table className="w-full">
+                <thead className="bg-gray-200">
+                  <tr>
+                    <th className="p-1 border border-black text-xs">Discount %</th>
+                    <th className="p-1 border border-black text-xs">Notes/Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="p-1 border border-black text-xs text-center font-bold">{bookingData.discountPercent}%</td>
+                    <td className="p-1 border border-black text-xs">{bookingData.discountNotes || 'No notes provided'}</td>
                   </tr>
                 </tbody>
               </table>

@@ -519,6 +519,29 @@ const CheckoutPage = () => {
                   <span className="text-gray-600">Inspection Charges:</span>
                   <span className="font-semibold text-red-600">₹{checkoutData.inspectionCharges || 0}</span>
                 </div>
+                {(() => {
+                  const selectedBookingData = bookings.find(b => b._id === selectedBooking);
+                  const discountPercent = selectedBookingData?.discountPercent || 0;
+                  const discountNotes = selectedBookingData?.discountNotes || '';
+                  
+                  if (discountPercent > 0) {
+                    return (
+                      <>
+                        <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                          <span className="text-gray-600">Discount ({discountPercent}%):</span>
+                          <span className="font-semibold text-green-600">Applied</span>
+                        </div>
+                        {discountNotes && (
+                          <div className="py-2 border-b border-gray-200">
+                            <span className="text-gray-600 text-sm">Discount Notes:</span>
+                            <p className="text-sm text-gray-700 mt-1 italic">"{discountNotes}"</p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
                 <div className="flex justify-between items-center py-3 border-t-2 border-yellow-400">
                   <span className="text-lg font-bold text-yellow-900">Total Amount:</span>
                   <span className="text-lg font-bold text-yellow-900">₹{checkoutData.totalAmount || 0}</span>

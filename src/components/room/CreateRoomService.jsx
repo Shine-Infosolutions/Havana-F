@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Minus, ShoppingCart } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const CreateRoomService = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const preSelectedBooking = location.state?.preSelectedBooking;
+  
   const [formData, setFormData] = useState({
     roomNumber: '',
     guestName: '',
@@ -20,8 +23,19 @@ const CreateRoomService = () => {
   useEffect(() => {
     fetchItems();
     fetchBookings();
-
   }, []);
+
+  useEffect(() => {
+    if (preSelectedBooking) {
+      setFormData(prev => ({
+        ...prev,
+        bookingId: preSelectedBooking._id,
+        bookingNo: preSelectedBooking.grcNo || preSelectedBooking.bookingNo,
+        guestName: preSelectedBooking.name,
+        roomNumber: preSelectedBooking.roomNumber
+      }));
+    }
+  }, [preSelectedBooking]);
 
   const fetchItems = async () => {
     try {
@@ -79,7 +93,6 @@ const CreateRoomService = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('Bookings data:', data);
-        // Filter out checked out bookings
         const activeBookings = (data.bookings || data || []).filter(booking => 
           booking.status !== 'Checked Out'
         );

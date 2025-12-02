@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
+import RoomServiceOrders from './RoomServiceOrders';
+import RestaurantOrders from './RestaurantOrders';
 import {
   FaUser,
   FaPhone,
@@ -157,7 +159,8 @@ const EditBookingForm = () => {
   const { axios } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
-  const editBooking = location.state?.editBooking;
+  const { bookingId } = useParams();
+  const [editBooking, setEditBooking] = useState(location.state?.editBooking || null);
 
   const [allCategories, setAllCategories] = useState([]);
   const [allRooms, setAllRooms] = useState([]);
@@ -173,6 +176,8 @@ const EditBookingForm = () => {
   const [roomServiceOrders, setRoomServiceOrders] = useState([]);
   const [restaurantOrders, setRestaurantOrders] = useState([]);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [editItems, setEditItems] = useState([]);
 
 
   const [formData, setFormData] = useState({
@@ -240,6 +245,12 @@ const EditBookingForm = () => {
     totalAdvanceAmount: 0,
     balanceAmount: 0
   });
+
+  useEffect(() => {
+    if (!editBooking) {
+      navigate('/booking');
+    }
+  }, [editBooking, navigate]);
 
   useEffect(() => {
     if (editBooking) {
@@ -333,8 +344,6 @@ const EditBookingForm = () => {
         totalAdvanceAmount: editBooking.totalAdvanceAmount || 0,
         balanceAmount: editBooking.balanceAmount || 0
       });
-    } else {
-      navigate('/booking');
     }
   }, [editBooking, navigate]);
 
@@ -450,12 +459,11 @@ const EditBookingForm = () => {
       
       // Add extra bed charges if applicable
       const extraBedCharge = formData.extraBed ? Number(formData.extraBedCharge || 0) : 0;
-      const finalTaxableAmount = roomRate + extraBedCharge;
+      const subtotal = roomRate + extraBedCharge;
       
-      // Calculate taxes
-      const cgstAmount = finalTaxableAmount * (formData.cgstRate / 100);
-      const sgstAmount = finalTaxableAmount * (formData.sgstRate / 100);
-      const finalRate = finalTaxableAmount + cgstAmount + sgstAmount;
+      // Apply discount to get the final taxable amount
+      const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
+      const finalTaxableAmount = subtotal - discountAmount;
       
       setFormData(prevForm => ({
         ...prevForm,
@@ -504,8 +512,8 @@ const EditBookingForm = () => {
   };
 
   useEffect(() => {
-    fetchAllData();
     if (editBooking) {
+      fetchAllData();
       fetchRoomServiceOrders();
     }
   }, [editBooking]);
@@ -671,14 +679,46 @@ const EditBookingForm = () => {
         
         return sum + ((formData.extraBedCharge || 0) * Math.max(0, extraBedDays));
       }, 0);
-      const finalRate = roomRate + extraBedCharge;
+      const subtotal = roomRate + extraBedCharge;
+      
+      // Apply discount to get the final taxable amount
+      const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
+      const finalRate = subtotal - discountAmount;
       
       setFormData(prev => ({ 
         ...prev, 
         rate: finalRate
       }));
     }
-  }, [selectedRooms.map(r => `${r.customPrice}-${r.extraBed}-${r.extraBedStartDate}`).join(','), formData.days, formData.extraBedCharge, formData.checkInDate, formData.checkOutDate]);
+  }, [selectedRooms.map(r => `${r.customPrice}-${r.extraBed}-${r.extraBedStartDate}`).join(','), formData.days, formData.extraBedCharge, formData.checkInDate, formData.checkOutDate, formData.discountPercent]);
+
+  // Recalculate rate when discount changes
+  useEffect(() => {
+    if (selectedRooms.length > 0 && formData.days > 0) {
+      const totalRoomRate = selectedRooms.reduce((sum, room) => {
+        const rate = room.customPrice !== undefined && room.customPrice !== '' && room.customPrice !== null
+          ? Number(room.customPrice) 
+          : (room.price || 0);
+        return sum + rate;
+      }, 0);
+      
+      const roomRate = totalRoomRate * formData.days;
+      const extraBedCharge = selectedRooms.reduce((sum, room) => {
+        if (!room.extraBed) return sum;
+        const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
+        const endDate = new Date(formData.checkOutDate);
+        if (startDate >= endDate) return sum;
+        const timeDiff = endDate.getTime() - startDate.getTime();
+        const extraBedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        return sum + ((formData.extraBedCharge || 0) * Math.max(0, extraBedDays));
+      }, 0);
+      const subtotal = roomRate + extraBedCharge;
+      const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
+      const finalRate = subtotal - discountAmount;
+      
+      setFormData(prev => ({ ...prev, rate: finalRate }));
+    }
+  }, [formData.discountPercent]);
 
   // Recalculate totals when tax rates change
   useEffect(() => {
@@ -694,14 +734,18 @@ const EditBookingForm = () => {
       const extraBedCharge = selectedRooms.reduce((sum, room) => {
         return sum + (room.extraBed ? (formData.extraBedCharge || 0) * formData.days : 0);
       }, 0);
-      const finalRate = roomRate + extraBedCharge;
+      const subtotal = roomRate + extraBedCharge;
+      
+      // Apply discount to get the final taxable amount
+      const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
+      const finalRate = subtotal - discountAmount;
       
       setFormData(prev => ({ 
         ...prev, 
         rate: finalRate
       }));
     }
-  }, [formData.cgstRate, formData.sgstRate]);
+  }, [formData.cgstRate, formData.sgstRate, formData.discountPercent]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -784,7 +828,7 @@ const EditBookingForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (loading || isNavigating) return; // Prevent multiple submissions and navigation-triggered submissions
+    if (loading || isNavigating || editingOrder) return; // Prevent submission while editing orders
     setLoading(true);
     
     try {
@@ -873,7 +917,13 @@ const EditBookingForm = () => {
       <main className="container mx-auto px-4 py-6">
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           <div className="p-6 space-y-8">
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={(e) => {
+              if (editingOrder) {
+                e.preventDefault();
+                return false;
+              }
+              handleSubmit(e);
+            }} className="space-y-8" noValidate>
               {/* Guest Details Section */}
               <section className="space-y-4">
                 <div className="flex items-center space-x-3">
@@ -1818,121 +1868,149 @@ const EditBookingForm = () => {
                   </h2>
                 </div>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Room Service Orders */}
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h3 className="text-lg font-semibold mb-4" style={{color: 'hsl(45, 100%, 20%)'}}>
-                      Room Service Orders ({roomServiceOrders.length})
-                    </h3>
-                    {roomServiceOrders.length === 0 ? (
-                      <p className="text-gray-500 text-center py-4">No room service orders</p>
-                    ) : (
-                      <div className="space-y-3 max-h-60 overflow-y-auto">
-                        {roomServiceOrders.map((order) => (
-                          <div key={order._id} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <div className="font-medium">Order #{order.orderNumber}</div>
-                                <div className="text-sm text-gray-600">
-                                  {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}
-                                </div>
-                              </div>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                                order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                order.status === 'in-progress' ? 'bg-orange-100 text-orange-800' :
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {order.status}
-                              </span>
-                            </div>
-                            <div className="text-sm text-gray-600 mb-2">
-                              Room {order.roomNumber} • {order.items?.length || 0} items • ₹{order.totalAmount}
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => {
-                                  setIsNavigating(true);
-                                  navigate(`/room-service/details/${order._id}`);
-                                }}
-                                className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
-                              >
-                                View
-                              </button>
-                              {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                                <button
-                                  onClick={() => {
-                                    setIsNavigating(true);
-                                    navigate(`/room-service/edit/${order._id}`);
-                                  }}
-                                  className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                {/* Room Service Orders */}
+                <RoomServiceOrders
+                  serviceCharges={roomServiceOrders}
+                  editingOrder={editingOrder}
+                  editItems={editItems}
+                  onEditOrder={(order) => {
+                    setEditingOrder({ ...order, type: 'service' });
+                    setEditItems([...order.items]);
+                  }}
+                  onSaveOrder={async (e) => {
+                    e?.preventDefault?.();
+                    try {
+                      const orderId = editingOrder._id || editingOrder.id;
+                      if (!orderId) {
+                        showToast.error('Order ID not found');
+                        return;
+                      }
+                      
+                      if (editItems.length === 0) {
+                        await axios.delete(`/api/room-service/${orderId}`);
+                        showToast.success('Order cancelled');
+                      } else {
+                        const subtotal = editItems.reduce((sum, item) => {
+                          const unitPrice = item.unitPrice || item.price || 0;
+                          return sum + (item.quantity * unitPrice);
+                        }, 0);
+                        const totalAmount = subtotal;
+                        
+                        await axios.put(`/api/room-service/${orderId}`, {
+                          items: editItems,
+                          subtotal,
+                          totalAmount
+                        });
+                        showToast.success('Order updated successfully');
+                      }
+                      
+                      await fetchRoomServiceOrders();
+                      setEditingOrder(null);
+                      setEditItems([]);
+                    } catch (err) {
+                      console.error('Failed to update order:', err);
+                      showToast.error('Failed to update order');
+                    }
+                  }}
+                  onCancelEdit={() => {
+                    setEditingOrder(null);
+                    setEditItems([]);
+                  }}
+                  onUpdateItemQuantity={(index, quantity) => {
+                    const newItems = [...editItems];
+                    newItems[index].quantity = Math.max(0, quantity);
+                    const unitPrice = newItems[index].unitPrice || newItems[index].price || 0;
+                    const calculatedTotal = newItems[index].quantity * unitPrice;
+                    newItems[index].totalPrice = calculatedTotal;
+                    newItems[index].total = calculatedTotal;
+                    setEditItems(newItems);
+                  }}
+                  onRemoveItem={(itemIndex) => {
+                    const newItems = editItems.filter((_, index) => index !== itemIndex);
+                    setEditItems(newItems);
+                  }}
+                />
 
-                  {/* Restaurant Orders */}
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h3 className="text-lg font-semibold mb-4" style={{color: 'hsl(45, 100%, 20%)'}}>
-                      Restaurant Orders ({restaurantOrders.length})
-                    </h3>
-                    {restaurantOrders.length === 0 ? (
-                      <p className="text-gray-500 text-center py-4">No restaurant orders</p>
-                    ) : (
-                      <div className="space-y-3 max-h-60 overflow-y-auto">
-                        {restaurantOrders.map((order) => (
-                          <div key={order._id} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <div className="font-medium">Order #{order._id?.slice(-6) || 'N/A'}</div>
-                                <div className="text-sm text-gray-600">
-                                  {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}
-                                </div>
-                              </div>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                order.status === 'preparing' ? 'bg-orange-100 text-orange-800' :
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {order.status || 'pending'}
-                              </span>
-                            </div>
-                            <div className="text-sm text-gray-600 mb-2">
-                              Room {order.tableNo} • {order.items?.length || 0} items • ₹{order.amount}
-                            </div>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => {
-                                  setIsNavigating(true);
-                                  navigate('/restaurant/all-orders');
-                                }}
-                                className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
-                              >
-                                View All
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setIsNavigating(true);
-                                  navigate(`/restaurant/edit-order/${order._id}`);
-                                }}
-                                className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                              >
-                                Edit
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                {/* Restaurant Orders */}
+                <RestaurantOrders
+                  restaurantCharges={restaurantOrders}
+                  editingOrder={editingOrder}
+                  editItems={editItems}
+                  onEditOrder={(order) => {
+                    setEditingOrder({ ...order, type: 'restaurant' });
+                    setEditItems([...order.items]);
+                  }}
+                  onSaveOrder={async (e) => {
+                    e?.preventDefault?.();
+                    try {
+                      const orderId = editingOrder._id || editingOrder.id;
+                      if (!orderId) {
+                        showToast.error('Order ID not found');
+                        return;
+                      }
+                      
+                      if (editItems.length === 0) {
+                        await axios.patch(`/api/restaurant-orders/${orderId}/status`, {
+                          status: 'cancelled'
+                        });
+                        showToast.success('Order cancelled');
+                      } else {
+                        const subtotal = editItems.reduce((sum, item) => {
+                          const unitPrice = item.unitPrice || item.price || 0;
+                          return sum + (item.quantity * unitPrice);
+                        }, 0);
+                        const totalAmount = subtotal;
+                        
+                        await axios.patch(`/api/restaurant-orders/${orderId}`, {
+                          items: editItems,
+                          amount: totalAmount
+                        });
+                        showToast.success('Order updated successfully');
+                      }
+                      
+                      await fetchRoomServiceOrders();
+                      setEditingOrder(null);
+                      setEditItems([]);
+                    } catch (err) {
+                      console.error('Failed to update order:', err);
+                      showToast.error('Failed to update order');
+                    }
+                  }}
+                  onCancelEdit={() => {
+                    setEditingOrder(null);
+                    setEditItems([]);
+                  }}
+                  onUpdateItemQuantity={(index, quantity) => {
+                    const newItems = [...editItems];
+                    newItems[index].quantity = Math.max(0, quantity);
+                    const unitPrice = newItems[index].unitPrice || newItems[index].price || 0;
+                    const calculatedTotal = newItems[index].quantity * unitPrice;
+                    newItems[index].totalPrice = calculatedTotal;
+                    newItems[index].total = calculatedTotal;
+                    setEditItems(newItems);
+                  }}
+                  onRemoveOrder={async (orderId, type) => {
+                    if (!confirm('Are you sure you want to remove this order?')) return;
+                    try {
+                      if (type === 'service') {
+                        await axios.delete(`/api/room-service/orders/${orderId}`);
+                      } else {
+                        await axios.patch(`/api/restaurant-orders/${orderId}/status`, {
+                          status: 'cancelled'
+                        });
+                      }
+                      await fetchRoomServiceOrders();
+                      showToast.success('Order removed successfully');
+                    } catch (err) {
+                      console.error('Failed to remove order:', err);
+                      showToast.error('Failed to remove order');
+                    }
+                  }}
+                  onRemoveItem={(itemIndex) => {
+                    const newItems = editItems.filter((_, index) => index !== itemIndex);
+                    setEditItems(newItems);
+                  }}
+                />
                 
                 <div className="flex justify-center">
                   <Button

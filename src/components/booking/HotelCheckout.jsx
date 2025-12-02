@@ -210,6 +210,28 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                   <span>Inspection Charges:</span>
                   <span className="font-medium text-red-600">₹{checkoutData.inspectionCharges || 0}</span>
                 </div>
+                {(() => {
+                  const discountPercent = booking?.discountPercent || 0;
+                  const discountNotes = booking?.discountNotes || '';
+                  
+                  if (discountPercent > 0) {
+                    return (
+                      <>
+                        <div className="flex justify-between py-2 border-b">
+                          <span>Discount ({discountPercent}%):</span>
+                          <span className="font-medium text-green-600">Applied</span>
+                        </div>
+                        {discountNotes && (
+                          <div className="py-2 border-b">
+                            <span className="text-sm text-gray-600">Discount Notes:</span>
+                            <p className="text-sm text-gray-700 mt-1 italic">"{discountNotes}"</p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
                 <div className="flex justify-between py-2 border-b">
                   <span>Subtotal:</span>
                   <span className="font-medium">₹{checkoutData.subtotal || 0}</span>

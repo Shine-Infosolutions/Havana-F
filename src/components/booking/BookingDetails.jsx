@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, CreditCard, Bed, Users, Edit2, Save, X, Plus, Trash2 } from 'lucide-react';
-import { useAppContext } from '../../context/AppContext';
+import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, CreditCard, Bed, Users, Edit2, Plus } from 'lucide-react';
 import axios from 'axios';
-import RoomServiceOrders from './RoomServiceOrders';
-import RestaurantOrders from './RestaurantOrders';
 
 const BookingDetails = () => {
   const { bookingId } = useParams(); // This will now be bookingNo
@@ -15,16 +12,7 @@ const BookingDetails = () => {
   const [error, setError] = useState(null);
   const [serviceCharges, setServiceCharges] = useState([]);
   const [restaurantCharges, setRestaurantCharges] = useState([]);
-  const [editingOrder, setEditingOrder] = useState(null);
-  const [editItems, setEditItems] = useState([]);
-  const [showAddPayment, setShowAddPayment] = useState(false);
-  const [newPayment, setNewPayment] = useState({
-    amount: '',
-    paymentMode: '',
-    paymentDate: new Date().toISOString().split('T')[0],
-    reference: '',
-    notes: ''
-  });
+
 
   useEffect(() => {
     fetchBookingDetails();
@@ -112,146 +100,11 @@ const BookingDetails = () => {
     }
   };
 
-  const handleEditOrder = (order, type) => {
-    setEditingOrder({ ...order, type });
-    setEditItems([...order.items]);
-  };
 
-  const handleSaveOrder = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const subtotal = editItems.reduce((sum, item) => {
-        const unitPrice = item.unitPrice || item.price || 0;
-        return sum + (item.quantity * unitPrice);
-      }, 0);
-      const totalAmount = subtotal; // Add tax calculation if needed
-      
-      if (editingOrder.type === 'service') {
-        await axios.put(`${BASE_URL}/api/room-service/orders/${editingOrder._id}`, {
-          items: editItems,
-          subtotal,
-          totalAmount
-        }, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      } else {
-        await axios.patch(`${BASE_URL}/api/restaurant-orders/${editingOrder._id}`, {
-          items: editItems,
-          amount: totalAmount
-        }, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      }
 
-      
-      // Refresh charges
-      await fetchServiceCharges(booking._id, token);
-      setEditingOrder(null);
-      setEditItems([]);
-    } catch (err) {
-      console.error('Failed to update order:', err);
-      alert('Failed to update order');
-    }
-  };
 
-  const handleCancelEdit = () => {
-    setEditingOrder(null);
-    setEditItems([]);
-  };
 
-  const handleAddPayment = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.put(`${BASE_URL}/api/bookings/update/${booking._id}`, {
-        advancePayments: [...(booking.advancePayments || []), {
-          ...newPayment,
-          amount: Number(newPayment.amount)
-        }]
-      }, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      // Update local booking state
-      setBooking(prev => ({
-        ...prev,
-        advancePayments: [...(prev.advancePayments || []), {
-          ...newPayment,
-          amount: Number(newPayment.amount)
-        }]
-      }));
-      
-      // Reset form
-      setNewPayment({
-        amount: '',
-        paymentMode: '',
-        paymentDate: new Date().toISOString().split('T')[0],
-        reference: '',
-        notes: ''
-      });
-      setShowAddPayment(false);
-    } catch (err) {
-      console.error('Failed to add payment:', err);
-      alert('Failed to add payment');
-    }
-  };
 
-  const handleCancelAddPayment = () => {
-    setNewPayment({
-      amount: '',
-      paymentMode: '',
-      paymentDate: new Date().toISOString().split('T')[0],
-      reference: '',
-      notes: ''
-    });
-    setShowAddPayment(false);
-  };
-
-  const updateItemQuantity = (index, quantity) => {
-    const newItems = [...editItems];
-    newItems[index].quantity = Math.max(0, quantity);
-    
-    // Handle different property names for price and total
-    const unitPrice = newItems[index].unitPrice || newItems[index].price || 0;
-    const calculatedTotal = newItems[index].quantity * unitPrice;
-    
-    // Update both possible total property names
-    newItems[index].totalPrice = calculatedTotal;
-    newItems[index].total = calculatedTotal;
-    
-    setEditItems(newItems);
-  };
-
-  const handleRemoveOrder = async (orderId, type) => {
-    if (!confirm('Are you sure you want to remove this order?')) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      
-      if (type === 'service') {
-        await axios.delete(`${BASE_URL}/api/room-service/orders/${orderId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      } else {
-        // For restaurant orders, update status to cancelled
-        await axios.patch(`${BASE_URL}/api/restaurant-orders/${orderId}/status`, {
-          status: 'cancelled'
-        }, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      }
-      
-      // Refresh charges
-      await fetchServiceCharges(booking._id, token);
-    } catch (err) {
-      console.error('Failed to remove order:', err);
-      alert('Failed to remove order');
-    }
-  };
-
-  const handleRemoveItem = (itemIndex) => {
-    const newItems = editItems.filter((_, index) => index !== itemIndex);
-    setEditItems(newItems);
-  };
 
   if (loading) {
     return (
@@ -292,7 +145,16 @@ const BookingDetails = () => {
             <ArrowLeft size={20} className="mr-2" />
             Back to Bookings
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">Booking Details</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold text-gray-800">Booking Details</h1>
+            <button
+              onClick={() => navigate(`/edit-booking/${booking.grcNo}`, { state: { editBooking: booking } })}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Edit2 size={18} className="mr-2" />
+              Edit
+            </button>
+          </div>
         </div>
 
         {/* Main Content */}
@@ -387,28 +249,60 @@ const BookingDetails = () => {
             )}
 
             {/* Room Service Orders */}
-            <RoomServiceOrders
-              serviceCharges={serviceCharges}
-              editingOrder={editingOrder}
-              editItems={editItems}
-              onEditOrder={handleEditOrder}
-              onSaveOrder={handleSaveOrder}
-              onCancelEdit={handleCancelEdit}
-              onUpdateItemQuantity={updateItemQuantity}
-            />
+            {serviceCharges.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Room Service Orders</h2>
+                <div className="space-y-4">
+                  {serviceCharges.map((order) => (
+                    <div key={order._id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-medium text-gray-800">Order #{order.orderNumber || order._id.slice(-6)}</p>
+                          <p className="text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <span className="text-lg font-semibold text-blue-600">₹{order.totalAmount || 0}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {order.items?.map((item, idx) => (
+                          <div key={idx} className="flex justify-between text-sm text-gray-700">
+                            <span>{item.itemName} x {item.quantity}</span>
+                            <span>₹{(item.quantity * (item.unitPrice || item.price || 0)).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Restaurant Orders */}
-            <RestaurantOrders
-              restaurantCharges={restaurantCharges}
-              editingOrder={editingOrder}
-              editItems={editItems}
-              onEditOrder={handleEditOrder}
-              onSaveOrder={handleSaveOrder}
-              onCancelEdit={handleCancelEdit}
-              onUpdateItemQuantity={updateItemQuantity}
-              onRemoveOrder={handleRemoveOrder}
-              onRemoveItem={handleRemoveItem}
-            />
+            {restaurantCharges.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Restaurant Orders</h2>
+                <div className="space-y-4">
+                  {restaurantCharges.map((order) => (
+                    <div key={order._id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-medium text-gray-800">Order #{order.orderNumber || order._id.slice(-6)}</p>
+                          <p className="text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <span className="text-lg font-semibold text-blue-600">₹{order.amount || 0}</span>
+                      </div>
+                      <div className="space-y-2">
+                        {order.items?.map((item, idx) => (
+                          <div key={idx} className="flex justify-between text-sm text-gray-700">
+                            <span>{item.itemName} x {item.quantity}</span>
+                            <span>₹{(item.quantity * (item.unitPrice || item.price || 0)).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Amendment History */}
             {booking.amendmentHistory && booking.amendmentHistory.length > 0 && (
@@ -544,19 +438,10 @@ const BookingDetails = () => {
 
             {/* Advance Payments */}
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-800 flex items-center">
-                  <CreditCard className="mr-2 text-blue-600" size={20} />
-                  Advance Payments
-                </h2>
-                <button
-                  onClick={() => setShowAddPayment(true)}
-                  className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                >
-                  <Plus size={16} className="mr-1" />
-                  Add Payment
-                </button>
-              </div>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <CreditCard className="mr-2 text-blue-600" size={20} />
+                Advance Payments
+              </h2>
               {booking.advancePayments && booking.advancePayments.length > 0 ? (
                 <div className="space-y-3">
                   {booking.advancePayments.map((payment, index) => (
@@ -623,85 +508,6 @@ const BookingDetails = () => {
                 </div>
               ) : (
                 <p className="text-gray-500 text-center py-4">No advance payments recorded</p>
-              )}
-              
-              {/* Add Payment Form */}
-              {showAddPayment && (
-                <div className="mt-4 border-t pt-4">
-                  <h3 className="text-lg font-medium text-gray-800 mb-3">Add New Payment</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Amount (₹)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={newPayment.amount}
-                        onChange={(e) => setNewPayment(prev => ({ ...prev, amount: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter amount"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Payment Mode</label>
-                      <select
-                        value={newPayment.paymentMode}
-                        onChange={(e) => setNewPayment(prev => ({ ...prev, paymentMode: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select Mode</option>
-                        <option value="Cash">Cash</option>
-                        <option value="Card">Card</option>
-                        <option value="UPI">UPI</option>
-                        <option value="Bank Transfer">Bank Transfer</option>
-                        <option value="Online">Online</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Payment Date</label>
-                      <input
-                        type="date"
-                        value={newPayment.paymentDate}
-                        onChange={(e) => setNewPayment(prev => ({ ...prev, paymentDate: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Reference/Transaction ID</label>
-                      <input
-                        type="text"
-                        value={newPayment.reference}
-                        onChange={(e) => setNewPayment(prev => ({ ...prev, reference: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Transaction ID, Cheque No, etc."
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Notes</label>
-                      <input
-                        type="text"
-                        value={newPayment.notes}
-                        onChange={(e) => setNewPayment(prev => ({ ...prev, notes: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Additional notes"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-end space-x-2 mt-4">
-                    <button
-                      onClick={handleCancelAddPayment}
-                      className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
-                    >
-                      <X size={16} className="inline mr-1" /> Cancel
-                    </button>
-                    <button
-                      onClick={handleAddPayment}
-                      disabled={!newPayment.amount || !newPayment.paymentMode}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Save size={16} className="inline mr-1" /> Add Payment
-                    </button>
-                  </div>
-                </div>
               )}
             </div>
 

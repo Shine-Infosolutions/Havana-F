@@ -738,14 +738,46 @@ const App = () => {
         
         return sum + ((formData.extraBedCharge || 0) * Math.max(0, extraBedDays));
       }, 0);
-      const finalRate = roomRate + extraBedCharge;
+      const subtotal = roomRate + extraBedCharge;
+      
+      // Apply discount to get the final taxable amount
+      const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
+      const finalRate = subtotal - discountAmount;
       
       setFormData(prev => ({ 
         ...prev, 
         rate: finalRate
       }));
     }
-  }, [selectedRooms.map(r => `${r.customPrice}-${r.extraBed}-${r.extraBedStartDate}`).join(','), formData.days, formData.extraBedCharge, formData.checkInDate, formData.checkOutDate, setFormData]);
+  }, [selectedRooms.map(r => `${r.customPrice}-${r.extraBed}-${r.extraBedStartDate}`).join(','), formData.days, formData.extraBedCharge, formData.checkInDate, formData.checkOutDate, formData.discountPercent, setFormData]);
+
+  // Recalculate rate when discount changes
+  useEffect(() => {
+    if (selectedRooms.length > 0 && formData.days > 0) {
+      const totalRoomRate = selectedRooms.reduce((sum, room) => {
+        const rate = room.customPrice !== undefined && room.customPrice !== '' && room.customPrice !== null
+          ? Number(room.customPrice) 
+          : (room.price || 0);
+        return sum + rate;
+      }, 0);
+      
+      const roomRate = totalRoomRate * formData.days;
+      const extraBedCharge = selectedRooms.reduce((sum, room) => {
+        if (!room.extraBed) return sum;
+        const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
+        const endDate = new Date(formData.checkOutDate);
+        if (startDate >= endDate) return sum;
+        const timeDiff = endDate.getTime() - startDate.getTime();
+        const extraBedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+        return sum + ((formData.extraBedCharge || 0) * Math.max(0, extraBedDays));
+      }, 0);
+      const subtotal = roomRate + extraBedCharge;
+      const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
+      const finalRate = subtotal - discountAmount;
+      
+      setFormData(prev => ({ ...prev, rate: finalRate }));
+    }
+  }, [formData.discountPercent]);
 
 
 
@@ -1194,7 +1226,11 @@ const App = () => {
       const extraBedCharge = newSelectedRooms.reduce((sum, room) => {
         return sum + (room.extraBed ? (formData.extraBedCharge || 0) * days : 0);
       }, 0);
-      const finalRate = roomRate + extraBedCharge;
+      const subtotal = roomRate + extraBedCharge;
+      
+      // Apply discount to get the final taxable amount
+      const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
+      const finalRate = subtotal - discountAmount;
       
       // Update form data with calculated rate
       setFormData(prevForm => ({

@@ -128,11 +128,8 @@ export const useBookingList = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      setBookings((prev) =>
-        prev.map((b) =>
-          b.id === bookingId ? { ...b, status: newStatus } : b
-        )
-      );
+      // Refresh data to ensure all related updates are reflected
+      await fetchData();
       setError(null);
     } catch (error) {
       setError(`Error updating status: ${error.message}`);
