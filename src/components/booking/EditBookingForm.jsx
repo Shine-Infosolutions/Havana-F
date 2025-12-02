@@ -1942,6 +1942,18 @@ const EditBookingForm = () => {
                     const newItems = editItems.filter((_, index) => index !== itemIndex);
                     setEditItems(newItems);
                   }}
+                  onToggleNC={async (orderId, type) => {
+                    try {
+                      const order = roomServiceOrders.find(o => o._id === orderId);
+                      await axios.patch(`/api/room-service/${orderId}`, {
+                        nonChargeable: !order.nonChargeable
+                      });
+                      await fetchRoomServiceOrders();
+                      showToast.success('Order NC status updated');
+                    } catch (err) {
+                      showToast.error('Failed to update NC status');
+                    }
+                  }}
                 />
 
                 {/* Restaurant Orders */}
@@ -2022,6 +2034,18 @@ const EditBookingForm = () => {
                   onRemoveItem={(itemIndex) => {
                     const newItems = editItems.filter((_, index) => index !== itemIndex);
                     setEditItems(newItems);
+                  }}
+                  onToggleNC={async (orderId, type) => {
+                    try {
+                      const order = restaurantOrders.find(o => o._id === orderId);
+                      await axios.patch(`/api/restaurant-orders/${orderId}`, {
+                        nonChargeable: !order.nonChargeable
+                      });
+                      await fetchRoomServiceOrders();
+                      showToast.success('Order NC status updated');
+                    } catch (err) {
+                      showToast.error('Failed to update NC status');
+                    }
                   }}
                 />
                 
@@ -2137,9 +2161,13 @@ const EditBookingForm = () => {
                             
                             return sum + ((formData.extraBedCharge || 0) * Math.max(0, extraBedDays));
                           }, 0);
-                          // Calculate room service and restaurant charges (exclude cancelled orders)
-                          const activeRoomServiceOrders = roomServiceOrders.filter(order => order.status !== 'cancelled');
-                          const activeRestaurantOrders = restaurantOrders.filter(order => order.status !== 'cancelled');
+                          // Calculate room service and restaurant charges (exclude cancelled and non-chargeable orders)
+                          const activeRoomServiceOrders = roomServiceOrders.filter(order => 
+                            order.status !== 'cancelled' && !order.nonChargeable
+                          );
+                          const activeRestaurantOrders = restaurantOrders.filter(order => 
+                            order.status !== 'cancelled' && !order.nonChargeable
+                          );
                           
                           const roomServiceTotal = activeRoomServiceOrders.reduce((sum, order) => {
                             return sum + (Number(order.totalAmount) || 0);

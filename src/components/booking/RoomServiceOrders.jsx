@@ -9,7 +9,8 @@ const RoomServiceOrders = ({
   onSaveOrder, 
   onCancelEdit, 
   onUpdateItemQuantity,
-  onRemoveItem
+  onRemoveItem,
+  onToggleNC
 }) => {
   if (serviceCharges.length === 0) return null;
 
@@ -29,7 +30,19 @@ const RoomServiceOrders = ({
                 <p className="text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString()}</p>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="font-medium text-lg">₹{order.totalAmount}</span>
+                <span className={`font-medium text-lg ${order.nonChargeable ? 'line-through text-gray-500' : ''}`}>
+                  ₹{order.totalAmount}
+                </span>
+                {order.nonChargeable && <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">NC</span>}
+                <label className="flex items-center space-x-1 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={order.nonChargeable || false}
+                    onChange={() => onToggleNC(order._id, 'service')}
+                    className="w-4 h-4"
+                  />
+                  <span>NC</span>
+                </label>
                 <button
                   onClick={() => onEditOrder(order, 'service')}
                   className="p-1 text-blue-600 hover:bg-blue-50 rounded"
