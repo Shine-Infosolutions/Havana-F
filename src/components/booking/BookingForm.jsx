@@ -2666,9 +2666,11 @@ const App = () => {
                       return sum + ((formData.extraBedCharge || 0) * Math.max(0, extraBedDays));
                     }, 0);
                     const subtotal = roomRate + extraBedTotal;
-                    const cgstAmount = subtotal * (Number(formData.cgstRate || 0) / 100);
-                    const sgstAmount = subtotal * (Number(formData.sgstRate || 0) / 100);
-                    const totalWithTax = subtotal + cgstAmount + sgstAmount;
+                    const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
+                    const discountedSubtotal = subtotal - discountAmount;
+                    const cgstAmount = discountedSubtotal * (Number(formData.cgstRate || 0) / 100);
+                    const sgstAmount = discountedSubtotal * (Number(formData.sgstRate || 0) / 100);
+                    const totalWithTax = discountedSubtotal + cgstAmount + sgstAmount;
                     
                     return (
                       <>
@@ -2687,6 +2689,18 @@ const App = () => {
                           <span>Subtotal:</span>
                           <span>₹{subtotal.toFixed(2)}</span>
                         </div>
+                        {discountAmount > 0 && (
+                          <div className="flex justify-between text-red-600">
+                            <span>Discount ({Number(formData.discountPercent || 0)}%):</span>
+                            <span>-₹{discountAmount.toFixed(2)}</span>
+                          </div>
+                        )}
+                        {discountAmount > 0 && (
+                          <div className="flex justify-between font-medium">
+                            <span>After Discount:</span>
+                            <span>₹{discountedSubtotal.toFixed(2)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span>CGST ({Number(formData.cgstRate || 0)}%):</span>
                           <span>₹{cgstAmount.toFixed(2)}</span>
@@ -2895,9 +2909,11 @@ const App = () => {
                       <span className="text-blue-600">Total Amount:</span>
                       <div className="font-semibold">₹{(() => {
                         const taxableAmount = Number(formData.rate) || 0;
-                        const cgstAmount = taxableAmount * (Number(formData.cgstRate) / 100);
-                        const sgstAmount = taxableAmount * (Number(formData.sgstRate) / 100);
-                        return (taxableAmount + cgstAmount + sgstAmount).toFixed(2);
+                        const discountAmount = taxableAmount * (Number(formData.discountPercent || 0) / 100);
+                        const discountedAmount = taxableAmount - discountAmount;
+                        const cgstAmount = discountedAmount * (Number(formData.cgstRate) / 100);
+                        const sgstAmount = discountedAmount * (Number(formData.sgstRate) / 100);
+                        return (discountedAmount + cgstAmount + sgstAmount).toFixed(2);
                       })()}</div>
                     </div>
                     <div>
@@ -2911,9 +2927,11 @@ const App = () => {
                       <span className="text-orange-600">Balance Due:</span>
                       <div className="font-semibold text-orange-700">₹{(() => {
                         const taxableAmount = Number(formData.rate) || 0;
-                        const cgstAmount = taxableAmount * (Number(formData.cgstRate) / 100);
-                        const sgstAmount = taxableAmount * (Number(formData.sgstRate) / 100);
-                        const totalAmount = taxableAmount + cgstAmount + sgstAmount;
+                        const discountAmount = taxableAmount * (Number(formData.discountPercent || 0) / 100);
+                        const discountedAmount = taxableAmount - discountAmount;
+                        const cgstAmount = discountedAmount * (Number(formData.cgstRate) / 100);
+                        const sgstAmount = discountedAmount * (Number(formData.sgstRate) / 100);
+                        const totalAmount = discountedAmount + cgstAmount + sgstAmount;
                         const totalAdvance = (formData.advancePayments || []).reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
                         const balance = totalAmount - totalAdvance;
                         return Math.max(0, balance).toFixed(2);
