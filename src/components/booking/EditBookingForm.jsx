@@ -1945,12 +1945,25 @@ const EditBookingForm = () => {
                   onToggleNC={async (orderId, type) => {
                     try {
                       const order = roomServiceOrders.find(o => o._id === orderId);
+                      const newNCStatus = !order.nonChargeable;
+                      
+                      // Optimistic update
+                      setRoomServiceOrders(prev => 
+                        prev.map(o => 
+                          o._id === orderId 
+                            ? { ...o, nonChargeable: newNCStatus }
+                            : o
+                        )
+                      );
+                      
                       await axios.patch(`/api/room-service/${orderId}`, {
-                        nonChargeable: !order.nonChargeable
+                        nonChargeable: newNCStatus
                       });
-                      await fetchRoomServiceOrders();
+                      
                       showToast.success('Order NC status updated');
                     } catch (err) {
+                      // Revert optimistic update on error
+                      await fetchRoomServiceOrders();
                       showToast.error('Failed to update NC status');
                     }
                   }}
@@ -2038,12 +2051,25 @@ const EditBookingForm = () => {
                   onToggleNC={async (orderId, type) => {
                     try {
                       const order = restaurantOrders.find(o => o._id === orderId);
+                      const newNCStatus = !order.nonChargeable;
+                      
+                      // Optimistic update
+                      setRestaurantOrders(prev => 
+                        prev.map(o => 
+                          o._id === orderId 
+                            ? { ...o, nonChargeable: newNCStatus }
+                            : o
+                        )
+                      );
+                      
                       await axios.patch(`/api/restaurant-orders/${orderId}`, {
-                        nonChargeable: !order.nonChargeable
+                        nonChargeable: newNCStatus
                       });
-                      await fetchRoomServiceOrders();
+                      
                       showToast.success('Order NC status updated');
                     } catch (err) {
+                      // Revert optimistic update on error
+                      await fetchRoomServiceOrders();
                       showToast.error('Failed to update NC status');
                     }
                   }}

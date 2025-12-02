@@ -133,6 +133,7 @@ const LiveOrders = () => {
             status: kot.status,
             createdAt: kot.createdAt,
             amount: restaurantOrder?.amount || 0,
+            invoiceNumber: restaurantOrder?.invoiceNumber || kot.kotNumber || kot._id.slice(-4),
             items: kot.items?.map((item, index) => {
               const orderItem = restaurantOrder?.items?.find(oi => 
                 oi.itemName === item.itemName
@@ -253,7 +254,7 @@ const LiveOrders = () => {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3">
               <div className="flex-1">
                 <div className="text-xs sm:text-sm text-gray-500 truncate">
-                  Order# {order._id.slice(-4)} / {order.orderType || 'Dine In'}
+                  Invoice# {order.invoiceNumber} / {order.orderType || 'Dine In'}
                 </div>
                 <div className="text-xs text-gray-400">
                   {new Date(order.createdAt).toLocaleDateString()} {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
@@ -264,11 +265,13 @@ const LiveOrders = () => {
             {/* Table Info */}
             <div className="flex items-center mb-3">
               <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-semibold mr-2">
-                {order.tableNo || 'T'}
+                {(order.tableNo?.toString().startsWith('R') || /^\d+$/.test(order.tableNo)) ? (order.tableNo?.toString().replace('R', '') || order.tableNo) : (order.tableNo || 'T')}
               </div>
               <div className="flex-1">
-                <div className="text-xs text-gray-500">Table/Room</div>
-                <div className="text-sm font-medium truncate">{order.tableNo || 'N/A'}</div>
+                <div className="text-xs text-gray-500">{(order.tableNo?.toString().startsWith('R') || /^\d+$/.test(order.tableNo)) ? 'Room' : 'Table'}</div>
+                <div className="text-sm font-medium truncate">
+                  {(order.tableNo?.toString().startsWith('R') || /^\d+$/.test(order.tableNo)) ? `Room ${order.tableNo?.toString().replace('R', '')}` : (order.tableNo || 'N/A')}
+                </div>
               </div>
             </div>
 
