@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Fragment } from "react";
 import { FaIndianRupeeSign } from "react-icons/fa6";
 import { SlCalender } from "react-icons/sl";
 import {
@@ -28,10 +28,15 @@ const Dashboard = () => {
     const savedCard = localStorage.getItem("activeCard");
     return savedCard || "bookings"; // Default to "bookings"
   });
-  const [timeFrame, setTimeFrame] = useState("weekly");
+  const [timeFrame, setTimeFrame] = useState("monthly");
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showDateRange, setShowDateRange] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [expandedOrder, setExpandedOrder] = useState(null);
 
 
   const [dashboardCards, setDashboardCards] = useState([]);
@@ -62,6 +67,26 @@ const Dashboard = () => {
     }
   };
 
+  const fetchDashboardStats = async (filter = 'today', startDate = null, endDate = null) => {
+    try {
+      let url = `/api/dashboard/stats?filter=${filter}`;
+      if (filter === 'range' && startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
+      }
+      
+      const { data } = await axios.get(url, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      
+      if (data.success) {
+        setDashboardStats(data.stats);
+      }
+    } catch (error) {
+      console.log('Dashboard Stats API Error:', error);
+      setDashboardStats(null);
+    }
+  };
+
   const fetchBookings = async () => {
     try {
       const { data } = await axios.get("/api/bookings/all", {
@@ -86,7 +111,7 @@ const Dashboard = () => {
     try {
       const [laundryRes, restaurantRes, pantryRes, banquetRes, reservationRes] = await Promise.allSettled([
         axios.get("/api/laundry/all", { headers }),
-        axios.get("/api/restaurant/all", { headers }),
+        axios.get("/api/restaurant-orders/all", { headers }),
         axios.get("/api/pantry/all", { headers }),
         axios.get("/api/banquet-bookings", { headers }),
         axios.get("/api/restaurant-reservations/all", { headers })
@@ -145,70 +170,70 @@ const Dashboard = () => {
 
   const updateDashboardCards = () => {
     const availableRooms = rooms.filter(room => room.status === 'available').length;
-    const totalBookingRevenue = bookings.reduce((total, booking) => {
-      const taxableAmount = Number(booking.taxableAmount) || 0;
-      const cgstAmount = Number(booking.cgstAmount) || 0;
-      const sgstAmount = Number(booking.sgstAmount) || 0;
-      const bookingTotal = taxableAmount + cgstAmount + sgstAmount;
-      // Skip invalid amounts (too large or negative)
-      if (bookingTotal > 1000000 || bookingTotal < 0) return total;
-      return total + bookingTotal;
-    }, 0);
     const { revenueTrend, bookingsTrend } = calculateTrends();
     
     const cards = [
       {
         id: "bookings",
-        title: "Bookings",
-        value: bookings.length.toString(),
+        title: "Total Bookings",
+        value: dashboardStats?.totalBookings?.toString() || bookings.length.toString(),
         icon: "Calendar",
         color: "bg-primary",
         trend: `${bookingsTrend >= 0 ? '+' : ''}${bookingsTrend.toFixed(1)}%`,
         trendUp: bookingsTrend >= 0,
       },
       {
-        id: "rooms",
-        title: "Rooms Available",
-        value: availableRooms.toString(),
-        icon: "Home",
-        color: "bg-primary",
+        id: "active",
+        title: "Active Bookings",
+        value: dashboardStats?.activeBookings?.toString() || "0",
+        icon: "CheckCircle",
+        color: "bg-green-500",
         trend: "+0%",
         trendUp: true,
       },
       {
+        id: "cancelled",
+        title: "Cancelled Bookings",
+        value: dashboardStats?.cancelledBookings?.toString() || "0",
+        icon: "AlertTriangle",
+        color: "bg-red-500",
+        trend: "+0%",
+        trendUp: false,
+      },
+      {
         id: "revenue",
-        title: "Booking Revenue",
-        value: `₹${totalBookingRevenue.toLocaleString()}`,
+        title: "Total Revenue",
+        value: `₹${(dashboardStats?.totalRevenue || 0).toLocaleString()}`,
         icon: "FaIndianRupeeSign",
         color: "bg-primary",
         trend: `${revenueTrend >= 0 ? '+' : ''}${revenueTrend.toFixed(1)}%`,
         trendUp: revenueTrend >= 0,
       },
       {
-        id: "occupancy",
-        title: "Occupancy Rate",
-        value: `${rooms.length > 0 ? Math.round((rooms.filter(room => room.status !== 'available').length / rooms.length) * 100) : 0}%`,
-        icon: "Percent",
-        color: "bg-primary",
+        id: "online",
+        title: "Online Payments",
+        value: dashboardStats?.payments?.upi?.toString() || "0",
+        icon: "FaIndianRupeeSign",
+        color: "bg-blue-600",
         trend: "+0%",
         trendUp: true,
       },
       {
-        id: "guests",
-        title: "Active Guests",
-        value: bookings.filter(booking => booking.status === 'Checked In').reduce((total, booking) => total + (booking.noOfAdults || 0) + (booking.noOfChildren || 0), 0).toString(),
+        id: "cash",
+        title: "Cash Payments",
+        value: dashboardStats?.payments?.cash?.toString() || "0",
+        icon: "FaIndianRupeeSign",
+        color: "bg-green-600",
+        trend: "+0%",
+        trendUp: true,
+      },
+      {
+        id: "restaurant",
+        title: "Restaurant Orders",
+        value: (allServiceData.restaurant?.length || 0).toString(),
         icon: "Users",
-        color: "bg-primary",
+        color: "bg-orange-500",
         trend: "+0%",
-        trendUp: true,
-      },
-      {
-        id: "rating",
-        title: "Avg. Rating",
-        value: "0.0",
-        icon: "Star",
-        color: "bg-primary",
-        trend: "+0.0",
         trendUp: true,
       },
     ];
@@ -218,15 +243,28 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      await Promise.all([fetchRooms(), fetchBookings(), fetchAllServiceData()]);
+      await Promise.all([
+        fetchRooms(), 
+        fetchBookings(), 
+        fetchAllServiceData(),
+        fetchDashboardStats(timeFrame)
+      ]);
       setLoading(false);
     };
     fetchData();
   }, []);
 
   useEffect(() => {
+    if (timeFrame === 'range' && startDate && endDate) {
+      fetchDashboardStats(timeFrame, startDate, endDate);
+    } else if (timeFrame !== 'range') {
+      fetchDashboardStats(timeFrame);
+    }
+  }, [timeFrame, startDate, endDate]);
+
+  useEffect(() => {
     updateDashboardCards();
-  }, [rooms, bookings]);
+  }, [rooms, bookings, dashboardStats]);
 
   const getRoomCategories = () => {
     const categories = {};
@@ -290,14 +328,343 @@ const Dashboard = () => {
         return Users;
       case "Star":
         return Star;
+      case "CheckCircle":
+        return CheckCircle;
+      case "AlertTriangle":
+        return AlertTriangle;
       default:
-        return null;
+        return Calendar;
     }
   };
 
   // Card detail content based on active card
   const renderCardDetail = () => {
-    return <div className="p-4 text-center text-gray-500">Card details coming soon...</div>;
+    if (!activeCard) {
+      return <div className="p-4 text-center text-gray-500">Select a card to view details</div>;
+    }
+
+    const getFilteredBookings = () => {
+      const now = new Date();
+      return bookings.filter(booking => {
+        const bookingDate = new Date(booking.createdAt);
+        
+        switch (timeFrame) {
+          case 'today':
+            return bookingDate.toDateString() === now.toDateString();
+          case 'weekly':
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return bookingDate >= weekAgo;
+          case 'monthly':
+            return bookingDate.getMonth() === now.getMonth() && bookingDate.getFullYear() === now.getFullYear();
+          case 'range':
+            if (startDate && endDate) {
+              return bookingDate >= new Date(startDate) && bookingDate <= new Date(endDate);
+            }
+            return true;
+          default:
+            return true;
+        }
+      });
+    };
+
+    const filteredBookings = getFilteredBookings();
+
+    switch (activeCard) {
+      case 'bookings':
+        return (
+          <div className="p-4">
+            <h3 className="text-lg font-semibold mb-4">Total Bookings Details</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">GRC No</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Guest Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredBookings.slice(0, 10).map((booking, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm">{booking.grcNo}</td>
+                      <td className="px-4 py-2 text-sm">{booking.name}</td>
+                      <td className="px-4 py-2 text-sm">{booking.roomNumber}</td>
+                      <td className="px-4 py-2 text-sm">
+                        <span className={`px-2 py-1 text-xs rounded ${
+                          booking.status === 'Checked In' ? 'bg-green-100 text-green-800' :
+                          booking.status === 'Checked Out' ? 'bg-blue-100 text-blue-800' :
+                          booking.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {booking.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-sm">₹{(booking.rate || 0).toLocaleString()}</td>
+                      <td className="px-4 py-2 text-sm">{new Date(booking.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredBookings.length > 10 && (
+                <p className="text-sm text-gray-500 mt-2">Showing first 10 of {filteredBookings.length} bookings</p>
+              )}
+            </div>
+          </div>
+        );
+      case 'active':
+        const activeBookings = filteredBookings.filter(b => b.status === 'Checked In');
+        return (
+          <div className="p-4">
+            <h3 className="text-lg font-semibold mb-4">Active Bookings Details</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200">
+                <thead className="bg-green-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">GRC No</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Guest Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Check-in</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Check-out</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {activeBookings.map((booking, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm">{booking.grcNo}</td>
+                      <td className="px-4 py-2 text-sm">{booking.name}</td>
+                      <td className="px-4 py-2 text-sm">{booking.roomNumber}</td>
+                      <td className="px-4 py-2 text-sm">{new Date(booking.checkInDate).toLocaleDateString()}</td>
+                      <td className="px-4 py-2 text-sm">{new Date(booking.checkOutDate).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      case 'cancelled':
+        const cancelledBookings = filteredBookings.filter(b => b.status === 'Cancelled');
+        return (
+          <div className="p-4">
+            <h3 className="text-lg font-semibold mb-4">Cancelled Bookings Details</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200">
+                <thead className="bg-red-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">GRC No</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Guest Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cancelled Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {cancelledBookings.map((booking, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm">{booking.grcNo}</td>
+                      <td className="px-4 py-2 text-sm">{booking.name}</td>
+                      <td className="px-4 py-2 text-sm">{booking.roomNumber}</td>
+                      <td className="px-4 py-2 text-sm">₹{(booking.rate || 0).toLocaleString()}</td>
+                      <td className="px-4 py-2 text-sm">{new Date(booking.updatedAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      case 'revenue':
+        return (
+          <div className="p-4">
+            <h3 className="text-lg font-semibold mb-4">Revenue Details</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200">
+                <thead className="bg-blue-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">GRC No</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Guest Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Room Rate</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">CGST</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">SGST</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredBookings.slice(0, 10).map((booking, index) => {
+                    const total = (booking.rate || 0) + (booking.cgstAmount || 0) + (booking.sgstAmount || 0);
+                    return (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 text-sm">{booking.grcNo}</td>
+                        <td className="px-4 py-2 text-sm">{booking.name}</td>
+                        <td className="px-4 py-2 text-sm">₹{(booking.rate || 0).toLocaleString()}</td>
+                        <td className="px-4 py-2 text-sm">₹{(booking.cgstAmount || 0).toLocaleString()}</td>
+                        <td className="px-4 py-2 text-sm">₹{(booking.sgstAmount || 0).toLocaleString()}</td>
+                        <td className="px-4 py-2 text-sm font-semibold">₹{total.toLocaleString()}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      case 'online':
+        const onlinePayments = filteredBookings.filter(b => b.paymentMode && b.paymentMode.toLowerCase().includes('upi'));
+        return (
+          <div className="p-4">
+            <h3 className="text-lg font-semibold mb-4">Online Payments Details</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200">
+                <thead className="bg-blue-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">GRC No</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Guest Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Payment Mode</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {onlinePayments.map((booking, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm">{booking.grcNo}</td>
+                      <td className="px-4 py-2 text-sm">{booking.name}</td>
+                      <td className="px-4 py-2 text-sm">{booking.paymentMode}</td>
+                      <td className="px-4 py-2 text-sm">₹{(booking.rate || 0).toLocaleString()}</td>
+                      <td className="px-4 py-2 text-sm">{new Date(booking.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      case 'cash':
+        const cashPayments = filteredBookings.filter(b => b.paymentMode && b.paymentMode.toLowerCase().includes('cash'));
+        return (
+          <div className="p-4">
+            <h3 className="text-lg font-semibold mb-4">Cash Payments Details</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200">
+                <thead className="bg-green-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">GRC No</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Guest Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Payment Mode</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {cashPayments.map((booking, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm">{booking.grcNo}</td>
+                      <td className="px-4 py-2 text-sm">{booking.name}</td>
+                      <td className="px-4 py-2 text-sm">{booking.paymentMode}</td>
+                      <td className="px-4 py-2 text-sm">₹{(booking.rate || 0).toLocaleString()}</td>
+                      <td className="px-4 py-2 text-sm">{new Date(booking.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      case 'restaurant':
+        return (
+          <div className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Restaurant Orders Details</h3>
+              <button 
+                onClick={() => setExpandedOrder(expandedOrder === 'all' ? null : 'all')}
+                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+              >
+                {expandedOrder === 'all' ? 'Collapse All' : 'Expand All Details'}
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200">
+                <thead className="bg-orange-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Table/Room</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {allServiceData.restaurant?.slice(0, 10).map((order, index) => (
+                    <Fragment key={index}>
+                      <tr className="hover:bg-gray-50">
+                        <td className="px-4 py-2 text-sm">{order._id?.slice(-6) || index + 1}</td>
+                        <td className="px-4 py-2 text-sm">{order.customerName || order.guestName || 'N/A'}</td>
+                        <td className="px-4 py-2 text-sm">{order.tableNo || order.roomNumber || 'N/A'}</td>
+                        <td className="px-4 py-2 text-sm">{order.items?.length || 0} items</td>
+                        <td className="px-4 py-2 text-sm">₹{(order.amount || order.totalAmount || 0).toLocaleString()}</td>
+                        <td className="px-4 py-2 text-sm">
+                          <span className={`px-2 py-1 text-xs rounded ${
+                            order.status === 'served' || order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            order.status === 'preparing' ? 'bg-yellow-100 text-yellow-800' :
+                            order.status === 'pending' ? 'bg-orange-100 text-orange-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {order.status || 'pending'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-sm">{new Date(order.createdAt).toLocaleDateString()}</td>
+                        <td className="px-4 py-2 text-sm">
+                          <button 
+                            onClick={() => setExpandedOrder(expandedOrder === index ? null : index)}
+                            className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                          >
+                            View Details
+                          </button>
+                        </td>
+                      </tr>
+                      {(expandedOrder === index || expandedOrder === 'all') && (
+                        <tr>
+                          <td colSpan="8" className="px-4 py-4 bg-gray-50">
+                            <div className="space-y-2">
+                              <h4 className="font-semibold text-sm">Order Items:</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {order.items?.map((item, itemIndex) => (
+                                  <div key={itemIndex} className="flex justify-between bg-white p-2 rounded">
+                                    <span className="text-sm">{item.itemName || item.name}</span>
+                                    <span className="text-sm">Qty: {item.quantity} × ₹{item.price}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              {order.notes && (
+                                <div>
+                                  <span className="font-semibold text-sm">Notes: </span>
+                                  <span className="text-sm">{order.notes}</span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+              {allServiceData.restaurant?.length > 10 && (
+                <p className="text-sm text-gray-500 mt-2">Showing first 10 of {allServiceData.restaurant.length} orders</p>
+              )}
+            </div>
+          </div>
+        );
+      default:
+        return <div className="p-4 text-center text-gray-500">Select a card to view details</div>;
+    }
   };
 
   if (loading) {
@@ -307,9 +674,67 @@ const Dashboard = () => {
   return (
     <div className="p-4 sm:p-6 overflow-auto h-full bg-background">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 mt-4 sm:mt-6 gap-4">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#1f2937]">
-          HAVANA DASHBOARD
-        </h1>
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#1f2937]">
+            HAVANA DASHBOARD
+          </h1>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <button
+              onClick={() => {
+                setTimeFrame('today');
+                setShowDateRange(false);
+              }}
+              className={`px-3 py-1 text-sm rounded ${timeFrame === 'today' ? 'bg-primary text-white' : 'bg-gray-200'}`}
+            >
+              Today
+            </button>
+            <button
+              onClick={() => {
+                setTimeFrame('weekly');
+                setShowDateRange(false);
+              }}
+              className={`px-3 py-1 text-sm rounded ${timeFrame === 'weekly' ? 'bg-primary text-white' : 'bg-gray-200'}`}
+            >
+              Weekly
+            </button>
+            <button
+              onClick={() => {
+                setTimeFrame('monthly');
+                setShowDateRange(false);
+              }}
+              className={`px-3 py-1 text-sm rounded ${timeFrame === 'monthly' ? 'bg-primary text-white' : 'bg-gray-200'}`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => {
+                setTimeFrame('range');
+                setShowDateRange(true);
+              }}
+              className={`px-3 py-1 text-sm rounded ${timeFrame === 'range' ? 'bg-primary text-white' : 'bg-gray-200'}`}
+            >
+              Date Range
+            </button>
+          </div>
+          {showDateRange && timeFrame === 'range' && (
+            <div className="flex gap-2 mt-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-2 py-1 text-sm border rounded"
+                placeholder="Start Date"
+              />
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="px-2 py-1 text-sm border rounded"
+                placeholder="End Date"
+              />
+            </div>
+          )}
+        </div>
         <button
           onClick={handleCalendarClick}
           className="p-2 rounded-full hover:bg-background transition-colors self-end sm:self-auto"
