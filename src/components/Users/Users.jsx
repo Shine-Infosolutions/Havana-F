@@ -112,14 +112,6 @@ const Users = () => {
         // For same-tab logout
         window.dispatchEvent(new CustomEvent('forceLogout', { detail: { userId } }));
       }
-      
-      if (currentStatus !== false) {
-        // Broadcast message to all tabs/windows
-        localStorage.setItem('forceLogout', JSON.stringify({ userId, timestamp: Date.now() }));
-        localStorage.removeItem('forceLogout');
-      }
-      
-      fetchUsers(currentPage);
     } catch (error) {
       console.error('Error updating user status:', error);
       showToast.error('Failed to update user status');
