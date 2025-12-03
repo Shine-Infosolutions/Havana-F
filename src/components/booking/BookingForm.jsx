@@ -924,7 +924,7 @@ const App = () => {
         }
         
         // Auto-fill customer details but reset booking-specific fields for new booking
-        setFormData({
+        setFormData(prev => ({
           // New booking details
           grcNo: newGrcNo,
           reservationId: '',
@@ -962,12 +962,14 @@ const App = () => {
           idProofImageUrl: fetchedData.idProofImageUrl || '',
           idProofImageUrl2: fetchedData.idProofImageUrl2 || '',
           
-          // Reset booking-specific fields
+          // Reset booking-specific fields but preserve current extraBedCharge
           photoUrl: '',
           roomNumber: '',
           planPackage: '',
           noOfAdults: 1,
           noOfChildren: 0,
+          roomGuestDetails: [],
+          extraBedCharge: prev.extraBedCharge || 500, // Preserve current extraBedCharge
           rate: 0,
           invoiceNumber: '',
           cgstRate: (() => {
@@ -992,6 +994,7 @@ const App = () => {
           nonChargeable: false,
           paymentMode: '',
           paymentStatus: 'Pending',
+          transactionId: '',
           bookingRefNo: '',
           mgmtBlock: 'No',
           billingInstruction: '',
@@ -1001,9 +1004,9 @@ const App = () => {
           vip: fetchedData.vip || false, // Keep VIP status
           status: 'Booked', // Always set to Booked for new booking
           extensionHistory: [],
-        advancePayments: [],
-        totalAdvanceAmount: 0,
-        balanceAmount: 0,
+          advancePayments: [],
+          totalAdvanceAmount: 0,
+          balanceAmount: 0,
           cardNumber: '',
           cardHolder: '',
           cardExpiry: '',
@@ -1012,7 +1015,7 @@ const App = () => {
           bankName: '',
           accountNumber: '',
           ifsc: '',
-        });
+        }));
         
         // Clear room selection and availability check for new booking
         setSelectedRooms([]);

@@ -272,7 +272,9 @@ const BookingDetails = () => {
                         {order.items?.map((item, idx) => (
                           <div key={idx} className="flex justify-between text-sm text-gray-700">
                             <span>{item.itemName} x {item.quantity}</span>
-                            <span>{order.nonChargeable ? <span className="text-green-600 font-bold">nc</span> : `₹${(item.quantity * (item.unitPrice || item.price || 0)).toFixed(2)}`}</span>
+                            <span className="text-green-600 font-bold">
+                              {(item.nonChargeable || item.isFree || item.nc || order.nonChargeable) ? 'NC' : `₹${(item.quantity * (item.unitPrice || item.price || 0)).toFixed(2)}`}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -306,7 +308,9 @@ const BookingDetails = () => {
                         {order.items?.map((item, idx) => (
                           <div key={idx} className="flex justify-between text-sm text-gray-700">
                             <span>{item.name || item.itemName || 'Unknown Item'} x {item.quantity}</span>
-                            <span>{order.nonChargeable ? <span className="text-green-600 font-bold">nc</span> : `₹${(item.quantity * (item.unitPrice || item.price || 0)).toFixed(2)}`}</span>
+                            <span className="text-green-600 font-bold">
+                              {(item.nonChargeable || item.isFree || item.nc || order.nonChargeable) ? 'NC' : `₹${(item.quantity * (item.unitPrice || item.price || 0)).toFixed(2)}`}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -479,32 +483,7 @@ const BookingDetails = () => {
                       <span>Total Advance Received:</span>
                       <span className="text-green-600">₹{booking.advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0)}</span>
                     </div>
-                    <div className="flex justify-between text-lg font-semibold mt-2">
-                      <span>Balance Due:</span>
-                      <span className="text-orange-600">₹{(() => {
-                        // If payment status is "Paid", balance due is 0
-                        if (booking.paymentStatus === 'Paid') {
-                          return '0.00';
-                        }
-                        
-                        const roomCost = booking.roomRates && booking.roomRates.length > 0 
-                          ? (() => {
-                              const days = Math.ceil((new Date(booking.checkOutDate) - new Date(booking.checkInDate)) / (1000 * 60 * 60 * 24));
-                              return booking.roomRates.reduce((sum, roomRate) => sum + (roomRate.customRate || 0), 0) * days;
-                            })()
-                          : (booking.rate || 0);
-                        const discount = roomCost * ((booking.discountPercent || 0) / 100);
-                        const afterDiscount = roomCost - discount;
-                        const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-                        const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
-                        const subtotal = afterDiscount + serviceTotal + restaurantTotal;
-                        const cgstAmount = subtotal * (booking.cgstRate || 0.025);
-                        const sgstAmount = subtotal * (booking.sgstRate || 0.025);
-                        const grandTotal = subtotal + cgstAmount + sgstAmount;
-                        const totalAdvance = booking.advancePayments?.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0) || 0;
-                        return Math.max(0, (grandTotal - totalAdvance).toFixed(2));
-                      })()}</span>
-                    </div>
+
                   </div>
                 </div>
               ) : (
@@ -652,11 +631,29 @@ const BookingDetails = () => {
                   <>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Room Service:</span>
-                      <span className="font-medium">₹{serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0)}</span>
+                      <span className="font-medium">₹{serviceCharges.reduce((sum, order) => {
+                        if (order.nonChargeable) return sum;
+                        const orderTotal = order.items.reduce((itemSum, item) => {
+                          const isNC = item.nonChargeable || item.isFree || item.nc;
+                          if (isNC) return itemSum;
+                          const unitPrice = item.unitPrice || item.price || 0;
+                          return itemSum + (item.quantity * unitPrice);
+                        }, 0);
+                        return sum + orderTotal;
+                      }, 0)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Restaurant:</span>
-                      <span className="font-medium">₹{restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0)}</span>
+                      <span className="font-medium">₹{restaurantCharges.reduce((sum, order) => {
+                        if (order.nonChargeable) return sum;
+                        const orderTotal = order.items.reduce((itemSum, item) => {
+                          const isNC = item.nonChargeable || item.isFree || item.nc;
+                          if (isNC) return itemSum;
+                          const unitPrice = item.unitPrice || item.price || 0;
+                          return itemSum + (item.quantity * unitPrice);
+                        }, 0);
+                        return sum + orderTotal;
+                      }, 0)}</span>
                     </div>
                   </>
                 )}
@@ -836,7 +833,7 @@ const BookingDetails = () => {
                     })()}</span>
                   </div>
                   <div className="flex justify-between text-xl font-bold text-orange-600 mt-2">
-                    <span>GRAND TOTAL:</span>
+                    <span>BALANCE DUE:</span>
                     <span>₹{(() => {
                       // If payment status is "Paid", balance due is 0
                       if (booking.paymentStatus === 'Paid') {

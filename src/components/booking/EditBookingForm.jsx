@@ -1967,17 +1967,26 @@ const EditBookingForm = () => {
                         newItems[itemIndex].isFree = newNC;
                         newItems[itemIndex].nc = newNC;
                         
+                        // Recalculate order total excluding NC items
+                        const newTotalAmount = newItems.reduce((sum, item) => {
+                          const isNC = item.nonChargeable || item.isFree || item.nc;
+                          if (isNC) return sum;
+                          const unitPrice = item.unitPrice || item.price || 0;
+                          return sum + (item.quantity * unitPrice);
+                        }, 0);
+                        
                         // Optimistic update
                         setRoomServiceOrders(prev => 
                           prev.map(o => 
                             o._id === orderId 
-                              ? { ...o, items: newItems }
+                              ? { ...o, items: newItems, totalAmount: newTotalAmount }
                               : o
                           )
                         );
                         
                         await axios.patch(`/api/room-service/${orderId}`, {
-                          items: newItems
+                          items: newItems,
+                          totalAmount: newTotalAmount
                         });
                       } else {
                         // Toggle order-level NC
@@ -2098,17 +2107,26 @@ const EditBookingForm = () => {
                         newItems[itemIndex].isFree = newNC;
                         newItems[itemIndex].nc = newNC;
                         
+                        // Recalculate order total excluding NC items
+                        const newAmount = newItems.reduce((sum, item) => {
+                          const isNC = item.nonChargeable || item.isFree || item.nc;
+                          if (isNC) return sum;
+                          const unitPrice = item.unitPrice || item.price || 0;
+                          return sum + (item.quantity * unitPrice);
+                        }, 0);
+                        
                         // Optimistic update
                         setRestaurantOrders(prev => 
                           prev.map(o => 
                             o._id === orderId 
-                              ? { ...o, items: newItems }
+                              ? { ...o, items: newItems, amount: newAmount }
                               : o
                           )
                         );
                         
                         await axios.patch(`/api/restaurant-orders/${orderId}`, {
-                          items: newItems
+                          items: newItems,
+                          amount: newAmount
                         });
                       } else {
                         // Toggle order-level NC
@@ -2247,19 +2265,37 @@ const EditBookingForm = () => {
                             
                             return sum + ((formData.extraBedCharge || 0) * Math.max(0, extraBedDays));
                           }, 0);
-                          // Calculate room service and restaurant charges (exclude cancelled and non-chargeable orders)
+                          // Calculate room service and restaurant charges (exclude cancelled orders, include order-level NC but exclude item-level NC)
                           const activeRoomServiceOrders = roomServiceOrders.filter(order => 
-                            order.status !== 'cancelled' && order.status !== 'canceled' && !order.nonChargeable
+                            order.status !== 'cancelled' && order.status !== 'canceled'
                           );
                           const activeRestaurantOrders = restaurantOrders.filter(order => 
-                            order.status !== 'cancelled' && order.status !== 'canceled' && !order.nonChargeable
+                            order.status !== 'cancelled' && order.status !== 'canceled'
                           );
                           
                           const roomServiceTotal = activeRoomServiceOrders.reduce((sum, order) => {
-                            return sum + (Number(order.totalAmount) || 0);
+                            // If entire order is NC, exclude it
+                            if (order.nonChargeable) return sum;
+                            // Calculate total excluding NC items
+                            const orderTotal = order.items.reduce((itemSum, item) => {
+                              const isNC = item.nonChargeable || item.isFree || item.nc;
+                              if (isNC) return itemSum;
+                              const unitPrice = item.unitPrice || item.price || 0;
+                              return itemSum + (item.quantity * unitPrice);
+                            }, 0);
+                            return sum + orderTotal;
                           }, 0);
                           const restaurantTotal = activeRestaurantOrders.reduce((sum, order) => {
-                            return sum + (Number(order.amount) || 0);
+                            // If entire order is NC, exclude it
+                            if (order.nonChargeable) return sum;
+                            // Calculate total excluding NC items
+                            const orderTotal = order.items.reduce((itemSum, item) => {
+                              const isNC = item.nonChargeable || item.isFree || item.nc;
+                              if (isNC) return itemSum;
+                              const unitPrice = item.unitPrice || item.price || 0;
+                              return itemSum + (item.quantity * unitPrice);
+                            }, 0);
+                            return sum + orderTotal;
                           }, 0);
                           
                           // Apply discount only to room cost (room rate + extra beds)
@@ -2549,10 +2585,65 @@ const EditBookingForm = () => {
                           <div>
                             <span className="text-blue-600">Total Amount:</span>
                             <div className="font-semibold">₹{(() => {
-                              const taxableAmount = Number(formData.rate) || 0;
-                              const cgstAmount = taxableAmount * (Number(formData.cgstRate) / 100);
-                              const sgstAmount = taxableAmount * (Number(formData.sgstRate) / 100);
-                              return formData.nonChargeable ? '0.00' : (taxableAmount + cgstAmount + sgstAmount).toFixed(2);
+                              if (formData.nonChargeable) return '0.00';
+                              
+                              // Use same calculation as Rate Breakdown
+                              const roomRate = selectedRooms.reduce((sum, room) => {
+                                const rate = room.customPrice !== undefined && room.customPrice !== '' && room.customPrice !== null
+                                  ? Number(room.customPrice) 
+                                  : (room.price || 0);
+                                return sum + rate;
+                              }, 0) * (formData.days || 1);
+                              
+                              const extraBedTotal = selectedRooms.reduce((sum, room) => {
+                                if (!room.extraBed) return sum;
+                                const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
+                                const endDate = new Date(formData.checkOutDate);
+                                if (startDate >= endDate) return sum;
+                                const timeDiff = endDate.getTime() - startDate.getTime();
+                                const extraBedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                                return sum + ((formData.extraBedCharge || 0) * Math.max(0, extraBedDays));
+                              }, 0);
+                              
+                              const activeRoomServiceOrders = roomServiceOrders.filter(order => 
+                                order.status !== 'cancelled' && order.status !== 'canceled'
+                              );
+                              const activeRestaurantOrders = restaurantOrders.filter(order => 
+                                order.status !== 'cancelled' && order.status !== 'canceled'
+                              );
+                              
+                              const roomServiceTotal = activeRoomServiceOrders.reduce((sum, order) => {
+                                if (order.nonChargeable) return sum;
+                                const orderTotal = order.items.reduce((itemSum, item) => {
+                                  const isNC = item.nonChargeable || item.isFree || item.nc;
+                                  if (isNC) return itemSum;
+                                  const unitPrice = item.unitPrice || item.price || 0;
+                                  return itemSum + (item.quantity * unitPrice);
+                                }, 0);
+                                return sum + orderTotal;
+                              }, 0);
+                              
+                              const restaurantTotal = activeRestaurantOrders.reduce((sum, order) => {
+                                if (order.nonChargeable) return sum;
+                                const orderTotal = order.items.reduce((itemSum, item) => {
+                                  const isNC = item.nonChargeable || item.isFree || item.nc;
+                                  if (isNC) return itemSum;
+                                  const unitPrice = item.unitPrice || item.price || 0;
+                                  return itemSum + (item.quantity * unitPrice);
+                                }, 0);
+                                return sum + orderTotal;
+                              }, 0);
+                              
+                              const roomSubtotal = roomRate + extraBedTotal;
+                              const discountAmount = roomSubtotal * (Number(formData.discountPercent || 0) / 100);
+                              const discountedRoomSubtotal = roomSubtotal - discountAmount;
+                              const subtotal = discountedRoomSubtotal + roomServiceTotal + restaurantTotal;
+                              
+                              const cgstAmount = subtotal * (Number(formData.cgstRate || 0) / 100);
+                              const sgstAmount = subtotal * (Number(formData.sgstRate || 0) / 100);
+                              const totalWithTax = subtotal + cgstAmount + sgstAmount;
+                              
+                              return totalWithTax.toFixed(2);
                             })()}</div>
                           </div>
                           <div>
@@ -2565,10 +2656,64 @@ const EditBookingForm = () => {
                           <div>
                             <span className="text-orange-600">Balance Due:</span>
                             <div className="font-semibold text-orange-700">₹{(() => {
-                              const taxableAmount = Number(formData.rate) || 0;
-                              const cgstAmount = taxableAmount * (Number(formData.cgstRate) / 100);
-                              const sgstAmount = taxableAmount * (Number(formData.sgstRate) / 100);
-                              const totalAmount = formData.nonChargeable ? 0 : taxableAmount + cgstAmount + sgstAmount;
+                              if (formData.nonChargeable) return '0.00';
+                              
+                              // Use same calculation as Rate Breakdown
+                              const roomRate = selectedRooms.reduce((sum, room) => {
+                                const rate = room.customPrice !== undefined && room.customPrice !== '' && room.customPrice !== null
+                                  ? Number(room.customPrice) 
+                                  : (room.price || 0);
+                                return sum + rate;
+                              }, 0) * (formData.days || 1);
+                              
+                              const extraBedTotal = selectedRooms.reduce((sum, room) => {
+                                if (!room.extraBed) return sum;
+                                const startDate = new Date(room.extraBedStartDate || new Date().toISOString().split('T')[0]);
+                                const endDate = new Date(formData.checkOutDate);
+                                if (startDate >= endDate) return sum;
+                                const timeDiff = endDate.getTime() - startDate.getTime();
+                                const extraBedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                                return sum + ((formData.extraBedCharge || 0) * Math.max(0, extraBedDays));
+                              }, 0);
+                              
+                              const activeRoomServiceOrders = roomServiceOrders.filter(order => 
+                                order.status !== 'cancelled' && order.status !== 'canceled'
+                              );
+                              const activeRestaurantOrders = restaurantOrders.filter(order => 
+                                order.status !== 'cancelled' && order.status !== 'canceled'
+                              );
+                              
+                              const roomServiceTotal = activeRoomServiceOrders.reduce((sum, order) => {
+                                if (order.nonChargeable) return sum;
+                                const orderTotal = order.items.reduce((itemSum, item) => {
+                                  const isNC = item.nonChargeable || item.isFree || item.nc;
+                                  if (isNC) return itemSum;
+                                  const unitPrice = item.unitPrice || item.price || 0;
+                                  return itemSum + (item.quantity * unitPrice);
+                                }, 0);
+                                return sum + orderTotal;
+                              }, 0);
+                              
+                              const restaurantTotal = activeRestaurantOrders.reduce((sum, order) => {
+                                if (order.nonChargeable) return sum;
+                                const orderTotal = order.items.reduce((itemSum, item) => {
+                                  const isNC = item.nonChargeable || item.isFree || item.nc;
+                                  if (isNC) return itemSum;
+                                  const unitPrice = item.unitPrice || item.price || 0;
+                                  return itemSum + (item.quantity * unitPrice);
+                                }, 0);
+                                return sum + orderTotal;
+                              }, 0);
+                              
+                              const roomSubtotal = roomRate + extraBedTotal;
+                              const discountAmount = roomSubtotal * (Number(formData.discountPercent || 0) / 100);
+                              const discountedRoomSubtotal = roomSubtotal - discountAmount;
+                              const subtotal = discountedRoomSubtotal + roomServiceTotal + restaurantTotal;
+                              
+                              const cgstAmount = subtotal * (Number(formData.cgstRate || 0) / 100);
+                              const sgstAmount = subtotal * (Number(formData.sgstRate || 0) / 100);
+                              const totalAmount = subtotal + cgstAmount + sgstAmount;
+                              
                               const totalAdvance = (formData.advancePayments || []).reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
                               const balance = totalAmount - totalAdvance;
                               return Math.max(0, balance).toFixed(2);
