@@ -303,7 +303,7 @@ const Order = () => {
                               <div className="font-medium text-gray-800">{item.name}</div>
                               <div className="text-xs text-gray-500">{categories.find(cat => cat._id === item.category)?.name || item.foodType}</div>
                               <div className="text-xs text-[#c3ad6b]">₹{(item.Price || item.price || 0).toFixed(2)} each</div>
-                              {hasRole(['ADMIN', 'GM']) && (
+                              {hasRole(['ADMIN', 'GM', 'FRONT DESK', 'STAFF']) && (
                                 <label className="flex items-center gap-1 mt-1">
                                   <input
                                     type="checkbox"

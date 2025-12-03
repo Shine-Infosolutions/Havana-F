@@ -401,12 +401,12 @@ export default function Invoice() {
     }, 0) || 0;
     const exactTotal = totalTaxableAmount + sgst + cgst + otherChargesTotal;
     const roundedTotal = Math.round(exactTotal);
-    const roundOff = Math.round((roundedTotal - exactTotal) * 100) / 100;
+    const roundOff = (roundedTotal - exactTotal);
     return roundOff;
   };
 
   const calculateNetTotal = () => {
-    if (!invoiceData) return '0.00';
+    if (!invoiceData) return '0';
     
     // Only room charges (including extra beds) are taxable
     const roomCharges = invoiceData.items?.filter(item => 
@@ -438,7 +438,7 @@ export default function Invoice() {
     // Net total = total taxable amount + taxes + round off
     const netTotal = totalTaxableAmount + sgst + cgst + roundOff;
     
-    return netTotal.toFixed(2);
+    return netTotal.toString();
   };
 
   const handlePrint = useReactToPrint({
@@ -785,11 +785,17 @@ export default function Invoice() {
                         return taxableAmount.toFixed(2);
                       })()}</td>
                       <td className="p-0.5 border border-black text-center text-xs">{bookingData?.paymentMode || ''}</td>
-                      <td className="p-0.5 border border-black text-right text-xs">{invoiceData.payment?.total?.toFixed(2)}</td>
+                      <td className="p-0.5 border border-black text-right text-xs">{(() => {
+                        const totalAdvance = bookingData?.advancePayments?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
+                        return totalAdvance.toFixed(2);
+                      })()}</td>
                     </tr>
                     <tr>
                       <td colSpan="3" className="p-0.5 border border-black font-bold text-right text-xs">Total</td>
-                      <td className="p-0.5 border border-black text-right font-bold text-xs">{invoiceData.payment?.total?.toFixed(2)}</td>
+                      <td className="p-0.5 border border-black text-right font-bold text-xs">{(() => {
+                        const totalAdvance = bookingData?.advancePayments?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
+                        return totalAdvance.toFixed(2);
+                      })()}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -918,7 +924,7 @@ export default function Invoice() {
                       <td className="p-0.5 border-l border-black text-right font-bold text-xs">₹{(() => {
                         const netTotal = parseFloat(calculateNetTotal());
                         const totalAdvance = bookingData?.advancePayments?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
-                        return (netTotal - totalAdvance).toFixed(2);
+                        return (netTotal - totalAdvance).toString();
                       })()}</td>
                     </tr>
 

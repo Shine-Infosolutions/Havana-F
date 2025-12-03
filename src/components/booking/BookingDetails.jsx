@@ -840,7 +840,7 @@ const BookingDetails = () => {
                     const sgstAmount = totalSubtotal * (booking.sgstRate || 0.025);
                     const exactTotal = totalSubtotal + cgstAmount + sgstAmount;
                     const roundedTotal = Math.round(exactTotal);
-                    const roundOff = Math.round((roundedTotal - exactTotal) * 100) / 100;
+                    const roundOff = (roundedTotal - exactTotal);
                     return (roundOff >= 0 ? '+' : '') + roundOff.toFixed(2);
                   })()}</span>
                 </div>
@@ -880,9 +880,15 @@ const BookingDetails = () => {
                       const sgstAmount = totalSubtotal * (booking.sgstRate || 0.025);
                       const exactTotal = totalSubtotal + cgstAmount + sgstAmount;
                       const roundedTotal = Math.round(exactTotal);
-                      return roundedTotal.toFixed(2);
+                      return roundedTotal.toString();
                     })()}</span>
                   </div>
+                  {booking.advancePayments && booking.advancePayments.length > 0 && (
+                    <div className="flex justify-between text-lg font-medium text-green-600 mt-2">
+                      <span>Advance Payment:</span>
+                      <span>-₹{booking.advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-xl font-bold text-orange-600 mt-2">
                     <span>BALANCE DUE:</span>
                     <span>₹{(() => {
@@ -923,7 +929,7 @@ const BookingDetails = () => {
                       const exactTotal = totalSubtotal + cgstAmount + sgstAmount;
                       const roundedTotal = Math.round(exactTotal);
                       const totalAdvance = booking.advancePayments?.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0) || 0;
-                      return Math.max(0, (roundedTotal - totalAdvance).toFixed(2));
+                      return Math.max(0, (roundedTotal - totalAdvance)).toString();
                     })()}</span>
                   </div>
                 </div>
