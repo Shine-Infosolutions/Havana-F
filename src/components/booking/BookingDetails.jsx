@@ -519,7 +519,7 @@ const BookingDetails = () => {
               </h2>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Room Rate (Base):</span>
+                  <span className="text-gray-600">Room Cost ({Math.ceil((new Date(booking.checkOutDate) - new Date(booking.checkInDate)) / (1000 * 60 * 60 * 24))} days):</span>
                   <span className="font-medium">₹{(() => {
                     // Calculate room cost from room rates if available
                     if (booking.roomRates && booking.roomRates.length > 0) {
@@ -529,6 +529,62 @@ const BookingDetails = () => {
                       }, 0) * days;
                     }
                     return booking.rate || 0;
+                  })()}</span>
+                </div>
+                {(() => {
+                  // Calculate extra bed charges with proper date handling
+                  const extraBedTotal = booking.roomRates ? booking.roomRates.reduce((sum, roomRate) => {
+                    if (!roomRate.extraBed) return sum;
+                    
+                    // Calculate extra bed days properly
+                    const startDate = new Date(roomRate.extraBedStartDate || booking.checkInDate);
+                    const endDate = new Date(booking.checkOutDate);
+                    
+                    // If start date is same or after checkout, no extra bed charge
+                    if (startDate >= endDate) return sum;
+                    
+                    const timeDiff = endDate.getTime() - startDate.getTime();
+                    const extraBedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                    
+                    return sum + ((booking.extraBedCharge || 500) * Math.max(0, extraBedDays));
+                  }, 0) : 0;
+                  
+                  if (extraBedTotal > 0) {
+                    const extraBedCount = booking.roomRates ? booking.roomRates.filter(r => r.extraBed).length : 0;
+                    return (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Extra Beds ({extraBedCount} beds × variable days × ₹{booking.extraBedCharge || 500}):</span>
+                        <span className="font-medium">₹{extraBedTotal.toFixed(2)}</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Room Subtotal:</span>
+                  <span className="font-medium">₹{(() => {
+                    const roomCost = booking.roomRates && booking.roomRates.length > 0 
+                      ? (() => {
+                          const days = Math.ceil((new Date(booking.checkOutDate) - new Date(booking.checkInDate)) / (1000 * 60 * 60 * 24));
+                          return booking.roomRates.reduce((sum, roomRate) => sum + (roomRate.customRate || 0), 0) * days;
+                        })()
+                      : (booking.rate || 0);
+                    const extraBedTotal = booking.roomRates ? booking.roomRates.reduce((sum, roomRate) => {
+                      if (!roomRate.extraBed) return sum;
+                      
+                      // Calculate extra bed days properly
+                      const startDate = new Date(roomRate.extraBedStartDate || booking.checkInDate);
+                      const endDate = new Date(booking.checkOutDate);
+                      
+                      // If start date is same or after checkout, no extra bed charge
+                      if (startDate >= endDate) return sum;
+                      
+                      const timeDiff = endDate.getTime() - startDate.getTime();
+                      const extraBedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                      
+                      return sum + ((booking.extraBedCharge || 500) * Math.max(0, extraBedDays));
+                    }, 0) : 0;
+                    return (roomCost + extraBedTotal).toFixed(2);
                   })()}</span>
                 </div>
                 {booking.discountPercent > 0 && (
@@ -542,7 +598,23 @@ const BookingDetails = () => {
                               return booking.roomRates.reduce((sum, roomRate) => sum + (roomRate.customRate || 0), 0) * days;
                             })()
                           : (booking.rate || 0);
-                        return (roomCost * (booking.discountPercent / 100)).toFixed(2);
+                        const extraBedTotal = booking.roomRates ? booking.roomRates.reduce((sum, roomRate) => {
+                          if (!roomRate.extraBed) return sum;
+                          
+                          // Calculate extra bed days properly
+                          const startDate = new Date(roomRate.extraBedStartDate || booking.checkInDate);
+                          const endDate = new Date(booking.checkOutDate);
+                          
+                          // If start date is same or after checkout, no extra bed charge
+                          if (startDate >= endDate) return sum;
+                          
+                          const timeDiff = endDate.getTime() - startDate.getTime();
+                          const extraBedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                          
+                          return sum + ((booking.extraBedCharge || 500) * Math.max(0, extraBedDays));
+                        }, 0) : 0;
+                        const roomSubtotal = roomCost + extraBedTotal;
+                        return (roomSubtotal * (booking.discountPercent / 100)).toFixed(2);
                       })()}</span>
                     </div>
                     <div className="flex justify-between">
@@ -554,8 +626,24 @@ const BookingDetails = () => {
                               return booking.roomRates.reduce((sum, roomRate) => sum + (roomRate.customRate || 0), 0) * days;
                             })()
                           : (booking.rate || 0);
-                        const discount = roomCost * ((booking.discountPercent || 0) / 100);
-                        return (roomCost - discount).toFixed(2);
+                        const extraBedTotal = booking.roomRates ? booking.roomRates.reduce((sum, roomRate) => {
+                          if (!roomRate.extraBed) return sum;
+                          
+                          // Calculate extra bed days properly
+                          const startDate = new Date(roomRate.extraBedStartDate || booking.checkInDate);
+                          const endDate = new Date(booking.checkOutDate);
+                          
+                          // If start date is same or after checkout, no extra bed charge
+                          if (startDate >= endDate) return sum;
+                          
+                          const timeDiff = endDate.getTime() - startDate.getTime();
+                          const extraBedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                          
+                          return sum + ((booking.extraBedCharge || 500) * Math.max(0, extraBedDays));
+                        }, 0) : 0;
+                        const roomSubtotal = roomCost + extraBedTotal;
+                        const discount = roomSubtotal * ((booking.discountPercent || 0) / 100);
+                        return (roomSubtotal - discount).toFixed(2);
                       })()}</span>
                     </div>
                   </>
@@ -581,11 +669,25 @@ const BookingDetails = () => {
                           return booking.roomRates.reduce((sum, roomRate) => sum + (roomRate.customRate || 0), 0) * days;
                         })()
                       : (booking.rate || 0);
-                    const discount = roomCost * ((booking.discountPercent || 0) / 100);
-                    const afterDiscount = roomCost - discount;
-                    const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-                    const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
-                    return (afterDiscount + serviceTotal + restaurantTotal).toFixed(2);
+                    const extraBedTotal = booking.roomRates ? booking.roomRates.reduce((sum, roomRate) => {
+                      if (!roomRate.extraBed) return sum;
+                      
+                      // Calculate extra bed days properly
+                      const startDate = new Date(roomRate.extraBedStartDate || booking.checkInDate);
+                      const endDate = new Date(booking.checkOutDate);
+                      
+                      // If start date is same or after checkout, no extra bed charge
+                      if (startDate >= endDate) return sum;
+                      
+                      const timeDiff = endDate.getTime() - startDate.getTime();
+                      const extraBedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                      
+                      return sum + ((booking.extraBedCharge || 500) * Math.max(0, extraBedDays));
+                    }, 0) : 0;
+                    const roomSubtotal = roomCost + extraBedTotal;
+                    const discount = roomSubtotal * ((booking.discountPercent || 0) / 100);
+                    const afterDiscount = roomSubtotal - discount;
+                    return afterDiscount.toFixed(2);
                   })()}</span>
                 </div>
                 <div className="flex justify-between">
@@ -597,8 +699,14 @@ const BookingDetails = () => {
                           return booking.roomRates.reduce((sum, roomRate) => sum + (roomRate.customRate || 0), 0) * days;
                         })()
                       : (booking.rate || 0);
-                    const discount = roomCost * ((booking.discountPercent || 0) / 100);
-                    const afterDiscount = roomCost - discount;
+                    const extraBedTotal = booking.roomRates ? booking.roomRates.reduce((sum, roomRate) => {
+                      if (!roomRate.extraBed) return sum;
+                      const days = Math.ceil((new Date(booking.checkOutDate) - new Date(booking.checkInDate)) / (1000 * 60 * 60 * 24));
+                      return sum + ((booking.extraBedCharge || 500) * days);
+                    }, 0) : 0;
+                    const roomSubtotal = roomCost + extraBedTotal;
+                    const discount = roomSubtotal * ((booking.discountPercent || 0) / 100);
+                    const afterDiscount = roomSubtotal - discount;
                     const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
                     const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
                     const subtotal = afterDiscount + serviceTotal + restaurantTotal;
@@ -614,8 +722,14 @@ const BookingDetails = () => {
                           return booking.roomRates.reduce((sum, roomRate) => sum + (roomRate.customRate || 0), 0) * days;
                         })()
                       : (booking.rate || 0);
-                    const discount = roomCost * ((booking.discountPercent || 0) / 100);
-                    const afterDiscount = roomCost - discount;
+                    const extraBedTotal = booking.roomRates ? booking.roomRates.reduce((sum, roomRate) => {
+                      if (!roomRate.extraBed) return sum;
+                      const days = Math.ceil((new Date(booking.checkOutDate) - new Date(booking.checkInDate)) / (1000 * 60 * 60 * 24));
+                      return sum + ((booking.extraBedCharge || 500) * days);
+                    }, 0) : 0;
+                    const roomSubtotal = roomCost + extraBedTotal;
+                    const discount = roomSubtotal * ((booking.discountPercent || 0) / 100);
+                    const afterDiscount = roomSubtotal - discount;
                     const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
                     const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
                     const subtotal = afterDiscount + serviceTotal + restaurantTotal;
@@ -638,8 +752,24 @@ const BookingDetails = () => {
                             return booking.roomRates.reduce((sum, roomRate) => sum + (roomRate.customRate || 0), 0) * days;
                           })()
                         : (booking.rate || 0);
-                      const discount = roomCost * ((booking.discountPercent || 0) / 100);
-                      const afterDiscount = roomCost - discount;
+                      const extraBedTotal = booking.roomRates ? booking.roomRates.reduce((sum, roomRate) => {
+                        if (!roomRate.extraBed) return sum;
+                        
+                        // Calculate extra bed days properly
+                        const startDate = new Date(roomRate.extraBedStartDate || booking.checkInDate);
+                        const endDate = new Date(booking.checkOutDate);
+                        
+                        // If start date is same or after checkout, no extra bed charge
+                        if (startDate >= endDate) return sum;
+                        
+                        const timeDiff = endDate.getTime() - startDate.getTime();
+                        const extraBedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                        
+                        return sum + ((booking.extraBedCharge || 500) * Math.max(0, extraBedDays));
+                      }, 0) : 0;
+                      const roomSubtotal = roomCost + extraBedTotal;
+                      const discount = roomSubtotal * ((booking.discountPercent || 0) / 100);
+                      const afterDiscount = roomSubtotal - discount;
                       const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
                       const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
                       const subtotal = afterDiscount + serviceTotal + restaurantTotal;
