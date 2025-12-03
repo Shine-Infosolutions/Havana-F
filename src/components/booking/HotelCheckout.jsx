@@ -67,7 +67,13 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
       
       console.log('Processed checkout data:', checkoutData);
       setCheckoutData(checkoutData);
-      setPaymentAmount(checkoutData.totalAmount?.toString() || '0');
+      
+      // Calculate balance due after advance payments
+      const advancePayments = booking?.advancePayments || [];
+      const totalAdvance = advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+      const balanceDue = Math.max(0, (checkoutData.totalAmount || 0) - totalAdvance);
+      
+      setPaymentAmount(balanceDue.toString());
     } catch (error) {
       console.error('Error fetching checkout data:', error);
       showToast.error('Failed to load checkout data');
@@ -248,6 +254,27 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                   <span>Total with Tax:</span>
                   <span className="text-blue-600">₹{checkoutData.totalAmount || 0}</span>
                 </div>
+                {(() => {
+                  const advancePayments = booking?.advancePayments || [];
+                  const totalAdvance = advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+                  const balanceDue = (checkoutData.totalAmount || 0) - totalAdvance;
+                  
+                  if (totalAdvance > 0) {
+                    return (
+                      <>
+                        <div className="flex justify-between py-2 border-b text-green-600">
+                          <span>Advance Paid:</span>
+                          <span className="font-medium">-₹{totalAdvance.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between py-3 border-t-2 border-green-200 text-lg font-bold">
+                          <span>Balance Due:</span>
+                          <span className="text-green-600">₹{Math.max(0, balanceDue).toFixed(2)}</span>
+                        </div>
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* Room Inspection */}
@@ -317,10 +344,30 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                 </div>
 
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="flex justify-between text-lg font-semibold">
-                    <span>Total Due:</span>
-                    <span className="text-blue-600">₹{checkoutData?.totalAmount || 0}</span>
-                  </div>
+                  {(() => {
+                    const advancePayments = booking?.advancePayments || [];
+                    const totalAdvance = advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+                    const balanceDue = Math.max(0, (checkoutData?.totalAmount || 0) - totalAdvance);
+                    
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span>Total Amount:</span>
+                          <span>₹{checkoutData?.totalAmount || 0}</span>
+                        </div>
+                        {totalAdvance > 0 && (
+                          <div className="flex justify-between text-sm text-green-600">
+                            <span>Advance Paid:</span>
+                            <span>-₹{totalAdvance.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-lg font-semibold border-t pt-2 mt-2">
+                          <span>Balance Due:</span>
+                          <span className="text-blue-600">₹{balanceDue.toFixed(2)}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
