@@ -181,6 +181,7 @@ const EditBookingForm = () => {
   const [isNavigating, setIsNavigating] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [editItems, setEditItems] = useState([]);
+  const [formInitialized, setFormInitialized] = useState(false);
 
 
   const [formData, setFormData] = useState({
@@ -237,6 +238,7 @@ const EditBookingForm = () => {
     nonChargeable: false,
     paymentMode: '',
     paymentStatus: 'Pending',
+    transactionId: '',
     bookingRefNo: '',
     mgmtBlock: 'No',
     billingInstruction: '',
@@ -257,7 +259,7 @@ const EditBookingForm = () => {
   }, [editBooking, navigate]);
 
   useEffect(() => {
-    if (editBooking) {
+    if (editBooking && !formInitialized) {
       // Extract category ID properly
       const categoryId = typeof editBooking.categoryId === 'object' 
         ? editBooking.categoryId._id || editBooking.categoryId.id
@@ -337,6 +339,7 @@ const EditBookingForm = () => {
         nonChargeable: editBooking.nonChargeable || false,
         paymentMode: editBooking.paymentMode || '',
         paymentStatus: editBooking.paymentStatus || 'Pending',
+        transactionId: editBooking.transactionId || '',
         bookingRefNo: editBooking.bookingRefNo || '',
         mgmtBlock: editBooking.mgmtBlock || 'No',
         billingInstruction: editBooking.billingInstruction || '',
@@ -349,8 +352,9 @@ const EditBookingForm = () => {
         totalAdvanceAmount: editBooking.totalAdvanceAmount || 0,
         balanceAmount: editBooking.balanceAmount || 0
       });
+      setFormInitialized(true);
     }
-  }, [editBooking, navigate]);
+  }, [editBooking, navigate, formInitialized]);
 
   const fetchAllData = async () => {
     try {
@@ -525,6 +529,10 @@ const EditBookingForm = () => {
 
 
 
+
+
+
+
   const fetchRoomServiceOrders = async () => {
     if (!editBooking?._id) return;
     
@@ -576,7 +584,7 @@ const EditBookingForm = () => {
 
   // Update selectedRooms with real room data when allRooms is loaded
   useEffect(() => {
-    if (allRooms.length > 0 && editBooking?.roomNumber && selectedRooms.length > 0) {
+    if (allRooms.length > 0 && editBooking?.roomNumber && formInitialized) {
       const existingRoomNumbers = editBooking.roomNumber.split(',').map(num => num.trim());
       const realSelectedRooms = allRooms.filter(room => 
         existingRoomNumbers.includes(room.room_number.toString())
@@ -2314,6 +2322,18 @@ const EditBookingForm = () => {
                       <option value="Bank Transfer">Bank Transfer</option>
                     </Select>
                   </div>
+                  {formData.paymentMode && formData.paymentMode !== 'Cash' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="transactionId">Transaction ID</Label>
+                      <Input
+                        id="transactionId"
+                        name="transactionId"
+                        value={formData.transactionId || ''}
+                        onChange={handleChange}
+                        placeholder="Enter transaction ID"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="paymentStatus">Payment Status</Label>
                     <Select
@@ -2407,7 +2427,7 @@ const EditBookingForm = () => {
                                 Remove
                               </Button>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <Label>Amount (₹)</Label>
                                 <Input
@@ -2429,6 +2449,10 @@ const EditBookingForm = () => {
                                   onChange={(e) => {
                                     const newPayments = [...formData.advancePayments];
                                     newPayments[index].paymentMode = e.target.value;
+                                    // Auto-set payment date to today when payment mode is selected
+                                    if (e.target.value && !newPayments[index].paymentDate) {
+                                      newPayments[index].paymentDate = new Date().toISOString().split('T')[0];
+                                    }
                                     setFormData(prev => ({ ...prev, advancePayments: newPayments }));
                                   }}
                                 >
@@ -2440,42 +2464,20 @@ const EditBookingForm = () => {
                                   <option value="Online">Online</option>
                                 </Select>
                               </div>
-                              <div className="space-y-2">
-                                <Label>Payment Date</Label>
-                                <Input
-                                  type="date"
-                                  value={payment.paymentDate || ''}
-                                  onChange={(e) => {
-                                    const newPayments = [...formData.advancePayments];
-                                    newPayments[index].paymentDate = e.target.value;
-                                    setFormData(prev => ({ ...prev, advancePayments: newPayments }));
-                                  }}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>Reference/Transaction ID</Label>
-                                <Input
-                                  value={payment.reference || ''}
-                                  onChange={(e) => {
-                                    const newPayments = [...formData.advancePayments];
-                                    newPayments[index].reference = e.target.value;
-                                    setFormData(prev => ({ ...prev, advancePayments: newPayments }));
-                                  }}
-                                  placeholder="Transaction ID, Cheque No, etc."
-                                />
-                              </div>
-                              <div className="space-y-2 md:col-span-2">
-                                <Label>Notes</Label>
-                                <Input
-                                  value={payment.notes || ''}
-                                  onChange={(e) => {
-                                    const newPayments = [...formData.advancePayments];
-                                    newPayments[index].notes = e.target.value;
-                                    setFormData(prev => ({ ...prev, advancePayments: newPayments }));
-                                  }}
-                                  placeholder="Additional notes"
-                                />
-                              </div>
+                              {payment.paymentMode && payment.paymentMode !== 'Cash' && (
+                                <div className="space-y-2 md:col-span-2">
+                                  <Label>Transaction ID</Label>
+                                  <Input
+                                    value={payment.reference || ''}
+                                    onChange={(e) => {
+                                      const newPayments = [...formData.advancePayments];
+                                      newPayments[index].reference = e.target.value;
+                                      setFormData(prev => ({ ...prev, advancePayments: newPayments }));
+                                    }}
+                                    placeholder="Enter transaction ID"
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}

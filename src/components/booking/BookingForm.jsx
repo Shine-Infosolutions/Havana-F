@@ -329,6 +329,7 @@ export const AppProvider = ({ children }) => {
     nonChargeable: false,
     paymentMode: '',
     paymentStatus: 'Pending',
+    transactionId: '',
     bookingRefNo: '',
     mgmtBlock: 'No',
     billingInstruction: '',
@@ -394,10 +395,7 @@ export const AppProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
-      const [grcResponse, invoiceResponse] = await Promise.all([
-        axios.get(`${BASE_URL}/api/bookings/next-grc`, { headers }),
-        axios.get(`${BASE_URL}/api/invoices/next-invoice-number?format=monthly&preview=true`, { headers })
-      ]);
+      const grcResponse = await axios.get(`${BASE_URL}/api/bookings/next-grc`, { headers });
       
       if (grcResponse.data && grcResponse.data.grcNo) {
         setFormData(prev => ({ ...prev, grcNo: grcResponse.data.grcNo }));
@@ -405,16 +403,9 @@ export const AppProvider = ({ children }) => {
         showMessage('Failed to generate GRC number from server', 'error');
         console.error('Invalid response from GRC API:', grcResponse.data);
       }
-      
-      if (invoiceResponse.data && invoiceResponse.data.invoiceNumber) {
-        setFormData(prev => ({ ...prev, invoiceNumber: invoiceResponse.data.invoiceNumber }));
-      } else {
-        showMessage('Failed to preview invoice number from server', 'error');
-        console.error('Invalid response from Invoice API:', invoiceResponse.data);
-      }
     } catch (error) {
-      console.error('Error fetching GRC/Invoice:', error);
-      showMessage(`Failed to fetch GRC/Invoice from server: ${error.message}`, 'error');
+      console.error('Error fetching GRC:', error);
+      showMessage(`Failed to fetch GRC from server: ${error.message}`, 'error');
     }
   };
 
@@ -1387,6 +1378,7 @@ const App = () => {
     delete cleanFormData.__v;
     delete cleanFormData.createdAt;
     delete cleanFormData.updatedAt;
+    delete cleanFormData.invoiceNumber; // Remove to force backend generation
     
     // Ensure numeric fields are properly formatted
     cleanFormData.age = cleanFormData.age ? Number(cleanFormData.age) : 0;
@@ -1535,16 +1527,16 @@ const App = () => {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="invoiceNumber">Invoice No. (Preview)</Label>
+              <Label htmlFor="invoiceNumber">Invoice No.</Label>
               <Input
                 id="invoiceNumber"
                 name="invoiceNumber"
-                value={formData.invoiceNumber}
+                value="Will be generated automatically"
                 readOnly
                 className="bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed"
               />
               <p className="text-xs text-gray-500 mt-1">
-                💡 Final invoice number will be assigned when booking is submitted
+                💡 Invoice number will be assigned when booking is submitted
               </p>
             </div>
             <div className="space-y-1">
@@ -2769,6 +2761,18 @@ const App = () => {
                 <option value="Bank Transfer">Bank Transfer</option>
               </Select>
             </div>
+            {formData.paymentMode && formData.paymentMode !== 'Cash' && (
+              <div className="space-y-2">
+                <Label htmlFor="transactionId">Transaction ID</Label>
+                <Input
+                  id="transactionId"
+                  name="transactionId"
+                  value={formData.transactionId || ''}
+                  onChange={handleChange}
+                  placeholder="Enter transaction ID"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="discountPercent">Discount (%)</Label>
               <Input
@@ -2861,7 +2865,7 @@ const App = () => {
                           Remove
                         </Button>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Amount (₹)</Label>
                           <Input
@@ -2883,6 +2887,10 @@ const App = () => {
                             onChange={(e) => {
                               const newPayments = [...formData.advancePayments];
                               newPayments[index].paymentMode = e.target.value;
+                              // Auto-set payment date to today when payment mode is selected
+                              if (e.target.value && !newPayments[index].paymentDate) {
+                                newPayments[index].paymentDate = new Date().toISOString().split('T')[0];
+                              }
                               setFormData(prev => ({ ...prev, advancePayments: newPayments }));
                             }}
                           >
@@ -2894,42 +2902,20 @@ const App = () => {
                             <option value="Online">Online</option>
                           </Select>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Payment Date</Label>
-                          <Input
-                            type="date"
-                            value={payment.paymentDate || ''}
-                            onChange={(e) => {
-                              const newPayments = [...formData.advancePayments];
-                              newPayments[index].paymentDate = e.target.value;
-                              setFormData(prev => ({ ...prev, advancePayments: newPayments }));
-                            }}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Reference/Transaction ID</Label>
-                          <Input
-                            value={payment.reference || ''}
-                            onChange={(e) => {
-                              const newPayments = [...formData.advancePayments];
-                              newPayments[index].reference = e.target.value;
-                              setFormData(prev => ({ ...prev, advancePayments: newPayments }));
-                            }}
-                            placeholder="Transaction ID, Cheque No, etc."
-                          />
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label>Notes</Label>
-                          <Input
-                            value={payment.notes || ''}
-                            onChange={(e) => {
-                              const newPayments = [...formData.advancePayments];
-                              newPayments[index].notes = e.target.value;
-                              setFormData(prev => ({ ...prev, advancePayments: newPayments }));
-                            }}
-                            placeholder="Additional notes"
-                          />
-                        </div>
+                        {payment.paymentMode && payment.paymentMode !== 'Cash' && (
+                          <div className="space-y-2 md:col-span-2">
+                            <Label>Transaction ID</Label>
+                            <Input
+                              value={payment.reference || ''}
+                              onChange={(e) => {
+                                const newPayments = [...formData.advancePayments];
+                                newPayments[index].reference = e.target.value;
+                                setFormData(prev => ({ ...prev, advancePayments: newPayments }));
+                              }}
+                              placeholder="Enter transaction ID"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

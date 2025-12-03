@@ -829,6 +829,12 @@ export default function Invoice() {
                       <td className="p-0.5 font-bold text-right text-xs">NET AMOUNT:</td>
                       <td className="p-0.5 border-l border-black text-right font-bold text-xs">₹{calculateNetTotal()}</td>
                     </tr>
+                    {bookingData?.advancePayments && bookingData.advancePayments.length > 0 && (
+                      <tr>
+                        <td className="p-0.5 text-right text-xs font-medium">Advance Payment:</td>
+                        <td className="p-0.5 border-l border-black text-right text-xs">-₹{bookingData.advancePayments.reduce((sum, payment) => sum + (payment.amount || 0), 0).toFixed(2)}</td>
+                      </tr>
+                    )}
                     <tr className="bg-yellow-100">
                       <td className="p-0.5 font-bold text-right text-xs">GRAND TOTAL:</td>
                       <td className="p-0.5 border-l border-black text-right font-bold text-xs">₹{(() => {

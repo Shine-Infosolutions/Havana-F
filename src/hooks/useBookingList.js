@@ -81,7 +81,14 @@ export const useBookingList = () => {
         };
       });
 
-      setBookings(mappedBookings);
+      // Sort bookings by creation date (latest first)
+      const sortedBookings = mappedBookings.sort((a, b) => {
+        const dateA = new Date(a._raw.createdAt || a._raw.bookingDate || 0);
+        const dateB = new Date(b._raw.createdAt || b._raw.bookingDate || 0);
+        return dateB - dateA; // Descending order (latest first)
+      });
+      
+      setBookings(sortedBookings);
     } catch (err) {
       setError(err.message);
       console.error("Error fetching data:", err);
@@ -144,7 +151,8 @@ export const useBookingList = () => {
       await fetchData();
       setError(null);
     } catch (error) {
-      setError(`Error updating status: ${error.message}`);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to update status';
+      setError(errorMessage);
       console.error("Status update error:", error);
     }
   };

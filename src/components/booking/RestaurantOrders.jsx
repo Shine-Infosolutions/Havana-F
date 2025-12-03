@@ -44,12 +44,14 @@ const RestaurantOrders = ({
                   <span>NC</span>
                 </label>
                 <button
+                  type="button"
                   onClick={() => onEditOrder(order, 'restaurant')}
                   className="p-1 text-blue-600 hover:bg-blue-50 rounded"
                 >
                   <Edit2 size={16} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => onRemoveOrder(order._id, 'restaurant')}
                   className="p-1 text-red-600 hover:bg-red-50 rounded"
                 >
@@ -68,6 +70,7 @@ const RestaurantOrders = ({
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
+                        type="button"
                         onClick={() => onUpdateItemQuantity(itemIndex, item.quantity - 1)}
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-200"
                       >
@@ -75,12 +78,14 @@ const RestaurantOrders = ({
                       </button>
                       <span className="w-8 text-center">{item.quantity}</span>
                       <button
+                        type="button"
                         onClick={() => onUpdateItemQuantity(itemIndex, item.quantity + 1)}
                         className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-200"
                       >
                         +
                       </button>
                       <button
+                        type="button"
                         onClick={() => onRemoveItem(itemIndex)}
                         className="ml-2 p-1 text-red-600 hover:bg-red-50 rounded"
                       >
@@ -92,12 +97,14 @@ const RestaurantOrders = ({
                 ))}
                 <div className="flex justify-end space-x-2 mt-4">
                   <button
+                    type="button"
                     onClick={onCancelEdit}
                     className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
                   >
                     <X size={16} className="inline mr-1" /> Cancel
                   </button>
                   <button
+                    type="button"
                     onClick={onSaveOrder}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                   >

@@ -327,6 +327,9 @@ const BookingPage = () => {
                     GRC No
                   </th>
                   <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                    Invoice No
+                  </th>
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>
                     Name
                   </th>
                   <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>
@@ -366,6 +369,9 @@ const BookingPage = () => {
                   >
                     <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
                       {booking.grcNo}
+                    </td>
+                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                      {booking._raw?.invoiceNumber || 'N/A'}
                     </td>
                     <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
                       {booking.name}
@@ -523,7 +529,11 @@ const BookingPage = () => {
                         </button>
                         {booking.status === 'Booked' && (
                           <button
-                            onClick={() => updateBookingStatus(booking.id, 'Checked In')}
+                            onClick={() => {
+                              if (confirm(`CHECK-IN CONFIRMATION\n\nGuest: ${booking.name}\nGRC No: ${booking.grcNo}\nInvoice No: ${booking._raw?.invoiceNumber || 'N/A'}\nRoom: ${booking.roomNumber}\n\nAre you sure you want to check in this guest?`)) {
+                                updateBookingStatus(booking.id, 'Checked In');
+                              }
+                            }}
                             className="bg-blue-600 text-white px-2 py-1 rounded text-xs transition duration-300"
                           >
                             Check In
@@ -573,6 +583,7 @@ const BookingPage = () => {
                 <div>
                   <h3 className="font-semibold text-lg" style={{ color: 'hsl(45, 100%, 20%)' }}>{booking.name}</h3>
                   <p className="text-sm" style={{ color: 'hsl(45, 100%, 40%)' }}>GRC: {booking.grcNo}</p>
+                  <p className="text-sm" style={{ color: 'hsl(45, 100%, 40%)' }}>Invoice: {booking._raw?.invoiceNumber || 'N/A'}</p>
                 </div>
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -740,7 +751,11 @@ const BookingPage = () => {
                 </button>
                 {booking.status === 'Booked' && (
                   <button
-                    onClick={() => updateBookingStatus(booking.id, 'Checked In')}
+                    onClick={() => {
+                      if (confirm(`CHECK-IN CONFIRMATION\n\nGuest: ${booking.name}\nGRC No: ${booking.grcNo}\nInvoice No: ${booking._raw?.invoiceNumber || 'N/A'}\nRoom: ${booking.roomNumber}\n\nAre you sure you want to check in this guest?`)) {
+                        updateBookingStatus(booking.id, 'Checked In');
+                      }
+                    }}
                     className="px-3 py-1 rounded text-sm transition duration-300"
                     style={{ backgroundColor: 'hsl(200, 60%, 50%)', color: 'white' }}
                   >
