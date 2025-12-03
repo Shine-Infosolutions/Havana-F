@@ -221,11 +221,13 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                   const discountNotes = booking?.discountNotes || '';
                   
                   if (discountPercent > 0) {
+                    const roomCharges = checkoutData.bookingCharges || 0;
+                    const discountAmount = roomCharges * (discountPercent / 100);
                     return (
                       <>
                         <div className="flex justify-between py-2 border-b">
-                          <span>Discount ({discountPercent}%):</span>
-                          <span className="font-medium text-green-600">Applied</span>
+                          <span>Discount ({discountPercent}%) - Room Only:</span>
+                          <span className="font-medium text-green-600">-₹{discountAmount.toFixed(2)}</span>
                         </div>
                         {discountNotes && (
                           <div className="py-2 border-b">
