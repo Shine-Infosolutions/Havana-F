@@ -3111,9 +3111,10 @@ const App = () => {
           </Button>
           <Button
             type="submit"
+            disabled={loading}
             className="px-8 py-3 font-semibold rounded-lg shadow-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 w-full sm:w-auto"
           >
-            Submit Booking
+            {loading ? 'Submitting...' : 'Submit Booking'}
           </Button>
         </div>
       </form>

@@ -105,7 +105,7 @@ const RoomServiceOrders = ({
                 {order.items.map((item, itemIndex) => (
                   <div key={itemIndex} className="flex justify-between text-sm">
                     <span>{item.itemName} x {item.quantity}</span>
-                    <span>₹{item.totalPrice}</span>
+                    <span>{order.nonChargeable ? <span className="text-green-600 font-bold">nc</span> : `₹${item.totalPrice}`}</span>
                   </div>
                 ))}
               </div>

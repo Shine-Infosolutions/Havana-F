@@ -117,7 +117,7 @@ const RestaurantOrders = ({
                 {order.items.map((item, itemIndex) => (
                   <div key={itemIndex} className="flex justify-between text-sm">
                     <span>{item.name || item.itemName || 'Unknown Item'} x {item.quantity}</span>
-                    <span>₹{item.total || item.totalPrice || (item.price * item.quantity) || 0}</span>
+                    <span>{order.nonChargeable ? <span className="text-green-600 font-bold">nc</span> : `₹${item.total || item.totalPrice || (item.price * item.quantity) || 0}`}</span>
                   </div>
                 ))}
               </div>
