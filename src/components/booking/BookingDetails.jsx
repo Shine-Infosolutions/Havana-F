@@ -272,7 +272,7 @@ const BookingDetails = () => {
                         {order.items?.map((item, idx) => (
                           <div key={idx} className="flex justify-between text-sm text-gray-700">
                             <span>{item.itemName} x {item.quantity}</span>
-                            <span>₹{(item.quantity * (item.unitPrice || item.price || 0)).toFixed(2)}</span>
+                            <span>{order.nonChargeable ? <span className="text-green-600 font-bold">nc</span> : `₹${(item.quantity * (item.unitPrice || item.price || 0)).toFixed(2)}`}</span>
                           </div>
                         ))}
                       </div>
@@ -305,8 +305,8 @@ const BookingDetails = () => {
                       <div className="space-y-2">
                         {order.items?.map((item, idx) => (
                           <div key={idx} className="flex justify-between text-sm text-gray-700">
-                            <span>{item.itemName} x {item.quantity}</span>
-                            <span>₹{(item.quantity * (item.unitPrice || item.price || 0)).toFixed(2)}</span>
+                            <span>{item.name || item.itemName || 'Unknown Item'} x {item.quantity}</span>
+                            <span>{order.nonChargeable ? <span className="text-green-600 font-bold">nc</span> : `₹${(item.quantity * (item.unitPrice || item.price || 0)).toFixed(2)}`}</span>
                           </div>
                         ))}
                       </div>

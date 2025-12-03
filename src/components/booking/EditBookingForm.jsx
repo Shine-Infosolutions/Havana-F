@@ -175,6 +175,7 @@ const EditBookingForm = () => {
     newCheckOutDate: '',
     reason: ''
   });
+  const [amendingStay, setAmendingStay] = useState(false);
   const [showCompanyDetails, setShowCompanyDetails] = useState(false);
   const [roomServiceOrders, setRoomServiceOrders] = useState([]);
   const [restaurantOrders, setRestaurantOrders] = useState([]);
@@ -815,6 +816,7 @@ const EditBookingForm = () => {
       return;
     }
 
+    setAmendingStay(true);
     try {
       const response = await axios.post(`/api/bookings/amend/${editBooking._id}`, amendmentData);
       showToast.success('Booking stay amended successfully!');
@@ -836,6 +838,8 @@ const EditBookingForm = () => {
       console.error('Error amending booking:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Failed to amend booking';
       showToast.error(errorMessage);
+    } finally {
+      setAmendingStay(false);
     }
   };
 
@@ -2586,7 +2590,7 @@ const EditBookingForm = () => {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || isNavigating || editingOrder}
                   className="px-8 py-3 font-semibold rounded-lg shadow-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 w-full sm:w-auto"
                 >
                   {loading ? 'Updating...' : 'Update Booking'}
@@ -2687,9 +2691,10 @@ const EditBookingForm = () => {
               <Button
                 type="button"
                 onClick={handleAmendStay}
+                disabled={amendingStay}
                 className="bg-orange-600 hover:bg-orange-700"
               >
-                Amend Stay
+                {amendingStay ? 'Amending...' : 'Amend Stay'}
               </Button>
             </div>
           </div>
