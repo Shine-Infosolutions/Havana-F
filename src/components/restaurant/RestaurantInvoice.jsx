@@ -343,8 +343,8 @@ export default function RestaurantInvoice() {
 
             <div className="client-details-right p-2">
               <div className="invoice-info-grid grid grid-cols-2 gap-y-1">
-                <p className="font-bold">Bill Date</p>
-                <p className="font-medium">: {invoiceData.invoiceDetails?.billDate}</p>
+                <p className="font-bold">Bill No. & Date</p>
+                <p className="font-medium">: {invoiceData.invoiceDetails?.billNo} {invoiceData.invoiceDetails?.billDate}</p>
                 <p className="font-bold">Order No.</p>
                 <p className="font-medium">: {invoiceData.invoiceDetails?.grcNo}</p>
                 <p className="font-bold">Table/Room</p>

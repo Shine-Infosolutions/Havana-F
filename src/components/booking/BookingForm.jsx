@@ -349,6 +349,7 @@ export const AppProvider = ({ children }) => {
     advancePayments: [],
     totalAdvanceAmount: 0,
     balanceAmount: 0,
+    invoiceNumber: '',
   });
 
   // Memoized available rooms for the currently selected category
@@ -465,7 +466,7 @@ export const AppProvider = ({ children }) => {
       purposeOfVisit: '', discountPercent: 0, discountRoomSource: 0, discountNotes: '', paymentMode: '',
       paymentStatus: 'Pending', bookingRefNo: '', mgmtBlock: 'No', billingInstruction: '',
       temperature: '', fromCSV: false, epabx: false, vip: false, status: 'Booked',
-      extensionHistory: [],
+      extensionHistory: [], invoiceNumber: '',
     });
     setSelectedRooms([]);
     setSearchGRC('');
@@ -903,7 +904,7 @@ const App = () => {
           }
         };
         
-        // Generate new GRC for new booking (keep existing invoice number)
+        // Generate new GRC for new booking
         let newGrcNo;
         try {
           const token = localStorage.getItem('token');
@@ -968,6 +969,7 @@ const App = () => {
           noOfAdults: 1,
           noOfChildren: 0,
           rate: 0,
+          invoiceNumber: '',
           cgstRate: (() => {
             const savedRates = localStorage.getItem('defaultGstRates');
             return savedRates ? JSON.parse(savedRates).cgstRate || 2.5 : 2.5;
@@ -1039,7 +1041,7 @@ const App = () => {
           setShowCompanyDetails(true);
         }
 
-        showToast.success(`Customer details loaded from GRC ${searchGRC}. New GRC ${newGrcNo} and Invoice ${newInvoiceNumber} generated for new booking.`);
+        showToast.success(`Customer details loaded from GRC ${searchGRC}. New GRC ${newGrcNo} generated for new booking.`);
       } else {
         showToast.error("No booking found with that GRC number.");
       }
@@ -1398,8 +1400,15 @@ const App = () => {
       
       const response = await axios.post(`${BASE_URL}/api/bookings/book`, cleanFormData, { headers });
 
-      showToast.success("Booking submitted successfully!");
-      alert("🎉 Booking submitted successfully! You will be redirected to the booking page.");
+      // If booking was successful and has an invoice number, show it
+      if (response.data?.booked?.[0]?.invoiceNumber) {
+        showToast.success(`Booking submitted successfully! Invoice: ${response.data.booked[0].invoiceNumber}`);
+        alert(`🎉 Booking submitted successfully! Invoice: ${response.data.booked[0].invoiceNumber}\nYou will be redirected to the booking page.`);
+      } else {
+        showToast.success("Booking submitted successfully!");
+        alert("🎉 Booking submitted successfully! You will be redirected to the booking page.");
+      }
+      
       resetForm();
       // Navigate to booking page after successful submission
       setTimeout(() => {
@@ -1521,6 +1530,17 @@ const App = () => {
                 value={formData.grcNo}
                 readOnly
                 className="bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="invoiceNumber">Invoice No.</Label>
+              <Input
+                id="invoiceNumber"
+                name="invoiceNumber"
+                value={formData.invoiceNumber}
+                readOnly
+                className="bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed"
+                placeholder="Auto-generated after booking"
               />
             </div>
 

@@ -167,8 +167,8 @@ export default function SharedHotelInvoice() {
 
             <div className="p-2">
               <div className="grid grid-cols-2 gap-y-1">
-                <p className="font-bold">Bill Date</p>
-                <p className="font-medium">: {invoiceData.invoiceDetails?.billDate}</p>
+                <p className="font-bold">Bill No. & Date</p>
+                <p className="font-medium">: {invoiceData.invoiceDetails?.billNo} {invoiceData.invoiceDetails?.billDate}</p>
                 <p className="font-bold">GRC No.</p>
                 <p className="font-medium">: {invoiceData.invoiceDetails?.grcNo}</p>
                 <p className="font-bold">Room No./Type</p>
