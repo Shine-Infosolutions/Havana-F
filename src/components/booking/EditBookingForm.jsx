@@ -701,15 +701,12 @@ const EditBookingForm = () => {
         
         return sum + ((formData.extraBedCharge || 0) * Math.max(0, extraBedDays));
       }, 0);
-      const subtotal = roomRate + extraBedCharge;
+      const roomSubtotal = roomRate + extraBedCharge;
       
-      // Apply discount to get the final taxable amount
-      const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
-      const finalRate = subtotal - discountAmount;
-      
+      // Store the room subtotal (before discount) in rate field
       setFormData(prev => ({ 
         ...prev, 
-        rate: finalRate
+        rate: roomSubtotal
       }));
     }
   }, [selectedRooms.map(r => `${r.customPrice}-${r.extraBed}-${r.extraBedStartDate}`).join(','), formData.days, formData.extraBedCharge, formData.checkInDate, formData.checkOutDate, formData.nonChargeable, formData.discountPercent]);
@@ -734,11 +731,9 @@ const EditBookingForm = () => {
         const extraBedDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
         return sum + ((formData.extraBedCharge || 0) * Math.max(0, extraBedDays));
       }, 0);
-      const subtotal = roomRate + extraBedCharge;
-      const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
-      const finalRate = subtotal - discountAmount;
-      
-      setFormData(prev => ({ ...prev, rate: finalRate }));
+      const roomSubtotal = roomRate + extraBedCharge;
+      // Store the room subtotal (before discount) in rate field
+      setFormData(prev => ({ ...prev, rate: roomSubtotal }));
     }
   }, [formData.discountPercent]);
 
@@ -756,15 +751,12 @@ const EditBookingForm = () => {
       const extraBedCharge = selectedRooms.reduce((sum, room) => {
         return sum + (room.extraBed ? (formData.extraBedCharge || 0) * formData.days : 0);
       }, 0);
-      const subtotal = roomRate + extraBedCharge;
+      const roomSubtotal = roomRate + extraBedCharge;
       
-      // Apply discount to get the final taxable amount
-      const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
-      const finalRate = subtotal - discountAmount;
-      
+      // Store the room subtotal (before discount) in rate field
       setFormData(prev => ({ 
         ...prev, 
-        rate: finalRate
+        rate: roomSubtotal
       }));
     }
   }, [formData.cgstRate, formData.sgstRate, formData.discountPercent]);
@@ -2203,10 +2195,10 @@ const EditBookingForm = () => {
                           }, 0);
                           // Calculate room service and restaurant charges (exclude cancelled and non-chargeable orders)
                           const activeRoomServiceOrders = roomServiceOrders.filter(order => 
-                            order.status !== 'cancelled' && !order.nonChargeable
+                            order.status !== 'cancelled' && order.status !== 'canceled' && !order.nonChargeable
                           );
                           const activeRestaurantOrders = restaurantOrders.filter(order => 
-                            order.status !== 'cancelled' && !order.nonChargeable
+                            order.status !== 'cancelled' && order.status !== 'canceled' && !order.nonChargeable
                           );
                           
                           const roomServiceTotal = activeRoomServiceOrders.reduce((sum, order) => {
@@ -2216,9 +2208,11 @@ const EditBookingForm = () => {
                             return sum + (Number(order.amount) || 0);
                           }, 0);
                           
-                          const subtotal = roomRate + extraBedTotal + roomServiceTotal + restaurantTotal;
-                          const discountAmount = subtotal * (Number(formData.discountPercent || 0) / 100);
-                          const discountedSubtotal = subtotal - discountAmount;
+                          // Apply discount only to room cost (room rate + extra beds)
+                          const roomSubtotal = roomRate + extraBedTotal;
+                          const discountAmount = roomSubtotal * (Number(formData.discountPercent || 0) / 100);
+                          const discountedRoomSubtotal = roomSubtotal - discountAmount;
+                          const subtotal = discountedRoomSubtotal + roomServiceTotal + restaurantTotal;
                           
                           // If non-chargeable, all amounts are 0
                           let cgstAmount, sgstAmount, totalWithTax;
@@ -2227,9 +2221,9 @@ const EditBookingForm = () => {
                             sgstAmount = 0;
                             totalWithTax = 0;
                           } else {
-                            cgstAmount = discountedSubtotal * (Number(formData.cgstRate || 0) / 100);
-                            sgstAmount = discountedSubtotal * (Number(formData.sgstRate || 0) / 100);
-                            totalWithTax = discountedSubtotal + cgstAmount + sgstAmount;
+                            cgstAmount = subtotal * (Number(formData.cgstRate || 0) / 100);
+                            sgstAmount = subtotal * (Number(formData.sgstRate || 0) / 100);
+                            totalWithTax = subtotal + cgstAmount + sgstAmount;
                           }
                           
                           // If non-chargeable, show zero amounts
@@ -2259,35 +2253,44 @@ const EditBookingForm = () => {
                                   <span>₹{extraBedTotal.toFixed(2)}</span>
                                 </div>
                               )}
-                              {roomServiceTotal > 0 && (
-                                <div className="flex justify-between">
-                                  <span>Room Service ({activeRoomServiceOrders.length} orders):</span>
-                                  <span>₹{roomServiceTotal.toFixed(2)}</span>
-                                </div>
-                              )}
-                              {restaurantTotal > 0 && (
-                                <div className="flex justify-between">
-                                  <span>Restaurant ({activeRestaurantOrders.length} orders):</span>
-                                  <span>₹{restaurantTotal.toFixed(2)}</span>
-                                </div>
+                              {(roomServiceTotal > 0 || restaurantTotal > 0) && (
+                                <>
+                                  {roomServiceTotal > 0 && (
+                                    <div className="flex justify-between">
+                                      <span>Room Service ({activeRoomServiceOrders.length} orders):</span>
+                                      <span>₹{roomServiceTotal.toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                  {restaurantTotal > 0 && (
+                                    <div className="flex justify-between">
+                                      <span>Restaurant ({activeRestaurantOrders.length} orders):</span>
+                                      <span>₹{restaurantTotal.toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                </>
                               )}
                               <hr className="my-1" />
                               <div className="flex justify-between font-medium">
-                                <span>Subtotal:</span>
-                                <span>₹{subtotal.toFixed(2)}</span>
+                                <span>Room Subtotal:</span>
+                                <span>₹{roomSubtotal.toFixed(2)}</span>
                               </div>
                               {discountAmount > 0 && (
                                 <div className="flex justify-between text-red-600">
-                                  <span>Discount ({Number(formData.discountPercent || 0)}%):</span>
+                                  <span>Discount ({Number(formData.discountPercent || 0)}%) - Room Only:</span>
                                   <span>-₹{discountAmount.toFixed(2)}</span>
                                 </div>
                               )}
                               {discountAmount > 0 && (
-                                <div className="flex justify-between font-medium">
-                                  <span>After Discount:</span>
-                                  <span>₹{discountedSubtotal.toFixed(2)}</span>
+                                <div className="flex justify-between">
+                                  <span>Room After Discount:</span>
+                                  <span>₹{discountedRoomSubtotal.toFixed(2)}</span>
                                 </div>
                               )}
+                              <hr className="my-1" />
+                              <div className="flex justify-between font-medium">
+                                <span>Total Subtotal:</span>
+                                <span>₹{subtotal.toFixed(2)}</span>
+                              </div>
                               <div className="flex justify-between">
                                 <span>CGST ({Number(formData.cgstRate || 0)}%):</span>
                                 <span>₹{cgstAmount.toFixed(2)}</span>
