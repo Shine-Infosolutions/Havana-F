@@ -47,15 +47,20 @@ const InventoryTable = ({ items, loading, onEdit, onStockIn, onStockOut, onRefre
     if (!confirm('Are you sure you want to delete this item?')) return;
 
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/inventory/items/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (response.ok) {
         toast.success('Item deleted successfully!');
         onRefresh();
       } else {
-        toast.error('Failed to delete item');
+        const error = await response.json();
+        toast.error(error.error || 'Failed to delete item');
       }
     } catch (error) {
       toast.error('Error deleting item');
@@ -147,9 +152,15 @@ const InventoryTable = ({ items, loading, onEdit, onStockIn, onStockOut, onRefre
                   </td>
                   
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {item.category}
-                    </span>
+                    {item.categoryId?.name ? (
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {item.categoryId.name}
+                      </span>
+                    ) : (
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">
+                        Uncategorized
+                      </span>
+                    )}
                   </td>
                   
                   <td className="px-6 py-4 whitespace-nowrap">

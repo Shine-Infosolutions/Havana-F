@@ -8,7 +8,7 @@ const InventoryForm = ({ item, categories = [], onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     itemCode: '',
-    category: '',
+    categoryId: '',
     description: '',
     currentStock: 0,
     minStockLevel: 5,
@@ -31,7 +31,7 @@ const InventoryForm = ({ item, categories = [], onClose }) => {
       setFormData({
         name: item.name || '',
         itemCode: item.itemCode || '',
-        category: item.category || (categories.length > 0 ? categories[0] : ''),
+        categoryId: item.categoryId?._id || item.categoryId || '',
         description: item.description || '',
         currentStock: item.currentStock || 0,
         minStockLevel: item.minStockLevel || 5,
@@ -45,8 +45,8 @@ const InventoryForm = ({ item, categories = [], onClose }) => {
         pricePerUnit: item.pricePerUnit || 0,
         lastPurchased: item.lastPurchased ? new Date(item.lastPurchased).toISOString().split('T')[0] : ''
       });
-    } else if (categories.length > 0 && !formData.category) {
-      setFormData(prev => ({ ...prev, category: categories[0] }));
+    } else if (categories.length > 0 && !formData.categoryId) {
+      setFormData(prev => ({ ...prev, categoryId: categories[0]?._id || '' }));
     }
   }, [item, categories]);
 
@@ -73,7 +73,8 @@ const InventoryForm = ({ item, categories = [], onClose }) => {
 
 
   const generateItemCode = () => {
-    const categoryCode = formData.category.substring(0, 3).toUpperCase();
+    const selectedCategory = categories.find(cat => cat._id === formData.categoryId);
+    const categoryCode = selectedCategory?.name?.substring(0, 3).toUpperCase() || 'ITM';
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const newCode = `${categoryCode}${randomNum}`;
     setFormData(prev => ({ ...prev, itemCode: newCode }));
@@ -193,14 +194,15 @@ const InventoryForm = ({ item, categories = [], onClose }) => {
                   Category *
                 </label>
                 <select
-                  name="category"
-                  value={formData.category}
+                  name="categoryId"
+                  value={formData.categoryId}
                   onChange={handleChange}
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
+                  <option value="">Select Category</option>
                   {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                    <option key={cat._id} value={cat._id}>{cat.name}</option>
                   ))}
                 </select>
               </div>

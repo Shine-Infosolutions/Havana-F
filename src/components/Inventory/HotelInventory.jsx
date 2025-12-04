@@ -107,12 +107,19 @@ const HotelInventory = () => {
       
       if (response.ok) {
         const data = await response.json();
-        setCategories(data.filter(cat => cat.isActive).map(cat => cat.name));
+        setCategories(data.filter(cat => cat.isActive));
       }
     } catch (error) {
       console.error('Failed to fetch categories');
       // Fallback to static categories if API fails
-      setCategories(['Housekeeping', 'Consumables', 'Kitchen', 'Linen', 'Maintenance']);
+      const fallbackCategories = [
+        { _id: 'fallback1', name: 'Housekeeping' },
+        { _id: 'fallback2', name: 'Consumables' },
+        { _id: 'fallback3', name: 'Kitchen' },
+        { _id: 'fallback4', name: 'Linen' },
+        { _id: 'fallback5', name: 'Maintenance' }
+      ];
+      setCategories(fallbackCategories);
     }
   };
 
@@ -326,7 +333,7 @@ const HotelInventory = () => {
             >
               <option value="">All Categories</option>
               {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat._id} value={cat.name}>{cat.name}</option>
               ))}
             </select>
           </div>
