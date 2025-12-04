@@ -742,7 +742,18 @@ export default function Invoice() {
                       <span>₹{typeof item === 'object' ? (item.declaredRate?.toFixed(2) || '0.00') : '0.00'}</span>
                     )}
                   </td>
-                  <td className="p-1 border border-black text-center">{typeof item === 'object' ? (item.hsn || 'N/A') : 'N/A'}</td>
+                  <td className="p-1 border border-black text-center">{(() => {
+                    if (typeof item === 'object' && item.particulars) {
+                      const particulars = item.particulars.toLowerCase();
+                      if (particulars.includes('room') && !particulars.includes('service') && !particulars.includes('dining')) return '996311';
+                      if (particulars.includes('room service') || particulars.includes('dining') || particulars.includes('restaurant')) return '996332';
+                      if (particulars.includes('banquet') || particulars.includes('hall')) return '996334';
+                      if (particulars.includes('mini bar') || particulars.includes('minibar')) return '996331';
+                      if (particulars.includes('laundry') || particulars.includes('laundary')) return '996337';
+                      return item.hsn || '996311';
+                    }
+                    return 'N/A';
+                  })()}</td>
                   <td className="p-1 border border-black text-right font-bold">
                     {item.isFree ? (
                       <span className="text-green-600">FREE</span>
