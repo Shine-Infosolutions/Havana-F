@@ -341,11 +341,7 @@ const Order = () => {
                             </div>
                           </td>
                           <td className="py-3 text-right font-semibold text-gray-800">
-                            {item.isFree ? (
-                              <span className="text-green-600 font-bold">FREE</span>
-                            ) : (
-                              <span>₹{((item.Price || item.price || 0) * item.quantity).toFixed(2)}</span>
-                            )}
+                            <span>₹{((item.Price || item.price || 0) * item.quantity).toFixed(2)}</span>
                           </td>
                           <td className="py-3 text-center">
                             <button
@@ -367,38 +363,24 @@ const Order = () => {
               <div className="border-t p-4">
 
                 <div className="space-y-2 mb-4">
-                  {(() => {
-                    const freeItems = cartItems.filter(item => item.isFree).length;
-                    const paidItems = cartItems.filter(item => !item.isFree).length;
-                    return freeItems > 0 && paidItems === 0 ? (
-                      <div className="text-center py-4">
-                        <div className="text-green-600 font-medium text-lg">
-                          All Items Free: ₹0.00
-                        </div>
-                      </div>
-                    ) : (
-                    <>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">Subtotal:</span>
-                        <span className="font-medium">₹{getGstAmounts().subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">SGST ({gstRates.sgstRate}%):</span>
-                        <span className="font-medium">₹{getGstAmounts().sgstAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-600">CGST ({gstRates.cgstRate}%):</span>
-                        <span className="font-medium">₹{getGstAmounts().cgstAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="border-t pt-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-lg text-gray-800">Total:</span>
-                          <span className="font-bold text-lg text-gray-800">₹{getGstAmounts().total.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    </>
-                    );
-                  })()}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-medium">₹{getGstAmounts().subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">SGST ({gstRates.sgstRate}%):</span>
+                    <span className="font-medium">₹{getGstAmounts().sgstAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">CGST ({gstRates.cgstRate}%):</span>
+                    <span className="font-medium">₹{getGstAmounts().cgstAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-lg text-gray-800">Total:</span>
+                      <span className="font-bold text-lg text-gray-800">₹{getGstAmounts().total.toFixed(2)}</span>
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <button

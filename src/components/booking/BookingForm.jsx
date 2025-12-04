@@ -585,6 +585,9 @@ const App = () => {
 
   // Local state for photos
   const [capturedPhotos, setCapturedPhotos] = useState([]);
+  
+  // State for validation errors
+  const [validationErrors, setValidationErrors] = useState({});
 
   // Navigation hook
   const navigate = useNavigate();
@@ -849,6 +852,15 @@ const App = () => {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
+    // Clear validation error when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+
     if (name === "paymentMode") {
       setFormData((prev) => ({
         ...prev,
@@ -872,6 +884,16 @@ const App = () => {
 
   const handleDateChange = (e) => {
     const { name, value } = e.target;
+    
+    // Clear validation error when user selects a date
+    if (validationErrors[name]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+    
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -1262,18 +1284,44 @@ const App = () => {
   };
 
   const validateForm = () => {
-    // Required fields
+    const errors = {};
+    
+    // Required fields validation
     if (!validateRequired(formData.name)) {
+      errors.name = true;
       showToast.error('Guest name is required');
+    }
+    
+    if (!validateRequired(formData.mobileNo)) {
+      errors.mobileNo = true;
+      showToast.error('Mobile number is required');
+    }
+    
+    if (!formData.checkInDate) {
+      errors.checkInDate = true;
+      showToast.error('Check-in date is required');
+    }
+    
+    if (!formData.checkOutDate) {
+      errors.checkOutDate = true;
+      showToast.error('Check-out date is required');
+    }
+    
+    if (!formData.paymentMode) {
+      errors.paymentMode = true;
+      showToast.error('Payment mode is required');
+    }
+    
+    // Set validation errors for visual feedback
+    setValidationErrors(errors);
+    
+    // If there are any required field errors, return false
+    if (Object.keys(errors).length > 0) {
       return false;
     }
     
-    if (!formData.checkInDate || !formData.checkOutDate) {
-      showToast.error('Check-in and check-out dates are required');
-      return false;
-    }
-    
-    if (!validateDateRange(formData.checkInDate, formData.checkOutDate)) {
+    // Additional validations (non-required fields)
+    if (formData.checkInDate && formData.checkOutDate && !validateDateRange(formData.checkInDate, formData.checkOutDate)) {
       showToast.error('Check-out date must be after check-in date');
       return false;
     }
@@ -1667,7 +1715,7 @@ const App = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="checkInDate">Check-in Date</Label>
+              <Label htmlFor="checkInDate">Check-in Date <span className="text-red-500">*</span></Label>
               <Input
                 id="checkInDate"
                 name="checkInDate"
@@ -1675,10 +1723,11 @@ const App = () => {
                 value={formData.checkInDate}
                 onChange={handleDateChange}
                 required
+                className={validationErrors.checkInDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="checkOutDate">Check-out Date</Label>
+              <Label htmlFor="checkOutDate">Check-out Date <span className="text-red-500">*</span></Label>
               <Input
                 id="checkOutDate"
                 name="checkOutDate"
@@ -1686,6 +1735,7 @@ const App = () => {
                 value={formData.checkOutDate}
                 onChange={handleDateChange}
                 required
+                className={validationErrors.checkOutDate ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
@@ -1881,6 +1931,7 @@ const App = () => {
                 value={formData.name}
                 onChange={handleChange}
                 required
+                className={validationErrors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
@@ -1908,13 +1959,14 @@ const App = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="mobileNo">Mobile No</Label>
+              <Label htmlFor="mobileNo">Mobile No <span className="text-red-500">*</span></Label>
               <Input
                 id="mobileNo"
                 name="mobileNo"
                 type="tel"
                 value={formData.mobileNo}
                 onChange={handleChange}
+                className={validationErrors.mobileNo ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
               />
             </div>
             <div className="space-y-2">
@@ -2765,12 +2817,13 @@ const App = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="paymentMode">Payment Mode</Label>
+              <Label htmlFor="paymentMode">Payment Mode <span className="text-red-500">*</span></Label>
               <Select
                 id="paymentMode"
                 name="paymentMode"
                 value={formData.paymentMode}
                 onChange={handleChange}
+                className={validationErrors.paymentMode ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
               >
                 <option value="">Select Payment Mode</option>
                 <option value="Cash">Cash</option>
