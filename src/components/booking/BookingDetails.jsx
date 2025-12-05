@@ -364,6 +364,8 @@ const BookingDetails = () => {
               </div>
             )}
 
+
+
             {/* Amendment History */}
             {booking.amendmentHistory && booking.amendmentHistory.length > 0 && (
               <div className="bg-white rounded-lg shadow p-6">
@@ -799,6 +801,7 @@ const BookingDetails = () => {
                     return (totalSubtotal * (booking.sgstRate || 0.025)).toFixed(2);
                   })()}</span>
                 </div>
+
                 <div className="flex justify-between">
                   <span className="text-gray-600">Round Off:</span>
                   <span className="font-medium">{(() => {
@@ -868,7 +871,8 @@ const BookingDetails = () => {
                       const afterDiscount = roomSubtotal - discount;
                       const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
                       const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
-                      const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal;
+                      const lateCheckoutFee = (booking.lateCheckoutFine?.applied && booking.lateCheckoutFine.amount > 0 && !booking.lateCheckoutFine.waived) ? booking.lateCheckoutFine.amount : 0;
+                      const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + lateCheckoutFee;
                       const cgstAmount = totalSubtotal * (booking.cgstRate || 0.025);
                       const sgstAmount = totalSubtotal * (booking.sgstRate || 0.025);
                       const exactTotal = totalSubtotal + cgstAmount + sgstAmount;
@@ -916,7 +920,8 @@ const BookingDetails = () => {
                       const afterDiscount = roomSubtotal - discount;
                       const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
                       const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
-                      const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal;
+                      const lateCheckoutFee = (booking.lateCheckoutFine?.applied && booking.lateCheckoutFine.amount > 0 && !booking.lateCheckoutFine.waived) ? booking.lateCheckoutFine.amount : 0;
+                      const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + lateCheckoutFee;
                       const cgstAmount = totalSubtotal * (booking.cgstRate || 0.025);
                       const sgstAmount = totalSubtotal * (booking.sgstRate || 0.025);
                       const exactTotal = totalSubtotal + cgstAmount + sgstAmount;

@@ -10,6 +10,7 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentAmount, setPaymentAmount] = useState('');
   const [roomInspected, setRoomInspected] = useState(false);
+  const [lateCheckoutFee, setLateCheckoutFee] = useState(0);
 
   useEffect(() => {
     if (booking) {
@@ -52,7 +53,7 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
       const checkoutData = {
         _id: checkoutRecord._id,
         bookingId: bookingId,
-        bookingCharges: charges.roomCharges.totalRoomCharges || 0,
+        bookingCharges: charges.roomCharges.taxableAmount || 0,
         restaurantCharges: charges.summary.totalRestaurantCharges || 0,
         roomServiceCharges: charges.summary.totalServiceCharges || 0,
         laundryCharges: 0, // Will be added separately if needed
@@ -74,6 +75,23 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
       const balanceDue = Math.max(0, (checkoutData.totalAmount || 0) - totalAdvance);
       
       setPaymentAmount(balanceDue.toString());
+      
+      // Auto-calculate late checkout fee if current time is past checkout time
+      const now = new Date();
+      const checkoutDate = new Date(booking.checkOutDate);
+      const [hours, minutes] = (booking.timeOut || '12:00').split(':').map(Number);
+      const expectedCheckout = new Date(checkoutDate.getFullYear(), checkoutDate.getMonth(), checkoutDate.getDate(), hours, minutes);
+      
+      if (now > expectedCheckout) {
+        const minutesLate = Math.ceil((now - expectedCheckout) / (1000 * 60));
+        const gracePeriod = 15;
+        if (minutesLate > gracePeriod) {
+          const chargeableMinutes = minutesLate - gracePeriod;
+          const chargeableHours = Math.ceil(chargeableMinutes / 60);
+          const suggestedFee = chargeableHours * 500;
+          setLateCheckoutFee(suggestedFee);
+        }
+      }
     } catch (error) {
       console.error('Error fetching checkout data:', error);
       showToast.error('Failed to load checkout data');
@@ -95,7 +113,8 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
       // Process payment
       await axios.put(`/api/checkout/${checkoutData._id}/payment`, {
         status: 'paid',
-        paidAmount: parseFloat(paymentAmount)
+        paidAmount: parseFloat(paymentAmount),
+        lateCheckoutFee: lateCheckoutFee
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -216,6 +235,7 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                   <span>Inspection Charges:</span>
                   <span className="font-medium text-red-600">₹{checkoutData.inspectionCharges || 0}</span>
                 </div>
+
                 {(() => {
                   const discountPercent = booking?.discountPercent || 0;
                   const discountNotes = booking?.discountNotes || '';
@@ -242,7 +262,7 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                 })()}
                 <div className="flex justify-between py-2 border-b">
                   <span>Subtotal:</span>
-                  <span className="font-medium">₹{checkoutData.subtotal || 0}</span>
+                  <span className="font-medium">₹{(checkoutData.subtotal || 0) + lateCheckoutFee}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span>CGST (2.5%):</span>
@@ -254,12 +274,12 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                 </div>
                 <div className="flex justify-between py-3 border-t-2 border-blue-200 text-lg font-bold">
                   <span>Total with Tax:</span>
-                  <span className="text-blue-600">₹{checkoutData.totalAmount || 0}</span>
+                  <span className="text-blue-600">₹{(checkoutData.totalAmount || 0) + lateCheckoutFee}</span>
                 </div>
                 {(() => {
                   const advancePayments = booking?.advancePayments || [];
                   const totalAdvance = advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
-                  const balanceDue = (checkoutData.totalAmount || 0) - totalAdvance;
+                  const balanceDue = ((checkoutData.totalAmount || 0) + lateCheckoutFee) - totalAdvance;
                   
                   if (totalAdvance > 0) {
                     return (
@@ -349,13 +369,13 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                   {(() => {
                     const advancePayments = booking?.advancePayments || [];
                     const totalAdvance = advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
-                    const balanceDue = Math.max(0, (checkoutData?.totalAmount || 0) - totalAdvance);
+                    const balanceDue = Math.max(0, ((checkoutData?.totalAmount || 0) + lateCheckoutFee) - totalAdvance);
                     
                     return (
                       <>
                         <div className="flex justify-between text-sm">
                           <span>Total Amount:</span>
-                          <span>₹{checkoutData?.totalAmount || 0}</span>
+                          <span>₹{(checkoutData?.totalAmount || 0) + lateCheckoutFee}</span>
                         </div>
                         {totalAdvance > 0 && (
                           <div className="flex justify-between text-sm text-green-600">
