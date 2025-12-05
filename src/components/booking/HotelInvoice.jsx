@@ -686,20 +686,7 @@ export default function Invoice() {
                 )}
               </p>
               <p className="font-bold">CheckIn Date</p>
-              <p className="font-medium">: {(() => {
-                const checkInDate = bookingData?.checkInDate ? formatDate(bookingData.checkInDate) : (invoiceData.invoiceDetails?.checkInDate && invoiceData.invoiceDetails.checkInDate !== 'N/A' ? invoiceData.invoiceDetails.checkInDate : formatDate());
-                const checkInTime = bookingData?.actualCheckInTime;
-                
-                if (checkInTime) {
-                  const timeStr = new Date(checkInTime).toLocaleTimeString('en-IN', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    hour12: true 
-                  });
-                  return `${checkInDate} ${timeStr}`;
-                }
-                return checkInDate;
-              })()}</p>
+              <p className="font-medium">: {bookingData?.checkInDate ? formatDate(bookingData.checkInDate) : (invoiceData.invoiceDetails?.checkInDate && invoiceData.invoiceDetails.checkInDate !== 'N/A' ? invoiceData.invoiceDetails.checkInDate : formatDate())}</p>
               <p className="font-bold">CheckOut Date</p>
               <p className="font-medium">: {bookingData?.checkOutDate ? formatDate(bookingData.checkOutDate) : (invoiceData.invoiceDetails?.checkOutDate && invoiceData.invoiceDetails.checkOutDate !== 'N/A' ? invoiceData.invoiceDetails.checkOutDate : formatDate())}</p>
               {bookingData?.planPackage && (
@@ -942,6 +929,8 @@ export default function Invoice() {
                       })()}</td>
                     </tr>
 
+
+                    
                     {/* Room service charges are already included in taxable amount, no need to show separately */}
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">Round Off:</td>
