@@ -117,13 +117,18 @@ const LaundryItems = () => {
         ? `${import.meta.env.VITE_API_BASE_URL}/api/laundry-items/${editingItem._id}`
         : `${import.meta.env.VITE_API_BASE_URL}/api/laundry-items/`;
       
+      const payload = { ...formData };
+      if (!payload.vendorId) {
+        delete payload.vendorId;
+      }
+      
       const response = await fetch(url, {
         method: editingItem ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
