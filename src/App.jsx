@@ -49,6 +49,8 @@ import RestaurantInvoice from './components/restaurant/RestaurantInvoice';
 import SharedHotelInvoice from './components/booking/SharedHotelInvoice';
 import NightAuditReport from './components/reports/NightAuditReport';
 import CashManagement from './components/CashManagement/CashManagement';
+import LaundryManagement from './components/Laundry/LaundryManagement';
+import VendorManagement from './components/Vendor/VendorManagement';
 
 import './App.css'
 
@@ -122,6 +124,20 @@ function App() {
             <Route path="inventory" element={
               <PrivateRoute requiredRoles={['ADMIN', 'GM', 'FRONT DESK']}>
                 <HotelInventory />
+              </PrivateRoute>
+            } />
+            
+            {/* Laundry Routes */}
+            <Route path="laundry" element={
+              <PrivateRoute requiredRoles={['ADMIN', 'GM', 'FRONT DESK']}>
+                <LaundryManagement />
+              </PrivateRoute>
+            } />
+            
+            {/* Vendor Routes */}
+            <Route path="vendors" element={
+              <PrivateRoute requiredRoles={['ADMIN', 'GM']}>
+                <VendorManagement />
               </PrivateRoute>
             } />
             

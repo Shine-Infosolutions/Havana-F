@@ -26,6 +26,8 @@ import {
   ChefHat,
   ClipboardList,
   IndianRupee,
+  Shirt,
+  Building2,
 } from "lucide-react";
 import logoImage from "../assets/hawana golden png.png";
 
@@ -122,6 +124,16 @@ const Sidebar = () => {
     // Hotel Inventory - Admin, GM, Front Desk
     if (hasRole(['ADMIN', 'GM', 'FRONT DESK'])) {
       items.push({ icon: Warehouse, label: "Hotel Inventory", path: "/inventory" });
+    }
+
+    // Laundry - Admin, GM, Front Desk
+    if (hasRole(['ADMIN', 'GM', 'FRONT DESK'])) {
+      items.push({ icon: Shirt, label: "Laundry", path: "/laundry" });
+    }
+
+    // Vendors - Admin, GM
+    if (hasRole(['ADMIN', 'GM'])) {
+      items.push({ icon: Building2, label: "Vendors", path: "/vendors" });
     }
 
     // Cash Management - Admin, Front Desk
