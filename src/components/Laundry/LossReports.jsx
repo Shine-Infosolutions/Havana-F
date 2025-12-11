@@ -107,10 +107,20 @@ const LossReports = () => {
                     {report.status}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                  <div><span className="text-gray-500">Items Lost:</span> <span className="font-medium">{report.lostItems?.length || 0}</span></div>
-                  <div><span className="text-gray-500">Amount:</span> <span className="font-medium">₹{report.totalLossAmount}</span></div>
-                  <div className="col-span-2"><span className="text-gray-500">Reported:</span> <span className="font-medium">{new Date(report.createdAt).toLocaleDateString()}</span></div>
+                <div className="text-sm mb-3 space-y-2">
+                  <div><span className="text-gray-500">Items Lost:</span> 
+                    <div className="font-medium text-xs mt-1">
+                      {report.lostItems?.map((item, idx) => (
+                        <span key={idx} className="inline-block bg-gray-100 px-2 py-1 rounded mr-1 mb-1">
+                          {item.quantity}x {item.itemName}
+                        </span>
+                      )) || 'No items'}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><span className="text-gray-500">Amount:</span> <span className="font-medium">₹{report.totalLossAmount}</span></div>
+                    <div><span className="text-gray-500">Reported:</span> <span className="font-medium">{new Date(report.createdAt).toLocaleDateString()}</span></div>
+                  </div>
                 </div>
                 <select
                   value={report.status}
@@ -133,7 +143,7 @@ const LossReports = () => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guest</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items Lost</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lost Items</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loss Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reported</th>
@@ -145,7 +155,15 @@ const LossReports = () => {
                   <tr key={report._id}>
                     <td className="px-6 py-4 whitespace-nowrap font-medium">{report.roomNumber}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{report.guestName || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{report.lostItems?.length || 0}</td>
+                    <td className="px-6 py-4">
+                      <div className="max-w-xs">
+                        {report.lostItems?.map((item, idx) => (
+                          <span key={idx} className="inline-block bg-gray-100 text-xs px-2 py-1 rounded mr-1 mb-1">
+                            {item.quantity}x {item.itemName}
+                          </span>
+                        )) || 'No items'}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">₹{report.totalLossAmount}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(report.status)}`}>

@@ -22,7 +22,7 @@ const LaundryLossManagement = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      setLossReports(Array.isArray(data) ? data : (data.lossReports || []));
+      setLossReports(Array.isArray(data) ? data : (data.reports || []));
     } catch (error) {
       toast.error('Failed to fetch loss reports');
       setLossReports([]);

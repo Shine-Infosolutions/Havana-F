@@ -11,6 +11,7 @@ const CreateLaundryOrder = () => {
   const [formData, setFormData] = useState({
     orderType: 'room_laundry',
     grcNo: '',
+    invoiceNumber: '',
     bookingId: '',
     roomNumber: '',
     requestedByName: '',
@@ -32,7 +33,7 @@ const CreateLaundryOrder = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      setLaundryItems(Array.isArray(data) ? data : (data.laundryItems || []));
+      setLaundryItems(data.success ? data.laundryItems : []);
     } catch (error) {
       setLaundryItems([]);
     }
@@ -58,8 +59,16 @@ const CreateLaundryOrder = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
-      setBookings(Array.isArray(data) ? data : (data.bookings || []));
+      const allBookings = Array.isArray(data) ? data : (data.bookings || []);
+      // Filter for checked-in bookings
+      const checkedInBookings = allBookings.filter(booking => 
+        booking.status === 'Checked In' || 
+        booking.status === 'checked_in' ||
+        booking.status === 'CheckedIn'
+      );
+      setBookings(checkedInBookings);
     } catch (error) {
+      console.error('Error fetching bookings:', error);
       setBookings([]);
     }
   };
@@ -137,18 +146,33 @@ const CreateLaundryOrder = () => {
               </select>
             </div>
             <div>
+              <label className="block text-sm font-medium mb-1">Booking (Checked-in only)</label>
+              <select value={formData.bookingId} onChange={(e) => {
+                const selectedBooking = bookings.find(b => b._id === e.target.value);
+                if (selectedBooking) {
+                  setFormData({
+                    ...formData, 
+                    bookingId: e.target.value, 
+                    grcNo: selectedBooking.grcNo || '',
+                    invoiceNumber: selectedBooking.invoiceNumber || '',
+                    roomNumber: selectedBooking.roomNumber || '',
+                    requestedByName: selectedBooking.guestName || selectedBooking.name || ''
+                  });
+                } else {
+                  setFormData({...formData, bookingId: e.target.value});
+                }
+              }} className="w-full px-3 py-2 border rounded-lg">
+                <option value="">Select Booking</option>
+                {bookings.map(b => <option key={b._id} value={b._id}>{b.grcNo} - {b.guestName || b.name} (Room: {b.roomNumber})</option>)}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-1">GRC No</label>
               <input type="text" value={formData.grcNo} onChange={(e) => setFormData({...formData, grcNo: e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Booking ID</label>
-              <select value={formData.bookingId} onChange={(e) => {
-                const selectedBooking = bookings.find(b => b._id === e.target.value);
-                setFormData({...formData, bookingId: e.target.value, grcNo: selectedBooking?.grcNo || ''});
-              }} className="w-full px-3 py-2 border rounded-lg">
-                <option value="">Select Booking</option>
-                {bookings.map(b => <option key={b._id} value={b._id}>{b.grcNo} - {b.name}</option>)}
-              </select>
+              <label className="block text-sm font-medium mb-1">Invoice Number</label>
+              <input type="text" value={formData.invoiceNumber} onChange={(e) => setFormData({...formData, invoiceNumber: e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Room Number *</label>
@@ -193,7 +217,7 @@ const CreateLaundryOrder = () => {
                     <label className="block text-sm font-medium mb-1">Item *</label>
                     <select value={item.rateId} onChange={(e) => updateItem(index, 'rateId', e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" required>
                       <option value="">Select Item</option>
-                      {laundryItems.filter(li => formData.serviceType === 'vendor' ? li.vendorId : !li.vendorId).map(li => <option key={li._id} value={li._id}>{li.itemName} - ₹{li.rate}</option>)}
+                      {laundryItems.map(li => <option key={li._id} value={li._id}>{li.itemName} - ₹{li.rate}</option>)}
                     </select>
                   </div>
 

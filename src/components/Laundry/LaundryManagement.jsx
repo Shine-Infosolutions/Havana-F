@@ -399,8 +399,9 @@ const LaundryManagement = ({ activeTab: initialTab = 'items' }) => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guest</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items Lost</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lost Items Details</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loss Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loss Note</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reported</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -411,15 +412,30 @@ const LaundryManagement = ({ activeTab: initialTab = 'items' }) => {
                   <tr key={report._id}>
                     <td className="px-6 py-4 whitespace-nowrap font-medium">{report.roomNumber}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{report.guestName || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{report.lostItems?.length || 0}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">₹{report.totalLossAmount}</td>
+                    <td className="px-6 py-4">
+                      <div className="max-w-xs">
+                        {report.lostItems?.map((item, idx) => (
+                          <div key={idx} className="text-sm">
+                            <span className="font-medium">{item.itemName}</span>
+                            <span className="text-gray-500 ml-1">(Qty: {item.quantity}, ₹{item.calculatedAmount})</span>
+                          </div>
+                        )) || 'No items'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium">₹{report.totalLossAmount}</td>
+                    <td className="px-6 py-4">
+                      <div className="max-w-xs text-sm text-gray-600">
+                        {report.lossNote || 'No note provided'}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(report.status)}`}>
                         {report.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {new Date(report.createdAt).toLocaleDateString()}
+                      <div>{new Date(report.createdAt).toLocaleDateString()}</div>
+                      <div className="text-xs text-gray-500">by {report.reportedBy || 'Staff'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <select
@@ -434,7 +450,7 @@ const LaundryManagement = ({ activeTab: initialTab = 'items' }) => {
                       </select>
                     </td>
                   </tr>
-                ))}
+                ))
               </tbody>
             </table>
           )}
