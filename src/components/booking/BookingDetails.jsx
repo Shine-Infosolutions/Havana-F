@@ -56,6 +56,7 @@ const BookingDetails = () => {
   const [error, setError] = useState(null);
   const [serviceCharges, setServiceCharges] = useState([]);
   const [restaurantCharges, setRestaurantCharges] = useState([]);
+  const [laundryCharges, setLaundryCharges] = useState([]);
 
 
   useEffect(() => {
@@ -105,6 +106,14 @@ const BookingDetails = () => {
         }
       });
       
+      // Fetch laundry orders by room number and GRC
+      const laundryResponse = await axios.get(`${BASE_URL}/api/laundry/all`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        params: {
+          search: bookingData?.roomNumber || bookingData?.grcNo
+        }
+      });
+      
       console.log('Room service response:', serviceResponse.data);
       console.log('Restaurant response:', restaurantResponse.data);
       
@@ -134,11 +143,24 @@ const BookingDetails = () => {
         order.status !== 'cancelled' && order.status !== 'canceled'
       );
       
+      // Filter laundry orders by room number or GRC
+      const allLaundryOrders = laundryResponse.data || [];
+      const roomNumbers = bookingData?.roomNumber ? bookingData.roomNumber.split(',').map(num => num.trim()) : [];
+      const filteredLaundryOrders = allLaundryOrders.filter(order => {
+        const matchesRoom = roomNumbers.some(roomNum => order.roomNumber === roomNum);
+        const matchesGRC = order.grcNo === bookingData?.grcNo;
+        const isNotCancelled = order.laundryStatus !== 'cancelled' && order.laundryStatus !== 'canceled';
+        
+        return (matchesRoom || matchesGRC) && isNotCancelled;
+      });
+      
       console.log('Final filtered restaurant orders:', filteredRestaurantOrders);
       console.log('Final filtered service orders:', filteredServiceOrders);
+      console.log('Final filtered laundry orders:', filteredLaundryOrders);
       
       setServiceCharges(filteredServiceOrders);
       setRestaurantCharges(filteredRestaurantOrders);
+      setLaundryCharges(filteredLaundryOrders);
     } catch (err) {
       console.error('Failed to fetch service charges:', err);
     }
@@ -364,7 +386,69 @@ const BookingDetails = () => {
               </div>
             )}
 
-
+            {/* Laundry Orders */}
+            {laundryCharges.length > 0 && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Laundry Orders ({laundryCharges.length})</h2>
+                <div className="space-y-4">
+                  {laundryCharges.map((order) => (
+                    <div key={order._id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-medium text-gray-800">Order #{order._id.slice(-6)}</p>
+                          <p className="text-sm text-gray-600">{new Date(order.createdAt).toLocaleDateString()}</p>
+                          <p className="text-sm text-gray-600">Status: <span className={`px-2 py-1 rounded text-xs ${
+                            order.laundryStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                            order.laundryStatus === 'picked_up' ? 'bg-blue-100 text-blue-700' :
+                            order.laundryStatus === 'ready' ? 'bg-green-100 text-green-700' :
+                            order.laundryStatus === 'delivered' ? 'bg-gray-100 text-gray-700' :
+                            order.laundryStatus === 'cancelled' ? 'bg-red-100 text-red-700' :
+                            'bg-orange-100 text-orange-700'
+                          }`}>{order.laundryStatus}</span></p>
+                          <p className="text-sm text-gray-600">Service: {order.serviceType === 'vendor' ? 'Vendor' : 'In-House'}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg font-semibold text-blue-600">
+                            ₹{order.items?.filter(item => !item.nonChargeable && item.status !== 'lost').reduce((sum, item) => sum + (item.calculatedAmount || 0), 0) || 0}
+                          </span>
+                          <p className="text-xs text-gray-500">Chargeable</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {order.items?.map((item, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-sm">
+                            <div className="flex-1">
+                              <span className={`${item.status === 'lost' || item.status === 'cancelled' ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                                {item.itemName} x {item.quantity}
+                              </span>
+                              <span className={`ml-2 px-1 py-0.5 rounded text-xs ${
+                                item.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                item.status === 'picked_up' ? 'bg-blue-100 text-blue-700' :
+                                item.status === 'ready' ? 'bg-green-100 text-green-700' :
+                                item.status === 'delivered' ? 'bg-gray-100 text-gray-700' :
+                                item.status === 'lost' ? 'bg-orange-100 text-orange-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {item.status}
+                              </span>
+                            </div>
+                            <span className={`font-medium ${item.nonChargeable || item.status === 'lost' ? 'text-green-600' : ''}`}>
+                              {item.nonChargeable ? 'NC' : item.status === 'lost' ? 'LOST' : `₹${(item.calculatedAmount || 0).toFixed(2)}`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      {order.vendorId && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <p className="text-xs text-gray-600">Vendor: {order.vendorId.vendorName || 'External Vendor'}</p>
+                          {order.vendorOrderId && <p className="text-xs text-gray-600">Vendor Order ID: {order.vendorOrderId}</p>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Amendment History */}
             {booking.amendmentHistory && booking.amendmentHistory.length > 0 && (
@@ -673,7 +757,7 @@ const BookingDetails = () => {
                     </div>
                   </>
                 )}
-                {(serviceCharges.length > 0 || restaurantCharges.length > 0) && (
+                {(serviceCharges.length > 0 || restaurantCharges.length > 0 || laundryCharges.length > 0) && (
                   <>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Room Service:</span>
@@ -699,6 +783,13 @@ const BookingDetails = () => {
                           return itemSum + (item.quantity * unitPrice);
                         }, 0);
                         return sum + orderTotal;
+                      }, 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Laundry:</span>
+                      <span className="font-medium">₹{laundryCharges.reduce((sum, order) => {
+                        const chargeableAmount = order.items?.filter(item => !item.nonChargeable && item.status !== 'lost').reduce((itemSum, item) => itemSum + (item.calculatedAmount || 0), 0) || 0;
+                        return sum + chargeableAmount;
                       }, 0)}</span>
                     </div>
                   </>
@@ -730,9 +821,31 @@ const BookingDetails = () => {
                     const roomSubtotal = roomCost + extraBedTotal;
                     const discount = roomSubtotal * ((booking.discountPercent || 0) / 100);
                     const afterDiscount = roomSubtotal - discount;
-                    const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-                    const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
-                    return (afterDiscount + serviceTotal + restaurantTotal).toFixed(2);
+                    const serviceTotal = serviceCharges.reduce((sum, order) => {
+                      if (order.nonChargeable) return sum;
+                      const orderTotal = order.items.reduce((itemSum, item) => {
+                        const isNC = item.nonChargeable || item.isFree || item.nc;
+                        if (isNC) return itemSum;
+                        const unitPrice = item.unitPrice || item.price || 0;
+                        return itemSum + (item.quantity * unitPrice);
+                      }, 0);
+                      return sum + orderTotal;
+                    }, 0);
+                    const restaurantTotal = restaurantCharges.reduce((sum, order) => {
+                      if (order.nonChargeable) return sum;
+                      const orderTotal = order.items.reduce((itemSum, item) => {
+                        const isNC = item.nonChargeable || item.isFree || item.nc;
+                        if (isNC) return itemSum;
+                        const unitPrice = item.unitPrice || item.price || 0;
+                        return itemSum + (item.quantity * unitPrice);
+                      }, 0);
+                      return sum + orderTotal;
+                    }, 0);
+                    const laundryTotal = laundryCharges.reduce((sum, order) => {
+                      const chargeableAmount = order.items?.filter(item => !item.nonChargeable && item.status !== 'lost').reduce((itemSum, item) => itemSum + (item.calculatedAmount || 0), 0) || 0;
+                      return sum + chargeableAmount;
+                    }, 0);
+                    return (afterDiscount + serviceTotal + restaurantTotal + laundryTotal).toFixed(2);
                   })()}</span>
                 </div>
                 <div className="flex justify-between">
@@ -762,9 +875,31 @@ const BookingDetails = () => {
                     const roomSubtotal = roomCost + extraBedTotal;
                     const discount = roomSubtotal * ((booking.discountPercent || 0) / 100);
                     const afterDiscount = roomSubtotal - discount;
-                    const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-                    const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
-                    const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal;
+                    const serviceTotal = serviceCharges.reduce((sum, order) => {
+                      if (order.nonChargeable) return sum;
+                      const orderTotal = order.items.reduce((itemSum, item) => {
+                        const isNC = item.nonChargeable || item.isFree || item.nc;
+                        if (isNC) return itemSum;
+                        const unitPrice = item.unitPrice || item.price || 0;
+                        return itemSum + (item.quantity * unitPrice);
+                      }, 0);
+                      return sum + orderTotal;
+                    }, 0);
+                    const restaurantTotal = restaurantCharges.reduce((sum, order) => {
+                      if (order.nonChargeable) return sum;
+                      const orderTotal = order.items.reduce((itemSum, item) => {
+                        const isNC = item.nonChargeable || item.isFree || item.nc;
+                        if (isNC) return itemSum;
+                        const unitPrice = item.unitPrice || item.price || 0;
+                        return itemSum + (item.quantity * unitPrice);
+                      }, 0);
+                      return sum + orderTotal;
+                    }, 0);
+                    const laundryTotal = laundryCharges.reduce((sum, order) => {
+                      const chargeableAmount = order.items?.filter(item => !item.nonChargeable && item.status !== 'lost').reduce((itemSum, item) => itemSum + (item.calculatedAmount || 0), 0) || 0;
+                      return sum + chargeableAmount;
+                    }, 0);
+                    const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + laundryTotal;
                     return (totalSubtotal * (booking.cgstRate || 0.025)).toFixed(2);
                   })()}</span>
                 </div>
@@ -795,9 +930,31 @@ const BookingDetails = () => {
                     const roomSubtotal = roomCost + extraBedTotal;
                     const discount = roomSubtotal * ((booking.discountPercent || 0) / 100);
                     const afterDiscount = roomSubtotal - discount;
-                    const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-                    const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
-                    const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal;
+                    const serviceTotal = serviceCharges.reduce((sum, order) => {
+                      if (order.nonChargeable) return sum;
+                      const orderTotal = order.items.reduce((itemSum, item) => {
+                        const isNC = item.nonChargeable || item.isFree || item.nc;
+                        if (isNC) return itemSum;
+                        const unitPrice = item.unitPrice || item.price || 0;
+                        return itemSum + (item.quantity * unitPrice);
+                      }, 0);
+                      return sum + orderTotal;
+                    }, 0);
+                    const restaurantTotal = restaurantCharges.reduce((sum, order) => {
+                      if (order.nonChargeable) return sum;
+                      const orderTotal = order.items.reduce((itemSum, item) => {
+                        const isNC = item.nonChargeable || item.isFree || item.nc;
+                        if (isNC) return itemSum;
+                        const unitPrice = item.unitPrice || item.price || 0;
+                        return itemSum + (item.quantity * unitPrice);
+                      }, 0);
+                      return sum + orderTotal;
+                    }, 0);
+                    const laundryTotal = laundryCharges.reduce((sum, order) => {
+                      const chargeableAmount = order.items?.filter(item => !item.nonChargeable && item.status !== 'lost').reduce((itemSum, item) => itemSum + (item.calculatedAmount || 0), 0) || 0;
+                      return sum + chargeableAmount;
+                    }, 0);
+                    const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + laundryTotal;
                     return (totalSubtotal * (booking.sgstRate || 0.025)).toFixed(2);
                   })()}</span>
                 </div>
@@ -829,9 +986,31 @@ const BookingDetails = () => {
                     const roomSubtotal = roomCost + extraBedTotal;
                     const discount = roomSubtotal * ((booking.discountPercent || 0) / 100);
                     const afterDiscount = roomSubtotal - discount;
-                    const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-                    const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
-                    const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal;
+                    const serviceTotal = serviceCharges.reduce((sum, order) => {
+                      if (order.nonChargeable) return sum;
+                      const orderTotal = order.items.reduce((itemSum, item) => {
+                        const isNC = item.nonChargeable || item.isFree || item.nc;
+                        if (isNC) return itemSum;
+                        const unitPrice = item.unitPrice || item.price || 0;
+                        return itemSum + (item.quantity * unitPrice);
+                      }, 0);
+                      return sum + orderTotal;
+                    }, 0);
+                    const restaurantTotal = restaurantCharges.reduce((sum, order) => {
+                      if (order.nonChargeable) return sum;
+                      const orderTotal = order.items.reduce((itemSum, item) => {
+                        const isNC = item.nonChargeable || item.isFree || item.nc;
+                        if (isNC) return itemSum;
+                        const unitPrice = item.unitPrice || item.price || 0;
+                        return itemSum + (item.quantity * unitPrice);
+                      }, 0);
+                      return sum + orderTotal;
+                    }, 0);
+                    const laundryTotal = laundryCharges.reduce((sum, order) => {
+                      const chargeableAmount = order.items?.filter(item => !item.nonChargeable && item.status !== 'lost').reduce((itemSum, item) => itemSum + (item.calculatedAmount || 0), 0) || 0;
+                      return sum + chargeableAmount;
+                    }, 0);
+                    const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + laundryTotal;
                     const cgstAmount = totalSubtotal * (booking.cgstRate || 0.025);
                     const sgstAmount = totalSubtotal * (booking.sgstRate || 0.025);
                     const exactTotal = totalSubtotal + cgstAmount + sgstAmount;
@@ -869,10 +1048,32 @@ const BookingDetails = () => {
                       const roomSubtotal = roomCost + extraBedTotal;
                       const discount = roomSubtotal * ((booking.discountPercent || 0) / 100);
                       const afterDiscount = roomSubtotal - discount;
-                      const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-                      const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
+                      const serviceTotal = serviceCharges.reduce((sum, order) => {
+                        if (order.nonChargeable) return sum;
+                        const orderTotal = order.items.reduce((itemSum, item) => {
+                          const isNC = item.nonChargeable || item.isFree || item.nc;
+                          if (isNC) return itemSum;
+                          const unitPrice = item.unitPrice || item.price || 0;
+                          return itemSum + (item.quantity * unitPrice);
+                        }, 0);
+                        return sum + orderTotal;
+                      }, 0);
+                      const restaurantTotal = restaurantCharges.reduce((sum, order) => {
+                        if (order.nonChargeable) return sum;
+                        const orderTotal = order.items.reduce((itemSum, item) => {
+                          const isNC = item.nonChargeable || item.isFree || item.nc;
+                          if (isNC) return itemSum;
+                          const unitPrice = item.unitPrice || item.price || 0;
+                          return itemSum + (item.quantity * unitPrice);
+                        }, 0);
+                        return sum + orderTotal;
+                      }, 0);
+                      const laundryTotal = laundryCharges.reduce((sum, order) => {
+                        const chargeableAmount = order.items?.filter(item => !item.nonChargeable && item.status !== 'lost').reduce((itemSum, item) => itemSum + (item.calculatedAmount || 0), 0) || 0;
+                        return sum + chargeableAmount;
+                      }, 0);
                       const lateCheckoutFee = (booking.lateCheckoutFine?.applied && booking.lateCheckoutFine.amount > 0 && !booking.lateCheckoutFine.waived) ? booking.lateCheckoutFine.amount : 0;
-                      const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + lateCheckoutFee;
+                      const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + laundryTotal + lateCheckoutFee;
                       const cgstAmount = totalSubtotal * (booking.cgstRate || 0.025);
                       const sgstAmount = totalSubtotal * (booking.sgstRate || 0.025);
                       const exactTotal = totalSubtotal + cgstAmount + sgstAmount;
@@ -918,10 +1119,32 @@ const BookingDetails = () => {
                       const roomSubtotal = roomCost + extraBedTotal;
                       const discount = roomSubtotal * ((booking.discountPercent || 0) / 100);
                       const afterDiscount = roomSubtotal - discount;
-                      const serviceTotal = serviceCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-                      const restaurantTotal = restaurantCharges.filter(order => !order.nonChargeable).reduce((sum, order) => sum + (order.amount || 0), 0);
+                      const serviceTotal = serviceCharges.reduce((sum, order) => {
+                        if (order.nonChargeable) return sum;
+                        const orderTotal = order.items.reduce((itemSum, item) => {
+                          const isNC = item.nonChargeable || item.isFree || item.nc;
+                          if (isNC) return itemSum;
+                          const unitPrice = item.unitPrice || item.price || 0;
+                          return itemSum + (item.quantity * unitPrice);
+                        }, 0);
+                        return sum + orderTotal;
+                      }, 0);
+                      const restaurantTotal = restaurantCharges.reduce((sum, order) => {
+                        if (order.nonChargeable) return sum;
+                        const orderTotal = order.items.reduce((itemSum, item) => {
+                          const isNC = item.nonChargeable || item.isFree || item.nc;
+                          if (isNC) return itemSum;
+                          const unitPrice = item.unitPrice || item.price || 0;
+                          return itemSum + (item.quantity * unitPrice);
+                        }, 0);
+                        return sum + orderTotal;
+                      }, 0);
+                      const laundryTotal = laundryCharges.reduce((sum, order) => {
+                        const chargeableAmount = order.items?.filter(item => !item.nonChargeable && item.status !== 'lost').reduce((itemSum, item) => itemSum + (item.calculatedAmount || 0), 0) || 0;
+                        return sum + chargeableAmount;
+                      }, 0);
                       const lateCheckoutFee = (booking.lateCheckoutFine?.applied && booking.lateCheckoutFine.amount > 0 && !booking.lateCheckoutFine.waived) ? booking.lateCheckoutFine.amount : 0;
-                      const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + lateCheckoutFee;
+                      const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + laundryTotal + lateCheckoutFee;
                       const cgstAmount = totalSubtotal * (booking.cgstRate || 0.025);
                       const sgstAmount = totalSubtotal * (booking.sgstRate || 0.025);
                       const exactTotal = totalSubtotal + cgstAmount + sgstAmount;

@@ -597,13 +597,16 @@ const LaundryOrders = () => {
                         >
                           View
                         </button>
-                        <button 
-                          onClick={() => handleLoss(order._id)} 
-                          className="px-3 py-1.5 bg-secondary hover:bg-primary text-white text-xs rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm hover:shadow-md"
-                          title="Report Loss"
-                        >
-                          Loss
-                        </button>
+                        {/* Only show Loss button if there are items that are not lost */}
+                        {order.items?.some(item => item.status !== 'lost') && (
+                          <button 
+                            onClick={() => handleLoss(order._id)} 
+                            className="px-3 py-1.5 bg-secondary hover:bg-primary text-white text-xs rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm hover:shadow-md"
+                            title="Report Loss"
+                          >
+                            Loss
+                          </button>
+                        )}
                         <button 
                           onClick={() => handleCancel(order._id)} 
                           className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm hover:shadow-md"

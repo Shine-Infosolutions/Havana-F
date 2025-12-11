@@ -20,6 +20,7 @@ export default function Invoice() {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [gstRates, setGstRates] = useState({ cgstRate: 2.5, sgstRate: 2.5 });
   const [showPaxDetails, setShowPaxDetails] = useState(false);
+  const [laundryOrders, setLaundryOrders] = useState([]);
 
   // Generate or retrieve existing invoice number
   const getOrGenerateInvoiceNumber = async (orderId, prefix) => {
@@ -135,7 +136,7 @@ export default function Invoice() {
             checkInDate: formatDate(),
             checkOutDate: formatDate()
           },
-          items: orderData.items?.filter(item => !orderData.nonChargeable).map((item, index) => {
+          items: orderData.items?.filter(item => !orderData.nonChargeable && !item.nonChargeable).map((item, index) => {
             const itemPrice = item.isFree ? 0 : (typeof item === 'object' ? (item.price || item.Price || 0) : 0);
             return {
               date: formatDate(),
@@ -252,6 +253,9 @@ export default function Invoice() {
         if (mappedData.clientDetails?.gstin && mappedData.clientDetails.gstin !== 'N/A') {
           fetchGSTDetails(mappedData.clientDetails.gstin);
         }
+        
+        // Fetch laundry orders for this booking
+        fetchLaundryOrders(checkoutId);
       }
       
     } catch (error) {
@@ -260,6 +264,27 @@ export default function Invoice() {
       // Set final GST rates
       setGstRates(currentGstRates);
       setLoading(false);
+    }
+  };
+
+
+
+  const fetchLaundryOrders = async (bookingId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`/api/laundry/booking/${bookingId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      const laundryOrders = response.data.orders || [];
+      const filteredLaundry = laundryOrders.filter(order => {
+        const isNotCancelled = order.laundryStatus !== 'cancelled' && order.laundryStatus !== 'canceled';
+        return isNotCancelled;
+      });
+      
+      setLaundryOrders(filteredLaundry);
+    } catch (error) {
+      console.error('Error fetching laundry orders:', error);
     }
   };
 
@@ -386,10 +411,20 @@ export default function Invoice() {
     
     // Add service charges to taxable amount
     const serviceCharges = invoiceData.items?.filter(item => 
-      item.particulars && (item.particulars.includes('Service') || item.particulars.includes('Restaurant') || item.particulars.includes('ROOM SERVICE') || item.particulars.includes('DINING'))
+      item.particulars && (
+        item.particulars.includes('IN ROOM DINING') || 
+        item.particulars.includes('Room Service Charges') ||
+        (item.particulars.includes('Service') && !item.particulars.includes('Laundry')) ||
+        (item.particulars.includes('Restaurant') && !item.particulars.includes('Laundry')) ||
+        (item.particulars.includes('DINING') && !item.particulars.includes('Laundry'))
+      )
     ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0) || 0;
     
-    const totalTaxableAmount = discountedRoomCharges + serviceCharges;
+    const laundryCharges = invoiceData.items?.filter(item => 
+      item.particulars && (item.particulars.includes('Laundry Services') || item.particulars.includes('LAUNDRY'))
+    ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0) || 0;
+    
+    const totalTaxableAmount = discountedRoomCharges + serviceCharges + laundryCharges;
     
     const sgstRate = bookingData?.sgstRate !== undefined ? bookingData.sgstRate : (gstRates.sgstRate / 100);
     const cgstRate = bookingData?.cgstRate !== undefined ? bookingData.cgstRate : (gstRates.cgstRate / 100);
@@ -421,10 +456,20 @@ export default function Invoice() {
     
     // Add service charges to taxable amount
     const serviceCharges = invoiceData.items?.filter(item => 
-      item.particulars && (item.particulars.includes('Service') || item.particulars.includes('Restaurant') || item.particulars.includes('ROOM SERVICE') || item.particulars.includes('DINING'))
+      item.particulars && (
+        item.particulars.includes('IN ROOM DINING') || 
+        item.particulars.includes('Room Service Charges') ||
+        (item.particulars.includes('Service') && !item.particulars.includes('Laundry')) ||
+        (item.particulars.includes('Restaurant') && !item.particulars.includes('Laundry')) ||
+        (item.particulars.includes('DINING') && !item.particulars.includes('Laundry'))
+      )
     ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0) || 0;
     
-    const totalTaxableAmount = discountedRoomCharges + serviceCharges;
+    const laundryCharges = invoiceData.items?.filter(item => 
+      item.particulars && (item.particulars.includes('Laundry Services') || item.particulars.includes('LAUNDRY'))
+    ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0) || 0;
+    
+    const totalTaxableAmount = discountedRoomCharges + serviceCharges + laundryCharges;
     
     // Calculate taxes on the total taxable amount
     const sgstRate = bookingData?.sgstRate !== undefined ? bookingData.sgstRate : (gstRates.sgstRate / 100);
@@ -872,6 +917,40 @@ export default function Invoice() {
                         return (roomCharges - discountAmount).toFixed(2);
                       })()}</td>
                     </tr>
+                    {(() => {
+                      const serviceCharges = invoiceData?.items?.filter(item => 
+                        item.particulars && (
+                          item.particulars.includes('IN ROOM DINING') || 
+                          item.particulars.includes('Room Service Charges') ||
+                          (item.particulars.includes('Service') && !item.particulars.includes('Laundry')) ||
+                          (item.particulars.includes('Restaurant') && !item.particulars.includes('Laundry')) ||
+                          (item.particulars.includes('DINING') && !item.particulars.includes('Laundry'))
+                        )
+                      ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0) || 0;
+                      if (serviceCharges > 0) {
+                        return (
+                          <tr>
+                            <td className="p-0.5 text-right text-xs font-medium">Room Service & Restaurant:</td>
+                            <td className="p-0.5 border-l border-black text-right text-xs">₹{serviceCharges.toFixed(2)}</td>
+                          </tr>
+                        );
+                      }
+                      return null;
+                    })()}
+                    {(() => {
+                      const laundryCharges = invoiceData?.items?.filter(item => 
+                        item.particulars && (item.particulars.includes('Laundry Services') || item.particulars.includes('LAUNDRY'))
+                      ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0) || 0;
+                      if (laundryCharges > 0) {
+                        return (
+                          <tr>
+                            <td className="p-0.5 text-right text-xs font-medium">Laundry Services:</td>
+                            <td className="p-0.5 border-l border-black text-right text-xs">₹{laundryCharges.toFixed(2)}</td>
+                          </tr>
+                        );
+                      }
+                      return null;
+                    })()}
 
                     <tr>
                       <td className="p-0.5 text-right text-xs font-medium">Total Taxable Amount:</td>
@@ -882,12 +961,21 @@ export default function Invoice() {
                           !item.particulars.includes('Service') && !item.particulars.includes('Restaurant') && !item.particulars.includes('DINING')
                         ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0);
                         const serviceCharges = invoiceData.items.filter(item => 
-                          item.particulars && (item.particulars.includes('Service') || item.particulars.includes('Restaurant') || item.particulars.includes('ROOM SERVICE') || item.particulars.includes('DINING'))
+                          item.particulars && (
+                            item.particulars.includes('IN ROOM DINING') || 
+                            item.particulars.includes('Room Service Charges') ||
+                            (item.particulars.includes('Service') && !item.particulars.includes('Laundry')) ||
+                            (item.particulars.includes('Restaurant') && !item.particulars.includes('Laundry')) ||
+                            (item.particulars.includes('DINING') && !item.particulars.includes('Laundry'))
+                          )
+                        ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0);
+                        const laundryCharges = invoiceData.items.filter(item => 
+                          item.particulars && (item.particulars.includes('Laundry Services') || item.particulars.includes('LAUNDRY'))
                         ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0);
                         const discountPercent = bookingData?.discountPercent || 0;
                         const discountAmount = roomCharges * (discountPercent / 100);
                         const discountedRoomCharges = roomCharges - discountAmount;
-                        return (discountedRoomCharges + serviceCharges).toFixed(2);
+                        return (discountedRoomCharges + serviceCharges + laundryCharges).toFixed(2);
                       })()}</td>
                     </tr>
                     <tr>
@@ -899,12 +987,21 @@ export default function Invoice() {
                           !item.particulars.includes('Service') && !item.particulars.includes('Restaurant') && !item.particulars.includes('DINING')
                         ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0);
                         const serviceCharges = invoiceData.items.filter(item => 
-                          item.particulars && (item.particulars.includes('Service') || item.particulars.includes('Restaurant') || item.particulars.includes('ROOM SERVICE') || item.particulars.includes('DINING'))
+                          item.particulars && (
+                            item.particulars.includes('IN ROOM DINING') || 
+                            item.particulars.includes('Room Service Charges') ||
+                            (item.particulars.includes('Service') && !item.particulars.includes('Laundry')) ||
+                            (item.particulars.includes('Restaurant') && !item.particulars.includes('Laundry')) ||
+                            (item.particulars.includes('DINING') && !item.particulars.includes('Laundry'))
+                          )
+                        ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0);
+                        const laundryCharges = invoiceData.items.filter(item => 
+                          item.particulars && (item.particulars.includes('Laundry Services') || item.particulars.includes('LAUNDRY'))
                         ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0);
                         const discountPercent = bookingData?.discountPercent || 0;
                         const discountAmount = roomCharges * (discountPercent / 100);
                         const discountedRoomCharges = roomCharges - discountAmount;
-                        const totalTaxableAmount = discountedRoomCharges + serviceCharges;
+                        const totalTaxableAmount = discountedRoomCharges + serviceCharges + laundryCharges;
                         const sgstRate = bookingData?.sgstRate !== undefined ? bookingData.sgstRate : (gstRates.sgstRate / 100);
                         return (totalTaxableAmount * sgstRate).toFixed(2);
                       })()}</td>
@@ -918,12 +1015,21 @@ export default function Invoice() {
                           !item.particulars.includes('Service') && !item.particulars.includes('Restaurant') && !item.particulars.includes('DINING')
                         ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0);
                         const serviceCharges = invoiceData.items.filter(item => 
-                          item.particulars && (item.particulars.includes('Service') || item.particulars.includes('Restaurant') || item.particulars.includes('ROOM SERVICE') || item.particulars.includes('DINING'))
+                          item.particulars && (
+                            item.particulars.includes('IN ROOM DINING') || 
+                            item.particulars.includes('Room Service Charges') ||
+                            (item.particulars.includes('Service') && !item.particulars.includes('Laundry')) ||
+                            (item.particulars.includes('Restaurant') && !item.particulars.includes('Laundry')) ||
+                            (item.particulars.includes('DINING') && !item.particulars.includes('Laundry'))
+                          )
+                        ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0);
+                        const laundryCharges = invoiceData.items.filter(item => 
+                          item.particulars && (item.particulars.includes('Laundry Services') || item.particulars.includes('LAUNDRY'))
                         ).reduce((sum, item) => sum + (item.isFree ? 0 : (item.amount || 0)), 0);
                         const discountPercent = bookingData?.discountPercent || 0;
                         const discountAmount = roomCharges * (discountPercent / 100);
                         const discountedRoomCharges = roomCharges - discountAmount;
-                        const totalTaxableAmount = discountedRoomCharges + serviceCharges;
+                        const totalTaxableAmount = discountedRoomCharges + serviceCharges + laundryCharges;
                         const cgstRate = bookingData?.cgstRate !== undefined ? bookingData.cgstRate : (gstRates.cgstRate / 100);
                         return (totalTaxableAmount * cgstRate).toFixed(2);
                       })()}</td>
@@ -995,6 +1101,57 @@ export default function Invoice() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Laundry Orders Details */}
+        {laundryOrders.length > 0 && (
+          <div className="mb-4 text-xs">
+            <p className="font-bold mb-2">Laundry Orders ({laundryOrders.length} order(s)):</p>
+            <div className="border border-black">
+              <table className="w-full">
+                <thead className="bg-gray-200">
+                  <tr>
+                    <th className="p-1 border border-black text-xs">#</th>
+                    <th className="p-1 border border-black text-xs">Date</th>
+                    <th className="p-1 border border-black text-xs">Items</th>
+                    <th className="p-1 border border-black text-xs">Status</th>
+                    <th className="p-1 border border-black text-xs">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {laundryOrders.map((order, index) => (
+                    <tr key={order._id || index}>
+                      <td className="p-1 border border-black text-xs text-center">{index + 1}</td>
+                      <td className="p-1 border border-black text-xs text-center">{new Date(order.createdAt).toLocaleDateString()}</td>
+                      <td className="p-1 border border-black text-xs">
+                        {order.items?.map((item, itemIndex) => (
+                          <div key={itemIndex} className="text-xs">
+                            {item.itemName} x{item.quantity}
+                            {item.nonChargeable && <span className="text-green-600 ml-1">(NC)</span>}
+                            {item.status === 'lost' && <span className="text-orange-600 ml-1">(LOST)</span>}
+                          </div>
+                        ))}
+                      </td>
+                      <td className="p-1 border border-black text-xs text-center">{order.laundryStatus}</td>
+                      <td className="p-1 border border-black text-xs text-right font-bold">
+                        ₹{order.items?.filter(item => !item.nonChargeable && item.status !== 'lost')
+                          .reduce((sum, item) => sum + (item.calculatedAmount || 0), 0)?.toFixed(2) || '0.00'}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="bg-gray-200">
+                    <td colSpan="4" className="p-1 border border-black font-bold text-xs text-right">Total Laundry:</td>
+                    <td className="p-1 border border-black text-xs text-right font-bold">
+                      ₹{laundryOrders.reduce((sum, order) => {
+                        return sum + (order.items?.filter(item => !item.nonChargeable && item.status !== 'lost')
+                          .reduce((itemSum, item) => itemSum + (item.calculatedAmount || 0), 0) || 0);
+                      }, 0).toFixed(2)}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>

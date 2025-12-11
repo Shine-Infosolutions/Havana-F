@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const CreateLaundryOrder = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [laundryItems, setLaundryItems] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -24,7 +25,20 @@ const CreateLaundryOrder = () => {
     fetchLaundryItems();
     fetchVendors();
     fetchBookings();
-  }, []);
+    
+    // Auto-fill form if coming from EditBookingForm
+    const preSelectedBooking = location.state?.preSelectedBooking;
+    if (preSelectedBooking) {
+      setFormData(prev => ({
+        ...prev,
+        bookingId: preSelectedBooking._id,
+        grcNo: preSelectedBooking.grcNo || '',
+        invoiceNumber: preSelectedBooking.invoiceNumber || '',
+        roomNumber: preSelectedBooking.roomNumber || '',
+        requestedByName: preSelectedBooking.name || ''
+      }));
+    }
+  }, [location.state]);
 
   const fetchLaundryItems = async () => {
     try {

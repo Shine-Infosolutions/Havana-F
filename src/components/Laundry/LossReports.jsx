@@ -74,36 +74,44 @@ const LossReports = () => {
   };
 
   return (
-    <div className="p-3 sm:p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-4 sm:mb-6">
-        <div>
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
-            <AlertTriangle style={{color: 'hsl(45, 43%, 58%)'}} size={24} />
-            Loss Reports
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Track and manage laundry loss reports</p>
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4 border border-border">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-text flex items-center gap-2">
+                <AlertTriangle className="text-primary" size={24} />
+                Loss Reports
+              </h1>
+              <p className="text-gray-600 mt-1">Track and manage laundry loss reports</p>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {loading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : lossReports.length === 0 ? (
-        <div className="bg-white rounded-lg shadow text-center py-12 text-gray-500">
-          <AlertTriangle className="mx-auto mb-3" size={48} />
-          <p className="text-sm sm:text-base">No loss reports found</p>
-        </div>
-      ) : (
+        {loading ? (
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600 font-medium">Loading loss reports...</p>
+          </div>
+        ) : lossReports.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg text-center py-16 border border-border">
+            <AlertTriangle className="mx-auto mb-4 text-gray-400" size={64} />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">No loss reports found</h3>
+            <p className="text-gray-500">No laundry loss reports have been filed yet</p>
+          </div>
+        ) : (
         <>
           {/* Mobile Card View */}
-          <div className="md:hidden space-y-3">
+          <div className="lg:hidden space-y-4">
             {lossReports.map((report) => (
-              <div key={report._id} className="bg-white rounded-lg shadow p-4">
-                <div className="flex justify-between items-start mb-3">
+              <div key={report._id} className="bg-white rounded-2xl shadow-lg p-6 border border-border hover:shadow-xl transition-all duration-200">
+                <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="font-semibold text-gray-900">Room {report.roomNumber}</h3>
-                    <p className="text-sm text-gray-600">{report.guestName || 'N/A'}</p>
+                    <h3 className="font-bold text-gray-900 text-lg">Room {report.roomNumber}</h3>
+                    <p className="text-gray-600 font-medium">{report.guestName || 'N/A'}</p>
                   </div>
-                  <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(report.status)}`}>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(report.status)}`}>
                     {report.status}
                   </span>
                 </div>
@@ -125,7 +133,7 @@ const LossReports = () => {
                 <select
                   value={report.status}
                   onChange={(e) => handleStatusUpdate(report._id, e.target.value)}
-                  className="w-full text-sm border rounded px-3 py-2"
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 hover:border-primary focus:border-primary focus:ring-2 focus:ring-accent focus:outline-none transition-all duration-200 bg-white"
                 >
                   <option value="reported">Reported</option>
                   <option value="investigating">Investigating</option>
@@ -137,36 +145,36 @@ const LossReports = () => {
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden md:block bg-white rounded-lg shadow overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="hidden lg:block bg-white rounded-2xl shadow-lg overflow-hidden border border-border">
+            <table className="min-w-full">
+              <thead className="bg-background">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guest</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lost Items</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loss Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reported</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-text uppercase tracking-wider">Room</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-text uppercase tracking-wider">Guest</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-text uppercase tracking-wider">Lost Items</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-text uppercase tracking-wider">Loss Amount</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-text uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-text uppercase tracking-wider">Reported</th>
+                  <th className="px-6 py-4 text-left text-sm font-bold text-text uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {lossReports.map((report) => (
-                  <tr key={report._id}>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">{report.roomNumber}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{report.guestName || 'N/A'}</td>
+                  <tr key={report._id} className="hover:bg-gray-50 transition-colors duration-150">
+                    <td className="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">{report.roomNumber}</td>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-700">{report.guestName || 'N/A'}</td>
                     <td className="px-6 py-4">
                       <div className="max-w-xs">
                         {report.lostItems?.map((item, idx) => (
-                          <span key={idx} className="inline-block bg-gray-100 text-xs px-2 py-1 rounded mr-1 mb-1">
+                          <span key={idx} className="inline-block bg-accent text-primary text-xs px-2 py-1 rounded-full mr-1 mb-1 font-medium">
                             {item.quantity}x {item.itemName}
                           </span>
                         )) || 'No items'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">₹{report.totalLossAmount}</td>
+                    <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-900">₹{report.totalLossAmount}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded text-xs ${getStatusBadge(report.status)}`}>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(report.status)}`}>
                         {report.status}
                       </span>
                     </td>
@@ -177,7 +185,7 @@ const LossReports = () => {
                       <select
                         value={report.status}
                         onChange={(e) => handleStatusUpdate(report._id, e.target.value)}
-                        className="text-sm border rounded px-2 py-1"
+                        className="text-sm border border-border rounded-lg px-3 py-2 hover:border-primary focus:border-primary focus:ring-2 focus:ring-accent focus:outline-none transition-all duration-200 bg-white"
                       >
                         <option value="reported">Reported</option>
                         <option value="investigating">Investigating</option>
@@ -191,9 +199,9 @@ const LossReports = () => {
             </table>
           </div>
         </>
-      )}
+        )}
 
-      <ConfirmationDialog
+        <ConfirmationDialog
         isOpen={showConfirmDialog}
         onClose={() => { setShowConfirmDialog(false); setConfirmAction(null); }}
         onConfirm={confirmAction}
@@ -202,7 +210,8 @@ const LossReports = () => {
         confirmText="Update"
         cancelText="Cancel"
         type="info"
-      />
+        />
+      </div>
     </div>
   );
 };

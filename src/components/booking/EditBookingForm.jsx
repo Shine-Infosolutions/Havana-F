@@ -179,6 +179,7 @@ const EditBookingForm = () => {
   const [showCompanyDetails, setShowCompanyDetails] = useState(false);
   const [roomServiceOrders, setRoomServiceOrders] = useState([]);
   const [restaurantOrders, setRestaurantOrders] = useState([]);
+  const [laundryOrders, setLaundryOrders] = useState([]);
   const [isNavigating, setIsNavigating] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [editItems, setEditItems] = useState([]);
@@ -576,8 +577,28 @@ const EditBookingForm = () => {
         return isForThisBooking && isNotCancelled;
       });
       
+      // Fetch laundry orders by room number and GRC
+      const laundryResponse = await axios.get('/api/laundry/all', {
+        headers: { 'Authorization': `Bearer ${token}` },
+        params: {
+          search: editBooking.roomNumber || editBooking.grcNo
+        }
+      });
+      
+      // Filter laundry orders by room number or GRC
+      const allLaundryOrders = laundryResponse.data.orders || laundryResponse.data || [];
+      const filteredLaundry = allLaundryOrders.filter(order => {
+        const matchesRoom = roomNumbers.some(roomNum => order.roomNumber === roomNum);
+        const matchesGRC = order.grcNo === editBooking.grcNo;
+        const matchesBooking = order.bookingId === editBooking._id;
+        const isNotCancelled = order.laundryStatus !== 'cancelled' && order.laundryStatus !== 'canceled';
+        
+        return (matchesRoom || matchesGRC || matchesBooking) && isNotCancelled;
+      });
+      
       setRoomServiceOrders(filteredRoomService);
       setRestaurantOrders(filteredRestaurant);
+      setLaundryOrders(filteredLaundry);
     } catch (error) {
       console.error('Error fetching orders:', error);
     }
@@ -1885,7 +1906,7 @@ const EditBookingForm = () => {
                     <FaConciergeBell className="text-lg" style={{color: 'hsl(45, 43%, 58%)'}} />
                   </div>
                   <h2 className="text-xl font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>
-                    Room Service & Restaurant Orders
+                    Room Service, Restaurant & Laundry Orders
                   </h2>
                 </div>
                 
@@ -2153,6 +2174,222 @@ const EditBookingForm = () => {
                   }}
                 />
                 
+                {/* Laundry Orders */}
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-4">Laundry Orders</h3>
+                  {laundryOrders.length > 0 ? (
+                    <div className="space-y-4">
+                      {laundryOrders.map((order, index) => (
+                        <div key={order._id || index} className="border rounded-lg p-4 bg-purple-50">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            {/* Order Header */}
+                            <div>
+                              <h4 className="font-medium text-purple-800 text-lg mb-2">
+                                Laundry Order #{index + 1}
+                              </h4>
+                              <div className="space-y-1 text-sm">
+                                <p className="text-purple-600">
+                                  <span className="font-medium">Guest:</span> {order.requestedByName || editBooking.name}
+                                </p>
+                                <p className="text-purple-600">
+                                  <span className="font-medium">Room:</span> {order.roomNumber}
+                                </p>
+                                <p className="text-purple-600">
+                                  <span className="font-medium">GRC No:</span> {order.grcNo}
+                                </p>
+                                <p className="text-purple-600">
+                                  <span className="font-medium">Service:</span> 
+                                  <span className="font-medium">{order.serviceType === 'vendor' ? 'External Vendor' : 'In-House'}</span>
+                                </p>
+                                {order.vendorId && (
+                                  <p className="text-purple-600">
+                                    <span className="font-medium">Vendor:</span> {order.vendorId.vendorName || 'External Vendor'}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Order Status & Dates */}
+                            <div>
+                              <div className="flex justify-between items-start mb-3">
+                                <div>
+                                  <p className="text-sm text-purple-600 mb-2">
+                                    <span className="font-medium">Status:</span>
+                                  </p>
+                                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                    order.laundryStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                    order.laundryStatus === 'picked_up' ? 'bg-blue-100 text-blue-700' :
+                                    order.laundryStatus === 'ready' ? 'bg-green-100 text-green-700' :
+                                    order.laundryStatus === 'delivered' ? 'bg-gray-100 text-gray-700' :
+                                    order.laundryStatus === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                    'bg-orange-100 text-orange-700'
+                                  }`}>
+                                    {order.laundryStatus?.toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-lg font-bold text-purple-800">
+                                    ₹{order.items?.filter(item => !item.nonChargeable && item.status !== 'lost').reduce((sum, item) => sum + (item.calculatedAmount || 0), 0)?.toFixed(2) || '0.00'}
+                                  </p>
+                                  <p className="text-xs text-purple-600">Chargeable Amount</p>
+                                </div>
+                              </div>
+                              
+                              {/* Important Dates */}
+                              <div className="space-y-1 text-sm">
+                                <p className="text-purple-600">
+                                  <span className="font-medium">Created:</span> {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}
+                                </p>
+                                {order.pickupDate && (
+                                  <p className="text-purple-600">
+                                    <span className="font-medium">Pickup:</span> {new Date(order.pickupDate).toLocaleDateString()}
+                                  </p>
+                                )}
+                                {order.deliveryDate && (
+                                  <p className="text-purple-600">
+                                    <span className="font-medium">Delivery:</span> {new Date(order.deliveryDate).toLocaleDateString()}
+                                  </p>
+                                )}
+                                {order.expectedDelivery && (
+                                  <p className="text-purple-600">
+                                    <span className="font-medium">Expected:</span> {new Date(order.expectedDelivery).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Items Details */}
+                          {order.items && order.items.length > 0 && (
+                            <div className="mt-4 border-t border-purple-200 pt-4">
+                              <h5 className="font-medium text-purple-700 mb-3 flex items-center justify-between">
+                                <span>Items ({order.items.length})</span>
+                                <span className="text-sm font-normal">
+                                  Total Qty: {order.items.reduce((sum, item) => sum + (item.quantity || 0), 0)}
+                                </span>
+                              </h5>
+                              <div className="grid gap-2">
+                                {order.items.map((item, itemIndex) => (
+                                  <div key={itemIndex} className="flex justify-between items-center text-sm bg-white p-3 rounded border">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className={`font-medium ${item.status === 'lost' || item.status === 'cancelled' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                          {item.itemName}
+                                        </span>
+                                        <span className="text-gray-500">×{item.quantity}</span>
+                                        {item.category && (
+                                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                            {item.category}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                          item.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                          item.status === 'picked_up' ? 'bg-blue-100 text-blue-700' :
+                                          item.status === 'ready' ? 'bg-green-100 text-green-700' :
+                                          item.status === 'delivered' ? 'bg-gray-100 text-gray-700' :
+                                          item.status === 'lost' ? 'bg-orange-100 text-orange-700' :
+                                          'bg-red-100 text-red-700'
+                                        }`}>
+                                          {item.status?.toUpperCase()}
+                                        </span>
+                                        {item.nonChargeable && (
+                                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                                            NON-CHARGEABLE
+                                          </span>
+                                        )}
+                                        {item.urgentService && (
+                                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                                            URGENT
+                                          </span>
+                                        )}
+                                      </div>
+                                      {item.notes && (
+                                        <p className="text-xs text-gray-600 mt-1 italic">
+                                          Note: {item.notes}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="text-right ml-4">
+                                      <div className="font-medium">
+                                        {item.nonChargeable ? (
+                                          <span className="text-green-600">NC</span>
+                                        ) : item.status === 'lost' ? (
+                                          <span className="text-orange-600">LOST</span>
+                                        ) : (
+                                          <span className="text-gray-800">₹{(item.calculatedAmount || 0).toFixed(2)}</span>
+                                        )}
+                                      </div>
+                                      {!item.nonChargeable && item.status !== 'lost' && item.price && (
+                                        <div className="text-xs text-gray-500">
+                                          ₹{item.price} × {item.quantity}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              {/* Order Summary */}
+                              <div className="mt-3 pt-3 border-t border-purple-200">
+                                <div className="flex justify-between text-sm">
+                                  <div className="space-y-1">
+                                    <p className="text-purple-600">
+                                      <span className="font-medium">Total Items:</span> {order.items.length}
+                                    </p>
+                                    <p className="text-purple-600">
+                                      <span className="font-medium">Chargeable Items:</span> {order.items.filter(item => !item.nonChargeable && item.status !== 'lost').length}
+                                    </p>
+                                    {order.items.some(item => item.nonChargeable) && (
+                                      <p className="text-green-600">
+                                        <span className="font-medium">Non-Chargeable:</span> {order.items.filter(item => item.nonChargeable).length}
+                                      </p>
+                                    )}
+                                    {order.items.some(item => item.status === 'lost') && (
+                                      <p className="text-orange-600">
+                                        <span className="font-medium">Lost Items:</span> {order.items.filter(item => item.status === 'lost').length}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-purple-600 text-sm">
+                                      <span className="font-medium">Subtotal:</span> ₹{order.items.reduce((sum, item) => sum + (item.calculatedAmount || 0), 0).toFixed(2)}
+                                    </p>
+                                    <p className="text-purple-600 text-sm">
+                                      <span className="font-medium">Final Total:</span> ₹{order.items.filter(item => !item.nonChargeable && item.status !== 'lost').reduce((sum, item) => sum + (item.calculatedAmount || 0), 0).toFixed(2)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Special Instructions or Notes */}
+                          {order.specialInstructions && (
+                            <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
+                              <p className="text-sm">
+                                <span className="font-medium text-blue-800">Special Instructions:</span>
+                                <span className="text-blue-700 ml-2">{order.specialInstructions}</span>
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="text-gray-400 mb-2">
+                        <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <p className="text-gray-500 text-lg font-medium">No laundry orders found</p>
+                      <p className="text-gray-400 text-sm">No laundry orders have been created for this booking yet.</p>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="flex justify-center gap-4">
                   <Button
                     type="button"
@@ -2186,6 +2423,21 @@ const EditBookingForm = () => {
                     style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
                   >
                     + Create New Restaurant Order
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setIsNavigating(true);
+                      navigate('/laundry/orders/create', {
+                        state: { 
+                          preSelectedBooking: editBooking
+                        }
+                      });
+                    }}
+                    className="px-6 py-3 rounded-lg font-medium text-white transition-colors"
+                    style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
+                  >
+                    + Create New Laundry Order
                   </Button>
                 </div>
               </section>
@@ -2302,7 +2554,16 @@ const EditBookingForm = () => {
                           const roomSubtotal = roomRate + extraBedTotal;
                           const discountAmount = roomSubtotal * (Number(formData.discountPercent || 0) / 100);
                           const discountedRoomSubtotal = roomSubtotal - discountAmount;
-                          const subtotal = discountedRoomSubtotal + roomServiceTotal + restaurantTotal;
+                          
+                          // Calculate laundry charges (exclude cancelled orders)
+                          const activeLaundryOrders = laundryOrders.filter(order => 
+                            order.laundryStatus !== 'cancelled' && order.laundryStatus !== 'canceled'
+                          );
+                          const laundryTotal = activeLaundryOrders.reduce((sum, order) => {
+                            return sum + (order.items?.filter(item => !item.nonChargeable && item.status !== 'lost').reduce((itemSum, item) => itemSum + (item.calculatedAmount || 0), 0) || 0);
+                          }, 0);
+                          
+                          const subtotal = discountedRoomSubtotal + roomServiceTotal + restaurantTotal + laundryTotal;
                           
                           // If non-chargeable, all amounts are 0
                           let cgstAmount, sgstAmount, totalWithTax;
@@ -2343,21 +2604,23 @@ const EditBookingForm = () => {
                                   <span>₹{extraBedTotal.toFixed(2)}</span>
                                 </div>
                               )}
-                              {(roomServiceTotal > 0 || restaurantTotal > 0) && (
-                                <>
-                                  {roomServiceTotal > 0 && (
-                                    <div className="flex justify-between">
-                                      <span>Room Service ({activeRoomServiceOrders.length} orders):</span>
-                                      <span>₹{roomServiceTotal.toFixed(2)}</span>
-                                    </div>
-                                  )}
-                                  {restaurantTotal > 0 && (
-                                    <div className="flex justify-between">
-                                      <span>Restaurant ({activeRestaurantOrders.length} orders):</span>
-                                      <span>₹{restaurantTotal.toFixed(2)}</span>
-                                    </div>
-                                  )}
-                                </>
+                              {roomServiceTotal > 0 && (
+                                <div className="flex justify-between">
+                                  <span>Room Service ({activeRoomServiceOrders.length} orders):</span>
+                                  <span>₹{roomServiceTotal.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {restaurantTotal > 0 && (
+                                <div className="flex justify-between">
+                                  <span>Restaurant ({activeRestaurantOrders.length} orders):</span>
+                                  <span>₹{restaurantTotal.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {laundryTotal > 0 && (
+                                <div className="flex justify-between">
+                                  <span>Laundry ({activeLaundryOrders.length} orders):</span>
+                                  <span>₹{laundryTotal.toFixed(2)}</span>
+                                </div>
                               )}
                               <hr className="my-1" />
                               <div className="flex justify-between font-medium">
