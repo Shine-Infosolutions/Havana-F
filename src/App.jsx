@@ -47,6 +47,7 @@ import KOT from './components/restaurant/KOT';
 import GSTSettings from './components/restaurant/GSTSettings';
 import RestaurantInvoice from './components/restaurant/RestaurantInvoice';
 import SharedHotelInvoice from './components/booking/SharedHotelInvoice';
+import { RoomServiceInvoice, LaundryInvoice } from './components/invoices';
 import NightAuditReport from './components/reports/NightAuditReport';
 import CashManagement from './components/CashManagement/CashManagement';
 import LaundryOrders from './components/Laundry/LaundryOrders';
@@ -286,6 +287,21 @@ function App() {
             <Route path="restaurant/invoice/:orderId" element={
               <PrivateRoute requiredRoles={['ADMIN', 'GM', 'FRONT DESK']}>
                 <RestaurantInvoice />
+              </PrivateRoute>
+            } />
+            <Route path="restaurant-invoice/:bookingId" element={
+              <PrivateRoute requiredRoles={['ADMIN', 'GM', 'FRONT DESK']}>
+                <RestaurantInvoice />
+              </PrivateRoute>
+            } />
+            <Route path="room-service-invoice/:bookingId" element={
+              <PrivateRoute requiredRoles={['ADMIN', 'GM', 'FRONT DESK']}>
+                <RoomServiceInvoice />
+              </PrivateRoute>
+            } />
+            <Route path="laundry-invoice/:bookingId" element={
+              <PrivateRoute requiredRoles={['ADMIN', 'GM', 'FRONT DESK']}>
+                <LaundryInvoice />
               </PrivateRoute>
             } />
             

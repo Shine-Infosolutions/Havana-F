@@ -4,14 +4,14 @@ import ashokaLogo from '../../assets/hawana golden png.png';
 import { RiPhoneFill, RiMailFill } from 'react-icons/ri';
 import { useAppContext } from '../../context/AppContext';
 
-export default function RestaurantInvoice() {
+export default function RestaurantInvoice({ orderData: propOrderData, isEmbedded = false }) {
   const { axios } = useAppContext();
   const location = useLocation();
   const { orderId } = useParams();
-  const orderData = location.state?.orderData;
+  const orderData = propOrderData || location.state?.orderData;
   
   const [invoiceData, setInvoiceData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isEmbedded);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -180,11 +180,16 @@ export default function RestaurantInvoice() {
   };
 
   useEffect(() => {
-    const id = orderId || orderData?._id;
-    if (id || orderData) {
-      fetchInvoiceData(id);
+    if (isEmbedded && propOrderData) {
+      // For embedded mode, use the provided order data directly
+      fetchInvoiceData(propOrderData._id);
+    } else {
+      const id = orderId || orderData?._id;
+      if (id || orderData) {
+        fetchInvoiceData(id);
+      }
     }
-  }, [orderId, orderData]);
+  }, [orderId, orderData, propOrderData, isEmbedded]);
 
   const calculateTotal = () => {
     if (!invoiceData?.items) return '0.00';
@@ -212,6 +217,141 @@ export default function RestaurantInvoice() {
     return (
       <div className="min-h-screen bg-white p-2 sm:p-4 flex items-center justify-center">
         <div className="text-lg text-red-600">Failed to load invoice data</div>
+      </div>
+    );
+  }
+
+  if (isEmbedded) {
+    // Return only the invoice content for embedded mode
+    return (
+      <div className="py-4">
+          
+          <div className="client-details-grid grid grid-cols-1 lg:grid-cols-2 text-xs border border-black mb-4">
+            <div className="client-details-left border-r border-black p-2">
+              <div className="client-info-grid grid grid-cols-3 gap-x-1 gap-y-1">
+                <p className="col-span-1">Name</p>
+                <p className="col-span-2">: {isEditing ? (
+                    <input
+                      type="text"
+                      value={invoiceData.clientDetails?.name || ''}
+                      onChange={(e) => setInvoiceData({
+                        ...invoiceData,
+                        clientDetails: {...invoiceData.clientDetails, name: e.target.value}
+                      })}
+                      className="border px-1 ml-1 text-xs w-32"
+                    />
+                  ) : invoiceData.clientDetails?.name}</p>
+              </div>
+              <div className="invoice-info-grid grid grid-cols-2 gap-y-1 mt-4">
+                <p className="font-bold">Bill No. & Date</p>
+                <p className="font-medium">: {invoiceData.invoiceDetails?.billNo} {invoiceData.invoiceDetails?.billDate}</p>
+                <p className="font-bold">GRC No.</p>
+                <p className="font-medium">: {invoiceData.invoiceDetails?.grcNo}</p>
+                <p className="font-bold">Table/Room</p>
+                <p className="font-medium">: {invoiceData.invoiceDetails?.roomNo}</p>
+                <p className="font-bold">Order Date</p>
+                <p className="font-medium">: {invoiceData.invoiceDetails?.checkInDate}</p>
+                <p className="font-bold">Order Time</p>
+                <p className="font-medium">: {new Date().toLocaleTimeString()}</p>
+              </div>
+            </div>
+
+            <div className="client-details-right p-2">
+            </div>
+          </div>
+
+          <div className="mb-4 overflow-x-auto">
+            <table className="items-table w-full text-xs border-collapse">
+              <thead>
+                <tr className="border border-black bg-gray-200">
+                  <th className="p-1 border border-black whitespace-nowrap">S.No</th>
+                  <th className="p-1 border border-black whitespace-nowrap">Item Name</th>
+                  <th className="p-1 border border-black text-center whitespace-nowrap">Qty</th>
+                  <th className="p-1 border border-black text-right whitespace-nowrap">Rate</th>
+                  <th className="p-1 border border-black text-center whitespace-nowrap">HSN/SAC</th>
+                  <th className="p-1 border border-black text-right whitespace-nowrap">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoiceData.items?.map((item, index) => (
+                  <tr key={index} className="border border-black">
+                    <td className="p-1 border border-black text-center">{index + 1}</td>
+                    <td className="p-1 border border-black">{item.particulars}</td>
+                    <td className="p-1 border border-black text-center">{item.pax}</td>
+                    <td className="p-1 border border-black text-right">₹{item.declaredRate?.toFixed(2)}</td>
+                    <td className="p-1 border border-black text-center">{item.hsn}</td>
+                    <td className="p-1 border border-black text-right font-bold">₹{item.amount?.toFixed(2)}</td>
+                  </tr>
+                ))}
+                <tr className="border border-black bg-gray-100">
+                  <td colSpan="5" className="p-1 text-right font-bold border border-black">SUB TOTAL :</td>
+                  <td className="p-1 text-right border border-black font-bold">₹{calculateTotal()}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mb-4 flex justify-end">
+            <div className="w-full lg:w-1/2">
+              <p className="font-bold mb-1">Net Amount Summary</p>
+              <table className="w-full border-collapse border border-black">
+                <tbody>
+                  <tr>
+                    <td className="p-1 text-right text-xs font-medium">Subtotal:</td>
+                    <td className="p-1 border-l border-black text-right text-xs">₹{invoiceData.payment?.taxableAmount?.toFixed(2) || '0.00'}</td>
+                  </tr>
+                  {invoiceData.payment?.sgst > 0 && (
+                    <tr>
+                      <td className="p-1 text-right text-xs font-medium">SGST ({invoiceData.payment?.sgstRate || 2.5}%):</td>
+                      <td className="p-1 border-l border-black text-right text-xs">₹{invoiceData.payment.sgst.toFixed(2)}</td>
+                    </tr>
+                  )}
+                  {invoiceData.payment?.cgst > 0 && (
+                    <tr>
+                      <td className="p-1 text-right text-xs font-medium">CGST ({invoiceData.payment?.cgstRate || 2.5}%):</td>
+                      <td className="p-1 border-l border-black text-right text-xs">₹{invoiceData.payment.cgst.toFixed(2)}</td>
+                    </tr>
+                  )}
+                  <tr className="bg-gray-200">
+                    <td className="p-1 font-bold text-right text-xs">NET AMOUNT:</td>
+                    <td className="p-1 border-l border-black text-right font-bold text-xs">₹{calculateNetTotal()}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="mt-4 text-xs">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 border-b border-t border-black py-4">
+              <div>
+                <p className="font-bold">PAYMENT METHOD:</p>
+                <div className="flex items-center space-x-4 mt-2">
+                  <label className="flex items-center">
+                    <input type="checkbox" className="mr-2" /> CASH
+                  </label>
+                  <label className="flex items-center">
+                    <input type="checkbox" className="mr-2" /> CARD
+                  </label>
+                  <label className="flex items-center">
+                    <input type="checkbox" className="mr-2" /> UPI
+                  </label>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-bold">RESTAURANT TIMING: 7:00 AM - 11:00 PM</p>
+                <p>Thank you for dining with us!</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 mt-4 gap-2 sm:gap-0">
+              <div className="text-left font-bold">RESTAURANT MANAGER</div>
+              <div className="text-center font-bold">CASHIER</div>
+              <div className="text-right font-bold">Customer Sign.</div>
+              <div className="text-left text-xs">Subject to GORAKHPUR Jurisdiction only.</div>
+              <div className="text-center text-xs">E. & O.E.</div>
+              <div></div>
+            </div>
+            <p className="mt-4 text-center text-lg font-bold">Thank You, Visit Again</p>
+          </div>
       </div>
     );
   }

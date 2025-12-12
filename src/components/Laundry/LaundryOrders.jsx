@@ -445,24 +445,28 @@ const LaundryOrders = () => {
                   >
                     View
                   </button>
-                  <button 
-                    onClick={() => handleEdit(order._id)} 
-                    className="text-green-600 hover:text-green-800 hover:bg-green-50 px-2 py-1 rounded transition-colors text-sm"
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    onClick={() => handleCancel(order._id)} 
-                    className="text-orange-600 hover:text-orange-800 hover:bg-orange-50 px-2 py-1 rounded transition-colors text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(order._id)} 
-                    className="text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors text-sm"
-                  >
-                    Delete
-                  </button>
+                  {order.laundryStatus !== 'cancelled' && (
+                    <>
+                      <button 
+                        onClick={() => handleEdit(order._id)} 
+                        className="text-green-600 hover:text-green-800 hover:bg-green-50 px-2 py-1 rounded transition-colors text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleCancel(order._id)} 
+                        className="text-orange-600 hover:text-orange-800 hover:bg-orange-50 px-2 py-1 rounded transition-colors text-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(order._id)} 
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors text-sm"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -584,36 +588,40 @@ const LaundryOrders = () => {
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
                         <button 
-                          onClick={() => handleEdit(order._id)} 
-                          className="px-3 py-1.5 bg-primary hover:bg-hover text-white text-xs rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm hover:shadow-md"
-                          title="Edit Order"
-                        >
-                          Edit
-                        </button>
-                        <button 
                           onClick={() => handleView(order._id)} 
                           className="px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm hover:shadow-md"
                           title="View Order"
                         >
                           View
                         </button>
-                        {/* Only show Loss button if there are items that are not lost */}
-                        {order.items?.some(item => item.status !== 'lost') && (
-                          <button 
-                            onClick={() => handleLoss(order._id)} 
-                            className="px-3 py-1.5 bg-secondary hover:bg-primary text-white text-xs rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm hover:shadow-md"
-                            title="Report Loss"
-                          >
-                            Loss
-                          </button>
+                        {order.laundryStatus !== 'cancelled' && (
+                          <>
+                            <button 
+                              onClick={() => handleEdit(order._id)} 
+                              className="px-3 py-1.5 bg-primary hover:bg-hover text-white text-xs rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm hover:shadow-md"
+                              title="Edit Order"
+                            >
+                              Edit
+                            </button>
+                            {/* Only show Loss button if there are items that are not lost */}
+                            {order.items?.some(item => item.status !== 'lost') && (
+                              <button 
+                                onClick={() => handleLoss(order._id)} 
+                                className="px-3 py-1.5 bg-secondary hover:bg-primary text-white text-xs rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm hover:shadow-md"
+                                title="Report Loss"
+                              >
+                                Loss
+                              </button>
+                            )}
+                            <button 
+                              onClick={() => handleCancel(order._id)} 
+                              className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm hover:shadow-md"
+                              title="Cancel Order"
+                            >
+                              Cancel
+                            </button>
+                          </>
                         )}
-                        <button 
-                          onClick={() => handleCancel(order._id)} 
-                          className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm hover:shadow-md"
-                          title="Cancel Order"
-                        >
-                          Cancel
-                        </button>
                       </div>
                     </td>
                   </tr>

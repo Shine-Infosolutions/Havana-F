@@ -6,6 +6,8 @@ import { FaWhatsapp, FaFilePdf } from 'react-icons/fa';
 import { useAppContext } from '../../context/AppContext';
 import { useReactToPrint } from 'react-to-print';
 import BackButton from '../common/BackButton';
+import RestaurantInvoice from '../restaurant/RestaurantInvoice';
+import { RoomServiceInvoice, LaundryInvoice } from '../invoices';
 
 export default function Invoice() {
   const { axios } = useAppContext();
@@ -14,13 +16,17 @@ export default function Invoice() {
   const invoiceRef = useRef();
   
   const [invoiceData, setInvoiceData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [gstRates, setGstRates] = useState({ cgstRate: 2.5, sgstRate: 2.5 });
   const [showPaxDetails, setShowPaxDetails] = useState(false);
   const [laundryOrders, setLaundryOrders] = useState([]);
+  const [activeInvoice, setActiveInvoice] = useState('hotel');
+  const [restaurantOrders, setRestaurantOrders] = useState([]);
+  const [roomServiceOrders, setRoomServiceOrders] = useState([]);
+  const [loadingServices, setLoadingServices] = useState(false);
 
   // Generate or retrieve existing invoice number
   const getOrGenerateInvoiceNumber = async (orderId, prefix) => {
@@ -93,11 +99,102 @@ export default function Invoice() {
   };
 
   useEffect(() => {
-    const checkoutId = location.state?.checkoutId || bookingData?._id;
-    if (checkoutId) {
-      fetchInvoiceData(checkoutId);
+    if (activeInvoice === 'hotel') {
+      const checkoutId = location.state?.checkoutId || bookingData?._id;
+      if (checkoutId) {
+        fetchInvoiceData(checkoutId);
+      }
     }
-  }, [location.state]);
+  }, [location.state, activeInvoice]);
+
+  useEffect(() => {
+    if (activeInvoice === 'restaurant' && bookingData?._id && restaurantOrders.length === 0) {
+      const fetchRestaurantOrders = async () => {
+        setLoadingServices(true);
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get('/api/restaurant-orders/all', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const bookingOrders = response.data.filter(order => 
+            order.bookingId?._id === bookingData._id || order.bookingId === bookingData._id
+          );
+          setRestaurantOrders(bookingOrders);
+        } catch (error) {
+          console.error('Error fetching restaurant orders:', error);
+        } finally {
+          setLoadingServices(false);
+        }
+      };
+      fetchRestaurantOrders();
+    }
+
+    if (activeInvoice === 'roomservice' && bookingData?._id && roomServiceOrders.length === 0) {
+      const fetchRoomServiceOrders = async () => {
+        setLoadingServices(true);
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get('/api/room-service/all', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const orders = Array.isArray(response.data) ? response.data : (response.data.orders || []);
+          const bookingOrders = orders.filter(order => 
+            order.bookingId?._id === bookingData._id || order.bookingId === bookingData._id
+          );
+          setRoomServiceOrders(bookingOrders);
+        } catch (error) {
+          console.error('Error fetching room service orders:', error);
+          setRoomServiceOrders([]);
+        } finally {
+          setLoadingServices(false);
+        }
+      };
+      fetchRoomServiceOrders();
+    }
+
+    if (activeInvoice === 'laundry' && bookingData?._id && laundryOrders.length === 0) {
+      const fetchLaundryOrdersForTab = async () => {
+        setLoadingServices(true);
+        try {
+          const token = localStorage.getItem('token');
+          // Try multiple API endpoints
+          let response;
+          try {
+            response = await axios.get(`/api/laundry/booking/${bookingData._id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+          } catch (err) {
+            response = await axios.get('/api/laundry/all', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+          }
+          
+          let orders = response.data.orders || response.data || [];
+          
+          // Filter by booking ID
+          const bookingOrders = orders.filter(order => {
+            return order.bookingId?._id === bookingData._id || 
+                   order.bookingId === bookingData._id ||
+                   order.booking?._id === bookingData._id ||
+                   order.booking === bookingData._id;
+          });
+          
+          const filteredLaundry = bookingOrders.filter(order => {
+            const isNotCancelled = order.laundryStatus !== 'cancelled' && order.laundryStatus !== 'canceled';
+            return isNotCancelled;
+          });
+
+          setLaundryOrders(filteredLaundry);
+        } catch (error) {
+          console.error('Error fetching laundry orders:', error);
+          setLaundryOrders([]);
+        } finally {
+          setLoadingServices(false);
+        }
+      };
+      fetchLaundryOrdersForTab();
+    }
+  }, [activeInvoice, bookingData?._id]);
 
   // Fetch invoice data from checkout API or use restaurant order data
   const fetchInvoiceData = async (checkoutId) => {
@@ -371,17 +468,14 @@ export default function Invoice() {
   };
 
   useEffect(() => {
-    // GST rates will be loaded from booking data in fetchInvoiceData
-    // No need to load from localStorage as we want booking-specific rates
-    
-    if (bookingData) {
-      // Use the checkout ID from navigation state or create one for restaurant orders
+    // Only fetch invoice data for hotel tab
+    if (activeInvoice === 'hotel' && bookingData) {
       const checkoutId = location.state?.checkoutId || bookingData._id || bookingData.id || `REST-${Date.now()}`;
       if (checkoutId) {
         fetchInvoiceData(checkoutId);
       }
     }
-  }, [bookingData, location.state]);
+  }, [bookingData, location.state, activeInvoice]);
 
   const calculateTotal = () => {
     if (!invoiceData?.items) return '0.00';
@@ -508,167 +602,223 @@ export default function Invoice() {
     window.open(whatsappUrl, '_blank');
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white p-2 sm:p-4 flex items-center justify-center">
-        <div className="text-lg">Loading Invoice...</div>
-      </div>
-    );
+  // Only show loading for hotel tab
+  if (activeInvoice === 'hotel') {
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-white p-2 sm:p-4 flex items-center justify-center">
+          <div className="text-lg">Loading Invoice...</div>
+        </div>
+      );
+    }
+
+    if (!invoiceData) {
+      return (
+        <div className="min-h-screen bg-white p-2 sm:p-4 flex items-center justify-center">
+          <div className="text-lg text-red-600">Failed to load invoice data</div>
+        </div>
+      );
+    }
   }
 
-  if (!invoiceData) {
-    return (
-      <div className="min-h-screen bg-white p-2 sm:p-4 flex items-center justify-center">
-        <div className="text-lg text-red-600">Failed to load invoice data</div>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <style>{`
-        @media print {
-          * { visibility: hidden; }
-          .print-content, .print-content * { visibility: visible !important; }
-          .print-content { 
-            position: absolute; 
-            left: 0; 
-            top: 0; 
-            width: 100%; 
-            box-sizing: border-box;
-            padding: 10px;
-          }
-          .no-print { display: none !important; }
-          @page { 
-            margin: 0.2in; 
-            size: A4;
-          }
-          body { margin: 0; padding: 0; background: white !important; }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          table { border-collapse: collapse !important; }
-          table, th, td { border: 1px solid black !important; }
-          .client-details-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; }
-          .client-details-left { border-right: 1px solid black !important; }
-          .client-info-grid { display: grid !important; grid-template-columns: auto auto 1fr !important; }
-          .invoice-info-grid { display: grid !important; grid-template-columns: auto 1fr !important; }
-          .overflow-x-auto { overflow: visible !important; }
-          table { page-break-inside: auto; }
-          tr { page-break-inside: avoid; page-break-after: auto; }
-          
-          /* Maintain client details layout */
-          .client-details-grid {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            border: 1px solid black !important;
-          }
-          .client-details-left {
-            border-right: 1px solid black !important;
-            padding: 8px !important;
-          }
-          .client-details-right {
-            padding: 8px !important;
-          }
-          .client-info-grid {
-            display: grid !important;
-            grid-template-columns: auto auto 1fr !important;
-            gap: 0px 4px !important;
-          }
-          .invoice-info-grid {
-            display: grid !important;
-            grid-template-columns: auto 1fr !important;
-            gap: 4px 8px !important;
-          }
-          .items-table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            font-size: 12px !important;
-          }
-          .items-table th, .items-table td {
-            border: 1px solid black !important;
-            padding: 6px !important;
-            font-size: 12px !important;
-          }
-          .items-table th:nth-child(1), .items-table td:nth-child(1) { width: 10% !important; }
-          .items-table th:nth-child(2), .items-table td:nth-child(2) { width: 35% !important; }
-          .items-table th:nth-child(3), .items-table td:nth-child(3) { width: 8% !important; }
-          .items-table th:nth-child(4), .items-table td:nth-child(4) { width: 15% !important; }
-          .items-table th:nth-child(5), .items-table td:nth-child(5) { width: 12% !important; }
-          .items-table th:nth-child(6), .items-table td:nth-child(6) { width: 20% !important; }
-          .contact-info {
-            position: absolute !important;
-            top: 10px !important;
-            right: 10px !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: flex-end !important;
-            font-size: 10px !important;
-          }
-        }
-      `}</style>
-      <div className="min-h-screen bg-white p-2 sm:p-4">
-      <div ref={invoiceRef} className="max-w-7xl mx-auto border-2 border-black p-2 sm:p-4 print-content relative" style={{
-        backgroundImage: `url(${ashokaLogo})`,
-        backgroundSize: '40%',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}>
-        <div className="absolute inset-0 bg-white/80 pointer-events-none"></div>
-        <div className="relative z-10">
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-4 space-y-4 lg:space-y-0">
-          <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <div className="w-20 h-20 sm:w-24 sm:h-24">
-              <img src={ashokaLogo} alt="Havana Logo" className="w-full h-full object-contain" />
-            </div>
-            <div className="text-xs text-center sm:text-left">
-              <p className="font-bold text-sm sm:text-base">HOTEL HAVANA </p>
-              <p className="text-xs">Deoria Bypass Rd, near LIC Office Gorakhpur</p>
-              <p className="text-xs">Taramandal, Gorakhpur, Uttar Pradesh 273016</p>
-              <p className="text-xs">Website: <a href="https://hotelhavana.com" className="text-blue-600">hotelhavana.com</a></p>
-              <p className="text-xs">contact@hotelhavana.in</p>
-              <p className="text-xs font-semibold">GSTIN: 09ACIFA2416J1ZF</p>
-            </div>
+  // Render different invoice components based on active selection
+  const renderInvoiceContent = () => {
+    if (activeInvoice === 'restaurant') {
+      if (loadingServices) {
+        return <div className="text-center py-8">Loading restaurant orders...</div>;
+      }
+      
+      if (restaurantOrders.length === 0) {
+        return (
+          <div className="text-center py-8">
+            <p className="text-lg font-bold mb-4">No Restaurant Orders</p>
+            <p className="text-gray-600">No restaurant orders found for this booking.</p>
           </div>
-          <div className="contact-info flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
-            <div className="text-xs flex items-center space-x-2">
-                <RiPhoneFill className="text-lg text-yellow-600" />
-                <span>+91-9451903390</span>
-            </div>
-            <div className="text-xs flex items-center space-x-2">
-                <RiMailFill className="text-lg text-yellow-600" />
-                <span>contact@hotelhavana.in</span>
-            </div>
-          </div>
+        );
+      }
+      
+      if (restaurantOrders.length > 0) {
+        const order = restaurantOrders[0];
+        return <RestaurantInvoice orderData={order} isEmbedded={true} />;
+      }
+      
+      return (
+        <div className="text-center py-8">
+          <p className="text-lg font-bold mb-4">No Restaurant Orders</p>
+          <p className="text-gray-600">No restaurant orders found for this booking.</p>
         </div>
-
-        <div className="flex justify-between items-center mb-2">
-          <div className="text-center font-bold text-lg flex-1">
-            TAX INVOICE
+      );
+    }
+    if (activeInvoice === 'roomservice') {
+      if (loadingServices) {
+        return <div className="text-center py-8">Loading room service orders...</div>;
+      }
+      
+      if (roomServiceOrders.length === 0) {
+        return (
+          <div className="text-center py-8">
+            <p className="text-lg font-bold mb-4">No Room Service Orders</p>
+            <p className="text-gray-600">No room service orders found for this booking.</p>
           </div>
-          <div className="flex gap-2 no-print">
-            <BackButton to="/booking" />
-            <button
-              onClick={() => setShowPaxDetails(!showPaxDetails)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-            >
-              {showPaxDetails ? 'Hide PAX' : 'Show PAX'}
-            </button>
-            <button
-              onClick={shareInvoicePDF}
-              disabled={generatingPdf}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm flex items-center gap-2 disabled:opacity-50"
-            >
-              <FaWhatsapp className="text-lg" />
-              Share on WhatsApp
-            </button>
-            <button
-              onClick={() => window.print()}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-            >
-              Print
-            </button>
-          </div>
-        </div>
+        );
+      }
+      
+      if (roomServiceOrders.length > 0) {
+        const order = roomServiceOrders[0];
+        console.log('Room service order:', order);
+        console.log('Room service items:', order.items);
+        const orderDate = new Date(order.createdAt);
+        const billNo = `RS-${order._id?.slice(-6) || 'adf49c'}`;
+        const grcNo = order.grcNo || bookingData?.grcNo || 'GRC0001';
+        const customerName = order.guestName || order.customerName || bookingData?.name || 'Guest';
+        const roomNumber = order.roomNumber || order.roomNo || (bookingData?.roomGuestDetails?.[0]?.roomNumber ? `Room ${bookingData.roomGuestDetails[0].roomNumber}` : 'Room 201');
+        const subtotal = order.items?.reduce((sum, item) => sum + (item.totalPrice || 0), 0) || 0;
         
+        return (
+          <div className="py-4">
+            {/* Customer Details Section */}
+            <div className="client-details-grid grid grid-cols-1 lg:grid-cols-2 text-xs border border-black mb-4">
+              <div className="client-details-left border-r border-black p-2">
+                <div className="client-info-grid grid grid-cols-3 gap-x-1 gap-y-1">
+                  <p className="col-span-1">Name</p>
+                  <p className="col-span-2">: {customerName}</p>
+                  <p className="col-span-1">Bill No. & Date</p>
+                  <p className="col-span-2">: {billNo} {orderDate.toLocaleDateString('en-GB')}</p>
+                  <p className="col-span-1">GRC No.</p>
+                  <p className="col-span-2">: {grcNo}</p>
+                  <p className="col-span-1">Room</p>
+                  <p className="col-span-2">: {roomNumber}</p>
+                  <p className="col-span-1">Order Date</p>
+                  <p className="col-span-2">: {orderDate.toLocaleDateString('en-GB')}</p>
+                  <p className="col-span-1">Order Time</p>
+                  <p className="col-span-2">: {orderDate.toLocaleTimeString('en-US', { hour12: true })}</p>
+                </div>
+              </div>
+              <div className="client-details-right p-2">
+              </div>
+            </div>
+
+            {/* Items Table */}
+            <div className="mb-4 overflow-x-auto">
+              <table className="w-full text-xs border-collapse border border-black">
+                <thead>
+                  <tr className="border border-black bg-gray-200">
+                    <th className="p-2 border border-black">S.No</th>
+                    <th className="p-2 border border-black">Item Name</th>
+                    <th className="p-2 border border-black">Qty</th>
+                    <th className="p-2 border border-black">Rate</th>
+                    <th className="p-2 border border-black">HSN/SAC</th>
+                    <th className="p-2 border border-black">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {order.items?.map((item, index) => (
+                    <tr key={index} className="border border-black">
+                      <td className="p-2 border border-black text-center">{index + 1}</td>
+                      <td className="p-2 border border-black">{item.itemName || item.name}</td>
+                      <td className="p-2 border border-black text-center">{item.quantity}</td>
+                      <td className="p-2 border border-black text-right">₹{(item.unitPrice || 0).toFixed(2)}</td>
+                      <td className="p-2 border border-black text-center">996332</td>
+                      <td className="p-2 border border-black text-right">₹{(item.totalPrice || 0).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="border border-black bg-gray-100">
+                    <td colSpan="5" className="p-2 text-right font-bold border border-black">SUB TOTAL :</td>
+                    <td className="p-2 text-right border border-black font-bold">₹{subtotal.toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Net Amount Summary */}
+            <div className="mb-4 flex justify-end">
+              <div className="w-full lg:w-1/2">
+                <p className="font-bold mb-1">Net Amount Summary</p>
+                <table className="w-full border-collapse border border-black">
+                  <tbody>
+                    <tr>
+                      <td className="p-1 text-right text-xs font-medium">Subtotal:</td>
+                      <td className="p-1 border-l border-black text-right text-xs">₹{subtotal.toFixed(2)}</td>
+                    </tr>
+                    <tr className="bg-gray-200">
+                      <td className="p-1 font-bold text-right text-xs">NET AMOUNT:</td>
+                      <td className="p-1 border-l border-black text-right font-bold text-xs">₹{subtotal.toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mt-4 text-xs">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 border-b border-t border-black py-4">
+                <div>
+                  <p className="font-bold">PAYMENT METHOD:</p>
+                  <div className="flex items-center space-x-4 mt-2">
+                    <label className="flex items-center">
+                      <input type="checkbox" className="mr-2" /> CASH
+                    </label>
+                    <label className="flex items-center">
+                      <input type="checkbox" className="mr-2" /> CARD
+                    </label>
+                    <label className="flex items-center">
+                      <input type="checkbox" className="mr-2" /> UPI
+                    </label>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold">ROOM SERVICE TIMING: 24 Hours</p>
+                  <p>Thank you for choosing our room service!</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 mt-4 gap-2 sm:gap-0">
+                <div className="text-left font-bold">ROOM SERVICE MANAGER</div>
+                <div className="text-center font-bold">CASHIER</div>
+                <div className="text-right font-bold">Customer Sign.</div>
+                <div className="text-left text-xs">Subject to GORAKHPUR Jurisdiction only.</div>
+                <div className="text-center text-xs">E. & O.E.</div>
+                <div></div>
+              </div>
+              <p className="mt-4 text-center text-lg font-bold">Thank You, Visit Again</p>
+            </div>
+          </div>
+        );
+      }
+      
+      return (
+        <div className="text-center py-8">
+          <p className="text-lg font-bold mb-4">No Room Service Orders</p>
+          <p className="text-gray-600">No room service orders found for this booking.</p>
+        </div>
+      );
+    }
+    if (activeInvoice === 'laundry') {
+      if (loadingServices) {
+        return <div className="text-center py-8">Loading laundry orders...</div>;
+      }
+      
+      if (laundryOrders.length === 0) {
+        return (
+          <div className="text-center py-8">
+            <p className="text-lg font-bold mb-4">No Laundry Orders</p>
+            <p className="text-gray-600">No laundry orders found for this booking.</p>
+          </div>
+        );
+      }
+      
+      if (laundryOrders.length > 0) {
+        // Combine all laundry orders into one invoice
+        const combinedOrder = {
+          ...laundryOrders[0],
+          items: laundryOrders.flatMap(order => order.items || []),
+          totalAmount: laundryOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0)
+        };
+        return <LaundryInvoice orderData={combinedOrder} isEmbedded={true} />;
+      }
+    }
+    // Default hotel invoice content
+    return (
+      <>
         <div className="client-details-grid grid grid-cols-1 lg:grid-cols-2 text-xs border border-black mb-2">
           <div className="client-details-left border-r border-black p-2">
             {(bookingData?.companyGSTIN && bookingData.companyGSTIN.trim() !== '') && (
@@ -1249,9 +1399,165 @@ export default function Invoice() {
           </div>
           <p className="mt-4 text-center text-lg font-bold">Thank You, Visit Again</p>
         </div>
+      </>
+    );
+  };
+
+  return (
+    <>
+      <style>{`
+        @media print {
+          * { visibility: hidden; }
+          .print-content, .print-content * { visibility: visible !important; }
+          .print-content { 
+            position: absolute; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            box-sizing: border-box;
+            padding: 10px;
+          }
+          .no-print { display: none !important; }
+          @page { 
+            margin: 0.2in; 
+            size: A4;
+          }
+          body { margin: 0; padding: 0; background: white !important; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          table { border-collapse: collapse !important; }
+          table, th, td { border: 1px solid black !important; }
+          .client-details-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; }
+          .client-details-left { border-right: 1px solid black !important; }
+          .client-info-grid { display: grid !important; grid-template-columns: auto auto 1fr !important; }
+          .invoice-info-grid { display: grid !important; grid-template-columns: auto 1fr !important; }
+          .overflow-x-auto { overflow: visible !important; }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+          .items-table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 12px !important;
+          }
+          .items-table th, .items-table td {
+            border: 1px solid black !important;
+            padding: 6px !important;
+            font-size: 12px !important;
+          }
+          .contact-info {
+            position: absolute !important;
+            top: 10px !important;
+            right: 10px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-end !important;
+            font-size: 10px !important;
+          }
+        }
+      `}</style>
+      <div className="min-h-screen bg-white p-2 sm:p-4">
+        <div ref={invoiceRef} className="max-w-7xl mx-auto border-2 border-black p-2 sm:p-4 print-content relative" style={{
+          backgroundImage: `url(${ashokaLogo})`,
+          backgroundSize: '40%',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}>
+          <div className="absolute inset-0 bg-white/80 pointer-events-none"></div>
+          <div className="relative z-10">
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-4 space-y-4 lg:space-y-0">
+              <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <div className="w-20 h-20 sm:w-24 sm:h-24">
+                  <img src={ashokaLogo} alt="Havana Logo" className="w-full h-full object-contain" />
+                </div>
+                <div className="text-xs text-center sm:text-left">
+                  <p className="font-bold text-sm sm:text-base">HOTEL HAVANA </p>
+                  <p className="text-xs">Deoria Bypass Rd, near LIC Office Gorakhpur</p>
+                  <p className="text-xs">Taramandal, Gorakhpur, Uttar Pradesh 273016</p>
+                  <p className="text-xs">Website: <a href="https://hotelhavana.com" className="text-blue-600">hotelhavana.com</a></p>
+                  <p className="text-xs">contact@hotelhavana.in</p>
+                  <p className="text-xs font-semibold">GSTIN: 09ACIFA2416J1ZF</p>
+                </div>
+              </div>
+              <div className="contact-info flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                <div className="text-xs flex items-center space-x-2">
+                    <RiPhoneFill className="text-lg text-yellow-600" />
+                    <span>+91-9451903390</span>
+                </div>
+                <div className="text-xs flex items-center space-x-2">
+                    <RiMailFill className="text-lg text-yellow-600" />
+                    <span>contact@hotelhavana.in</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-4 no-print">
+              <div className="flex justify-between items-center mb-2">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setActiveInvoice('hotel')}
+                    className={`px-3 py-2 rounded text-sm ${activeInvoice === 'hotel' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                  >
+                    Hotel Invoice
+                  </button>
+                  <button
+                    onClick={() => setActiveInvoice('roomservice')}
+                    className={`px-3 py-2 rounded text-sm ${activeInvoice === 'roomservice' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                  >
+                    Room Service
+                  </button>
+                  <button
+                    onClick={() => setActiveInvoice('restaurant')}
+                    className={`px-3 py-2 rounded text-sm ${activeInvoice === 'restaurant' ? 'bg-orange-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                  >
+                    Restaurant
+                  </button>
+                  <button
+                    onClick={() => setActiveInvoice('laundry')}
+                    className={`px-3 py-2 rounded text-sm ${activeInvoice === 'laundry' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                  >
+                    Laundry
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <BackButton to="/booking" />
+                  {activeInvoice === 'hotel' && (
+                    <button
+                      onClick={() => setShowPaxDetails(!showPaxDetails)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                    >
+                      {showPaxDetails ? 'Hide PAX' : 'Show PAX'}
+                    </button>
+                  )}
+                  <button
+                    onClick={shareInvoicePDF}
+                    disabled={generatingPdf}
+                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <FaWhatsapp className="text-lg" />
+                    Share on WhatsApp
+                  </button>
+                  <button
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                  >
+                    Print
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-center font-bold text-lg flex-1">
+                {activeInvoice === 'hotel' && 'TAX INVOICE'}
+                {activeInvoice === 'roomservice' && 'ROOM SERVICE INVOICE'}
+                {activeInvoice === 'restaurant' && 'RESTAURANT INVOICE'}
+                {activeInvoice === 'laundry' && 'LAUNDRY INVOICE'}
+              </div>
+            </div>
+
+            {renderInvoiceContent()}
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 }
