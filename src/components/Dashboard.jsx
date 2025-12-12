@@ -12,6 +12,7 @@ import {
   Clock,
   AlertTriangle,
   LogOut,
+  Download,
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +24,73 @@ import DashboardLoader from "./DashboardLoader";
 
 const Dashboard = () => {
   const { axios } = useAppContext();
+
+  const exportCSV = async (cardId) => {
+    try {
+      const token = localStorage.getItem('token');
+      let url = '';
+      let filename = '';
+      
+      switch (cardId) {
+        case 'bookings':
+          url = '/api/dashboard/export/total-bookings';
+          filename = 'total-bookings.csv';
+          break;
+        case 'active':
+          url = '/api/dashboard/export/active-bookings';
+          filename = 'active-bookings.csv';
+          break;
+        case 'cancelled':
+          url = '/api/dashboard/export/cancelled-bookings';
+          filename = 'cancelled-bookings.csv';
+          break;
+        case 'revenue':
+          url = '/api/dashboard/export/revenue';
+          filename = 'revenue.csv';
+          break;
+        case 'online':
+          url = '/api/dashboard/export/online-payments';
+          filename = 'online-payments.csv';
+          break;
+        case 'cash':
+          url = '/api/dashboard/export/cash-payments';
+          filename = 'cash-payments.csv';
+          break;
+        case 'restaurant':
+          url = '/api/dashboard/export/restaurant-orders';
+          filename = 'restaurant-orders.csv';
+          break;
+        case 'laundry':
+          url = '/api/laundry/export/csv';
+          filename = 'laundry-orders.csv';
+          break;
+        default:
+          return;
+      }
+      
+      // Add filter parameters
+      url += `?filter=${timeFrame}`;
+      if (timeFrame === 'range' && startDate && endDate) {
+        url += `&startDate=${startDate}&endDate=${endDate}`;
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}${url}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        a.click();
+        window.URL.revokeObjectURL(downloadUrl);
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+    }
+  };
   const navigate = useNavigate();
   const [activeCard, setActiveCard] = useState(() => {
     const savedCard = localStorage.getItem("activeCard");
@@ -233,6 +301,15 @@ const Dashboard = () => {
         value: (allServiceData.restaurant?.length || 0).toString(),
         icon: "Users",
         color: "bg-orange-500",
+        trend: "+0%",
+        trendUp: true,
+      },
+      {
+        id: "laundry",
+        title: "Laundry Orders",
+        value: (allServiceData.laundry?.length || 0).toString(),
+        icon: "Users",
+        color: "bg-purple-500",
         trend: "+0%",
         trendUp: true,
       },
@@ -662,6 +739,55 @@ const Dashboard = () => {
             </div>
           </div>
         );
+      case 'laundry':
+        return (
+          <div className="p-4">
+            <h3 className="text-lg font-semibold mb-4">Laundry Orders Details</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200">
+                <thead className="bg-purple-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Room</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">GRC No</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Service Type</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {allServiceData.laundry?.slice(0, 10).map((order, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm">{order._id?.slice(-6) || index + 1}</td>
+                      <td className="px-4 py-2 text-sm">{order.roomNumber || 'N/A'}</td>
+                      <td className="px-4 py-2 text-sm">{order.grcNo || 'N/A'}</td>
+                      <td className="px-4 py-2 text-sm">
+                        <span className={`px-2 py-1 text-xs rounded ${
+                          order.laundryStatus === 'delivered' ? 'bg-green-100 text-green-800' :
+                          order.laundryStatus === 'cancelled' ? 'bg-red-100 text-red-800' :
+                          order.laundryStatus === 'ready' ? 'bg-blue-100 text-blue-800' :
+                          order.laundryStatus === 'picked_up' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {order.laundryStatus || 'pending'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-sm">{order.serviceType || 'N/A'}</td>
+                      <td className="px-4 py-2 text-sm">{order.items?.length || 0} items</td>
+                      <td className="px-4 py-2 text-sm">₹{(order.totalAmount || 0).toLocaleString()}</td>
+                      <td className="px-4 py-2 text-sm">{new Date(order.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {allServiceData.laundry?.length > 10 && (
+                <p className="text-sm text-gray-500 mt-2">Showing first 10 of {allServiceData.laundry.length} orders</p>
+              )}
+            </div>
+          </div>
+        );
       default:
         return <div className="p-4 text-center text-gray-500">Select a card to view details</div>;
     }
@@ -778,13 +904,25 @@ const Dashboard = () => {
                   <div className={`p-2 rounded-lg ${card.color} text-white`}>
                     <IconComponent className="w-5 h-5" />
                   </div>
-                  <span
-                    className={`text-xs font-medium ${
-                      card.trendUp ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {card.trend}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        exportCSV(card.id);
+                      }}
+                      className="p-1 rounded hover:bg-gray-100 transition-colors"
+                      title="Export CSV"
+                    >
+                      <Download className="w-4 h-4 text-gray-600" />
+                    </button>
+                    <span
+                      className={`text-xs font-medium ${
+                        card.trendUp ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {card.trend}
+                    </span>
+                  </div>
                 </div>
                 <h3 className="text-sm text-text/70">{card.title}</h3>
                 <p className="text-2xl font-bold text-[#1f2937]">
