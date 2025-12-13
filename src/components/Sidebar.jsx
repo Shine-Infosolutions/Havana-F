@@ -30,6 +30,7 @@ import {
   Building2,
   AlertTriangle,
   Tag,
+  Sparkles,
 } from "lucide-react";
 import logoImage from "../assets/hawana golden png.png";
 
@@ -143,6 +144,11 @@ const Sidebar = () => {
           { label: "Vendors", path: "/vendors", icon: Building2 },
         ],
       });
+    }
+
+    // Housekeeping - Admin, GM, Housekeeping, Front Desk
+    if (hasRole(['ADMIN', 'GM', 'HOUSEKEEPING', 'FRONT DESK'])) {
+      items.push({ icon: Sparkles, label: "Housekeeping", path: "/housekeeping" });
     }
 
     // Cash Management - Admin, Front Desk

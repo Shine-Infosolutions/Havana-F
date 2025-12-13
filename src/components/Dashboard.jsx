@@ -910,10 +910,10 @@ const Dashboard = () => {
                         e.stopPropagation();
                         exportCSV(card.id);
                       }}
-                      className="p-1 rounded hover:bg-gray-100 transition-colors"
+                      className="px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
                       title="Export CSV"
                     >
-                      <Download className="w-4 h-4 text-gray-600" />
+                      Export CSV
                     </button>
                     <span
                       className={`text-xs font-medium ${
