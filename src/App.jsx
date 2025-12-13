@@ -58,6 +58,7 @@ import LaundryItems from './components/Laundry/LaundryItems';
 import LaundryCategories from './components/Laundry/LaundryCategories';
 import LossReports from './components/Laundry/LossReports';
 import VendorManagement from './components/Vendor/VendorManagement';
+import Housekeeping from './components/Housekeeping/Housekeeping';
 
 import './App.css'
 
@@ -175,6 +176,13 @@ function App() {
             <Route path="vendors" element={
               <PrivateRoute requiredRoles={['ADMIN', 'GM']}>
                 <VendorManagement />
+              </PrivateRoute>
+            } />
+            
+            {/* Housekeeping Routes */}
+            <Route path="housekeeping" element={
+              <PrivateRoute requiredRoles={['ADMIN', 'GM', 'HOUSEKEEPING', 'FRONT DESK']}>
+                <Housekeeping />
               </PrivateRoute>
             } />
             
