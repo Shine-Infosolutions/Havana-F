@@ -15,6 +15,7 @@ import {
   Download,
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import BookingCalendar from "./BookingCalendar";
 
@@ -24,6 +25,7 @@ import DashboardLoader from "./DashboardLoader";
 
 const Dashboard = () => {
   const { axios } = useAppContext();
+  const { hasRole } = useAuth();
 
   const exportCSV = async (cardId) => {
     try {
@@ -1020,57 +1022,59 @@ const Dashboard = () => {
       )}
 
 
-      {/* Room Categories */}
-      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
-        <h2 className="text-lg sm:text-xl font-extrabold text-[#1f2937] mb-4">
-          Room Categories & Availability
-        </h2>
-        {loading ? (
-          <p className="text-gray-600">Loading rooms...</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Object.entries(getRoomCategories()).map(([category, data]) => (
-              <div
-                key={category}
-                className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer border border-gray-200"
-                onClick={() => {
-                  navigate('/bookingform', { state: { category } });
-                }}
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold text-gray-800">{category}</h3>
-                  <Home className="w-5 h-5 text-primary" />
+      {/* Room Categories - Hidden for ACCOUNTS role */}
+      {!hasRole('ACCOUNTS') || hasRole(['ADMIN', 'GM', 'FRONT DESK']) ? (
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+          <h2 className="text-lg sm:text-xl font-extrabold text-[#1f2937] mb-4">
+            Room Categories & Availability
+          </h2>
+          {loading ? (
+            <p className="text-gray-600">Loading rooms...</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Object.entries(getRoomCategories()).map(([category, data]) => (
+                <div
+                  key={category}
+                  className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer border border-gray-200"
+                  onClick={() => {
+                    navigate('/bookingform', { state: { category } });
+                  }}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="font-semibold text-gray-800">{category}</h3>
+                    <Home className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total:</span>
+                      <span className="font-medium">{data.total}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-green-600">Available:</span>
+                      <span className="font-medium text-green-600">{data.available}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-red-600">Occupied:</span>
+                      <span className="font-medium text-red-600">{data.occupied}</span>
+                    </div>
+                  </div>
+                  {data.available > 0 && (
+                    <button 
+                      className="w-full mt-3 bg-primary text-white py-2 px-4 rounded-md text-sm hover:bg-primary/90 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/bookingform', { state: { category } });
+                      }}
+                    >
+                      Book Now
+                    </button>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Total:</span>
-                    <span className="font-medium">{data.total}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-600">Available:</span>
-                    <span className="font-medium text-green-600">{data.available}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-red-600">Occupied:</span>
-                    <span className="font-medium text-red-600">{data.occupied}</span>
-                  </div>
-                </div>
-                {data.available > 0 && (
-                  <button 
-                    className="w-full mt-3 bg-primary text-white py-2 px-4 rounded-md text-sm hover:bg-primary/90 transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate('/bookingform', { state: { category } });
-                    }}
-                  >
-                    Book Now
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
 
 
       {/* Add this at the very end, just before the final closing </div> */}
