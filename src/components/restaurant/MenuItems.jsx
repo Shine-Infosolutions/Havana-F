@@ -3,12 +3,42 @@ import { useAppContext } from "../../context/AppContext";
 import { useAuth } from "../../context/AuthContext";
 import Pagination from "../common/Pagination";
 import Category from "./Category";
+import DashboardLoader from '../DashboardLoader';
+
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 const MenuItems = () => {
   const { axios } = useAppContext();
   const { hasRole } = useAuth();
   const [menuItems, setMenuItems] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [activeTab, setActiveTab] = useState('items');
@@ -51,8 +81,12 @@ const MenuItems = () => {
   };
 
   useEffect(() => {
-    fetchMenuItems();
-    fetchCategories();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await Promise.all([fetchMenuItems(), fetchCategories()]);
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -97,10 +131,14 @@ const MenuItems = () => {
     return <Category onBackToItems={() => setActiveTab('items')} />;
   }
 
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Menu Items" />;
+  }
+
   return (
     <div className="p-4 sm:p-6" style={{ backgroundColor: 'hsl(45, 100%, 95%)', color: 'hsl(45, 100%, 20%)' }}>
       {/* Tab Navigation */}
-      <div className="mb-6">
+      <div className="mb-6 animate-slideInLeft animate-delay-100">
         <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit">
           <button
             onClick={() => setActiveTab('items')}
@@ -125,7 +163,7 @@ const MenuItems = () => {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 animate-fadeInUp animate-delay-200">
         <h2 className="text-xl sm:text-2xl font-semibold" style={{ color: 'hsl(45, 100%, 20%)' }}>Menu Items</h2>
         <button
           onClick={() => setShowForm(true)}
@@ -139,7 +177,7 @@ const MenuItems = () => {
       </div>
 
       {showForm && (
-        <div className="p-4 sm:p-6 rounded-lg shadow-md mb-6" style={{ backgroundColor: 'white', border: '1px solid hsl(45, 100%, 85%)' }}>
+        <div className="p-4 sm:p-6 rounded-lg shadow-md mb-6 animate-fadeInUp animate-delay-300" style={{ backgroundColor: 'white', border: '1px solid hsl(45, 100%, 85%)' }}>
           <h3 className="text-lg font-semibold mb-4" style={{ color: 'hsl(45, 100%, 20%)' }}>{editingItem ? 'Edit' : 'Add'} Menu Item</h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -264,9 +302,9 @@ const MenuItems = () => {
           <p className="text-gray-500">No menu items found. Add some items to get started.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {menuItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item) => (
-          <div key={item._id} className="p-4 rounded-lg shadow-md" style={{ backgroundColor: 'white', border: '1px solid hsl(45, 100%, 85%)' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeInUp animate-delay-300">
+          {menuItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((item, index) => (
+          <div key={item._id} className="p-4 rounded-lg shadow-md animate-scaleIn" style={{ backgroundColor: 'white', border: '1px solid hsl(45, 100%, 85%)', animationDelay: `${Math.min(index * 100 + 400, 800)}ms` }}>
             <h3 className="font-semibold text-lg" style={{ color: 'hsl(45, 100%, 20%)' }}>{item.name}</h3>
             <p className="text-sm" style={{ color: 'hsl(45, 100%, 40%)' }}>Food Type: {item.foodType}</p>
             <p className="text-sm mb-2" style={{ color: 'hsl(45, 100%, 30%)' }}>{item.description}</p>

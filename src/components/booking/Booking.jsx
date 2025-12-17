@@ -8,6 +8,68 @@ import Pagination from "../common/Pagination";
 import DashboardLoader from '../DashboardLoader';
 import HotelCheckout from './HotelCheckout';
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .animate-fadeInUp {
+    opacity: 0;
+    animation: fadeInUp 0.5s ease-out forwards;
+  }
+  
+  .animate-slideInLeft {
+    opacity: 0;
+    animation: slideInLeft 0.4s ease-out forwards;
+  }
+  
+  .animate-scaleIn {
+    opacity: 0;
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+  
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 
 
 const BookingPage = () => {
@@ -222,9 +284,9 @@ const BookingPage = () => {
   }
 
   return (
-    <div className="min-h-screen" style={{backgroundColor: 'hsl(45, 100%, 95%)'}}>
+    <div className="min-h-screen" style={{backgroundColor: 'hsl(45, 100%, 95%)', opacity: isInitialLoading ? 0 : 1, transition: 'opacity 0.3s ease-in-out'}}>
       <div className="p-6">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-8 animate-slideInLeft animate-delay-100">
           <h1 className="text-3xl font-extrabold" style={{color: 'hsl(45, 100%, 20%)'}}>
             Bookings
           </h1>
@@ -237,7 +299,7 @@ const BookingPage = () => {
         </button>
       </div>
 
-      <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+      <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 animate-fadeInUp animate-delay-200">
         <div className="relative flex-1">
           <input
             type="text"
@@ -322,8 +384,8 @@ const BookingPage = () => {
       ) : (
         <>
           {/* Desktop Table View */}
-          <div className="hidden md:block rounded-xl shadow-lg overflow-hidden bg-white" style={{ border: '1px solid hsl(45, 100%, 85%)' }}>
-          <div className="overflow-x-scroll overflow-y-auto max-h-96 booking-table-scroll">
+          <div className="hidden md:block rounded-xl shadow-lg overflow-hidden bg-white animate-scaleIn animate-delay-300" style={{ border: '1px solid hsl(45, 100%, 85%)' }}>
+          <div className="overflow-x-auto overflow-y-scroll max-h-[70vh]" style={{scrollbarWidth: 'thin'}}>
             <table className="min-w-full" style={{ minWidth: '1200px' }}>
               <thead className="border-b" style={{ backgroundColor: 'hsl(45, 100%, 90%)', borderColor: 'hsl(45, 100%, 85%)' }}>
                 <tr>
@@ -366,10 +428,11 @@ const BookingPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y" style={{ backgroundColor: 'white', borderColor: 'hsl(45, 100%, 90%)' }}>
-                {paginatedBookings.map((booking) => (
+                {paginatedBookings.map((booking, index) => (
                   <tr
                     key={booking.id}
-                    className="transition-colors duration-200"
+                    className="transition-colors duration-200 animate-fadeInUp"
+                    style={{animationDelay: `${Math.min(index * 50 + 400, 800)}ms`}}
                   >
                     <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
                       {booking.grcNo}
@@ -579,11 +642,11 @@ const BookingPage = () => {
 
         {/* Mobile Card View */}
         <div className="md:hidden space-y-4">
-          {paginatedBookings.map((booking) => (
+          {paginatedBookings.map((booking, index) => (
             <div
               key={booking.id}
-              className="rounded-lg shadow-md p-4 bg-white"
-              style={{ border: '1px solid hsl(45, 100%, 85%)' }}
+              className="rounded-lg shadow-md p-4 bg-white animate-scaleIn"
+              style={{ border: '1px solid hsl(45, 100%, 85%)', animationDelay: `${Math.min(index * 100 + 300, 700)}ms` }}
             >
               <div className="flex justify-between items-start mb-3">
                 <div>
@@ -800,13 +863,15 @@ const BookingPage = () => {
             </div>
           ))}
           </div>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            itemsPerPage={10}
-            totalItems={bookings.length}
-          />
+          <div className="animate-fadeInUp animate-delay-300">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              itemsPerPage={10}
+              totalItems={bookings.length}
+            />
+          </div>
         </>
       )}
 

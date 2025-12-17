@@ -3,6 +3,34 @@ import { ArrowLeft, Search, Calendar, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 const RoomServiceHistory = () => {
   const navigate = useNavigate();
   const { hasRole } = useAuth();
@@ -130,7 +158,7 @@ const RoomServiceHistory = () => {
   return (
     <div className="min-h-screen" style={{backgroundColor: '#f5f5dc'}}>
       <div className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-slideInLeft animate-delay-100">
           <button
             onClick={() => navigate('/dashboard')}
             className="flex items-center hover:opacity-80 transition-opacity text-lg"
@@ -144,7 +172,7 @@ const RoomServiceHistory = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 animate-fadeInUp animate-delay-200">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{color: '#D4AF37'}} />
@@ -215,7 +243,7 @@ const RoomServiceHistory = () => {
         </div>
 
         {/* Orders List */}
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 animate-fadeInUp animate-delay-300">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold" style={{color: '#B8860B'}}>
               All Orders ({filteredOrders.length})
@@ -241,8 +269,8 @@ const RoomServiceHistory = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((order) => (
-                    <tr key={order._id} className="border-b hover:bg-gray-50">
+                  {filteredOrders.map((order, index) => (
+                    <tr key={order._id} className={`border-b hover:bg-gray-50 animate-scaleIn`} style={{animationDelay: `${Math.min(index * 50 + 400, 800)}ms`}}>
                       <td className="py-3 px-4 font-medium">{order.orderNumber}</td>
                       <td className="py-3 px-4 text-sm">
                         {new Date(order.createdAt).toLocaleDateString()}<br/>

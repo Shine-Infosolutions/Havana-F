@@ -2,6 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, FileText, Download, Printer } from 'lucide-react';
 import axios from 'axios';
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 const NightAuditReport = () => {
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportData, setReportData] = useState(null);
@@ -36,7 +64,7 @@ const NightAuditReport = () => {
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6 print:shadow-none print:hidden">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6 print:shadow-none print:hidden animate-slideInLeft animate-delay-100">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Night Audit Report</h1>
@@ -72,7 +100,7 @@ const NightAuditReport = () => {
         </div>
 
         {/* Report Content */}
-        <div className="bg-white rounded-lg shadow-sm print:shadow-none">
+        <div className="bg-white rounded-lg shadow-sm print:shadow-none animate-fadeInUp animate-delay-200">
           {/* Report Header */}
           <div className="p-6 border-b print:border-gray-300">
             <div className="text-center">
@@ -98,7 +126,7 @@ const NightAuditReport = () => {
           ) : (
           <div className="p-6 space-y-8">
             {/* House Status */}
-            <section>
+            <section className="animate-scaleIn animate-delay-300">
               <h3 className="text-lg font-semibold mb-4 text-blue-600 border-b pb-2">House Status</h3>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse border border-gray-300">
@@ -139,7 +167,7 @@ const NightAuditReport = () => {
             </section>
 
             {/* House Keeping Status */}
-            <section>
+            <section className="animate-scaleIn animate-delay-300">
               <h3 className="text-lg font-semibold mb-4 text-blue-600 border-b pb-2">House Keeping Status</h3>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse border border-gray-300">
@@ -165,7 +193,7 @@ const NightAuditReport = () => {
             </section>
 
             {/* Revenue Analysis */}
-            <section>
+            <section className="animate-scaleIn animate-delay-300">
               <h3 className="text-lg font-semibold mb-4 text-blue-600 border-b pb-2">Revenue Analysis</h3>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse border border-gray-300">
@@ -197,7 +225,7 @@ const NightAuditReport = () => {
             </section>
 
             {/* Performance Analysis */}
-            <section>
+            <section className="animate-scaleIn animate-delay-300">
               <h3 className="text-lg font-semibold mb-4 text-blue-600 border-b pb-2">Performance Analysis</h3>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse border border-gray-300">
@@ -225,7 +253,7 @@ const NightAuditReport = () => {
             </section>
 
             {/* 10 Days Forecast */}
-            <section>
+            <section className="animate-scaleIn animate-delay-300">
               <h3 className="text-lg font-semibold mb-4 text-blue-600 border-b pb-2">10 Days Forecast</h3>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse border border-gray-300">

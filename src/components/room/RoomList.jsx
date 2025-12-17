@@ -17,6 +17,34 @@ import RoomForm from "./RoomForm";
 import Pagination from "../common/Pagination";
 import DashboardLoader from '../DashboardLoader';
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 const RoomList = () => {
   const { axios } = useAppContext();
   const { hasRole } = useAuth();
@@ -290,8 +318,8 @@ const RoomList = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen overflow-y-auto bg-[#fff9e6]">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-4 sm:mt-6 gap-4">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 min-h-screen overflow-y-auto bg-[#fff9e6]" style={{opacity: isInitialLoading ? 0 : 1, transition: 'opacity 0.3s ease-in-out'}}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-4 sm:mt-6 gap-4 animate-slideInLeft animate-delay-100">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1f2937]">Rooms</h1>
         <button
           onClick={handleAddRoom}
@@ -303,7 +331,7 @@ const RoomList = () => {
       </div>
 
       {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 animate-fadeInUp animate-delay-200">
         <div className="relative flex-grow">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-dark/50 w-4 h-4" />
           <input
@@ -320,7 +348,7 @@ const RoomList = () => {
       </div>
 
       {/* Filter Buttons */}
-      <div className="flex justify-end" ref={dropdownRef}>
+      <div className="flex justify-end animate-fadeInUp animate-delay-300" ref={dropdownRef}>
         <div className="relative">
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -407,10 +435,11 @@ const RoomList = () => {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {rooms.length > 0 ? (
-              rooms.map((room) => (
+              rooms.map((room, index) => (
                 <div
                   key={room._id}
-                  className="bg-primary/50 border border-gray-200 backdrop-blur-sm rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all"
+                  className="bg-primary/50 border border-gray-200 backdrop-blur-sm rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all animate-scaleIn"
+                  style={{animationDelay: `${Math.min(index * 100 + 400, 800)}ms`}}
                 >
                   {/* Image Section */}
                   <div className="h-40 sm:h-48 bg-gray-200 relative overflow-hidden">
@@ -504,13 +533,15 @@ const RoomList = () => {
             )}
           </div>
 
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            itemsPerPage={limit}
-            totalItems={total}
-          />
+          <div className="animate-fadeInUp animate-delay-300">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              itemsPerPage={limit}
+              totalItems={total}
+            />
+          </div>
         </>
       )}
 

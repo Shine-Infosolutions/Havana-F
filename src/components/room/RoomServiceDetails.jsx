@@ -2,6 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, MapPin, Clock, Phone, CreditCard } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 const RoomServiceDetails = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -56,7 +84,7 @@ const RoomServiceDetails = () => {
   return (
     <div className="min-h-screen" style={{backgroundColor: '#f5f5dc'}}>
       <div className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-slideInLeft animate-delay-100">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center hover:opacity-80 transition-opacity text-lg"
@@ -69,9 +97,9 @@ const RoomServiceDetails = () => {
           <div></div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fadeInUp animate-delay-200">
           {/* Order Information */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-md p-6 animate-scaleIn animate-delay-300">
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-xl font-semibold" style={{color: '#B8860B'}}>
                 Order #{order.orderNumber}
@@ -130,7 +158,7 @@ const RoomServiceDetails = () => {
           </div>
 
           {/* Order Items */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-md p-6 animate-scaleIn animate-delay-300">
             <h2 className="text-xl font-semibold mb-4" style={{color: '#B8860B'}}>
               Order Items ({order.items.length})
             </h2>

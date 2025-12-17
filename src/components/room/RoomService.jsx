@@ -1,6 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, ShoppingCart } from 'lucide-react';
+import DashboardLoader from '../DashboardLoader';
+
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 const RoomService = () => {
   const navigate = useNavigate();
@@ -10,28 +39,33 @@ const RoomService = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCart, setShowCart] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
 
 
 
   useEffect(() => {
-    const storedRoomData = localStorage.getItem('selectedRoomService');
-
-    
-    if (storedRoomData) {
-      try {
-        const parsedData = JSON.parse(storedRoomData);
-
-        setRoomData(parsedData);
-      } catch (error) {
-
-        navigate('/easy-dashboard');
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      
+      const storedRoomData = localStorage.getItem('selectedRoomService');
+      
+      if (storedRoomData) {
+        try {
+          const parsedData = JSON.parse(storedRoomData);
+          setRoomData(parsedData);
+          await fetchItems();
+        } catch (error) {
+          navigate('/easy-dashboard');
+        }
+      } else {
+        setTimeout(() => navigate('/easy-dashboard'), 100);
       }
-    } else {
-
-      setTimeout(() => navigate('/easy-dashboard'), 100);
-    }
-    fetchItems();
+      
+      setIsInitialLoading(false);
+    };
+    
+    loadInitialData();
   }, [navigate]);
 
   const fetchItems = async () => {
@@ -237,8 +271,8 @@ const RoomService = () => {
     });
   };
 
-  if (!roomData) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (isInitialLoading || !roomData) {
+    return <DashboardLoader pageName="Room Service" />;
   }
 
   const booking = roomData.booking;
@@ -252,7 +286,7 @@ const RoomService = () => {
     <div className="min-h-screen" style={{backgroundColor: '#f5f5dc'}}>
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-slideInLeft animate-delay-100">
           <button
             onClick={() => navigate('/easy-dashboard')}
             className="flex items-center hover:opacity-80 transition-opacity text-lg"
@@ -288,7 +322,7 @@ const RoomService = () => {
         </div>
 
         {/* Guest Details */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 animate-fadeInUp animate-delay-200">
           <h3 className="text-xl font-semibold mb-4" style={{color: '#B8860B'}}>Guest Details - Room {roomData.room_number}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
@@ -324,7 +358,7 @@ const RoomService = () => {
         </div>
 
         {/* Search Menu */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 animate-fadeInUp animate-delay-300">
           <h3 className="text-xl font-semibold mb-4" style={{color: '#B8860B'}}>Search Menu</h3>
           
           {/* Search Bar */}
@@ -346,7 +380,7 @@ const RoomService = () => {
         </div>
 
         {/* Category Tabs */}
-        <div className="flex flex-wrap gap-3 mb-6">
+        <div className="flex flex-wrap gap-3 mb-6 animate-fadeInUp animate-delay-300">
           <button
             onClick={() => setSelectedCategory('All')}
             className={`px-6 py-2 rounded-lg font-medium transition-colors ${
@@ -375,7 +409,7 @@ const RoomService = () => {
         </div>
 
         {/* Menu Items Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6 animate-fadeInUp animate-delay-300">
           {availableItems.length === 0 ? (
             <div className="col-span-full text-center py-8 text-gray-500">
               Loading items...
@@ -389,7 +423,7 @@ const RoomService = () => {
             const orderItem = orderItems.find(orderItem => orderItem.itemId === item.id);
             
             return (
-              <div key={index} className={`bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow ${item.stock === 0 ? 'opacity-50' : ''}`}>
+              <div key={index} className={`bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow ${item.stock === 0 ? 'opacity-50' : ''} animate-scaleIn`} style={{animationDelay: `${Math.min(index * 50 + 400, 800)}ms`}}>
                 <h5 className="text-lg font-semibold mb-2" style={{color: '#8B4513'}}>{item.name}</h5>
                 <p className="text-sm mb-1" style={{color: '#B8860B'}}>{item.category}</p>
                 <p className="text-sm mb-2" style={{color: item.stock > 0 ? '#22c55e' : '#ef4444'}}>Stock: {item.stock}</p>

@@ -28,16 +28,25 @@ export const useKOTManagement = () => {
   const [userRole, setUserRole] = useState(null);
   const [userRestaurantRole, setUserRestaurantRole] = useState(null);
   const [lastOrderCount, setLastOrderCount] = useState(0);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const socket = null;
 
   useEffect(() => {
-    fetchUserRole();
-    fetchMenuItems();
-    fetchKOTs();
-    fetchOrders();
-    fetchChefs();
-    fetchTables();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await Promise.all([
+        fetchUserRole(),
+        fetchMenuItems(),
+        fetchKOTs(),
+        fetchOrders(),
+        fetchChefs(),
+        fetchTables()
+      ]);
+      setIsInitialLoading(false);
+    };
+    
+    loadInitialData();
     
     // Polling for new orders
     const pollInterval = setInterval(() => {
@@ -277,6 +286,7 @@ export const useKOTManagement = () => {
     userRole,
     userRestaurantRole,
     lastOrderCount,
+    isInitialLoading,
     
     // Setters
     setActiveTab,

@@ -2,6 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Minus } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 const EditRoomService = () => {
   const navigate = useNavigate();
   const { orderId } = useParams();
@@ -195,7 +223,7 @@ const EditRoomService = () => {
   return (
     <div className="min-h-screen" style={{backgroundColor: '#f5f5dc'}}>
       <div className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-slideInLeft animate-delay-100">
           <button
             onClick={() => navigate('/room-service/history')}
             className="flex items-center hover:opacity-80 transition-opacity text-lg"
@@ -208,9 +236,9 @@ const EditRoomService = () => {
           <div></div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fadeInUp animate-delay-200">
           {/* Order Details */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-md p-6 animate-scaleIn animate-delay-300">
             <h2 className="text-xl font-semibold mb-4" style={{color: '#B8860B'}}>Order Details</h2>
             
             <div className="space-y-3 mb-6">
@@ -233,7 +261,7 @@ const EditRoomService = () => {
               ) : (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {orderItems.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={index} className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg animate-fadeInUp`} style={{animationDelay: `${index * 50 + 400}ms`}}>
                       <div className="flex-1">
                         <div className="font-medium">{item.itemName}</div>
                         <div className="text-sm text-gray-600">₹{item.unitPrice} each</div>
@@ -293,12 +321,12 @@ const EditRoomService = () => {
           </div>
 
           {/* Available Items */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-md p-6 animate-scaleIn animate-delay-300">
             <h2 className="text-xl font-semibold mb-4" style={{color: '#B8860B'}}>Add More Items</h2>
             
             <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
-              {availableItems.map((item) => (
-                <div key={item.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+              {availableItems.map((item, index) => (
+                <div key={item.id} className={`border rounded-lg p-4 hover:shadow-md transition-shadow animate-scaleIn`} style={{animationDelay: `${Math.min(index * 50 + 500, 1000)}ms`}}>
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold">{item.name}</h3>
                     <span className="text-lg font-bold" style={{color: '#8B4513'}}>₹{item.price}</span>

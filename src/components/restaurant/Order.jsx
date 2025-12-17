@@ -1,7 +1,35 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useOrderManagement } from '../../hooks/useOrderManagement';
 import { useAuth } from '../../context/AuthContext';
+
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 const Order = () => {
   const location = useLocation();
@@ -10,6 +38,7 @@ const Order = () => {
   const [isConnected] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [nonChargeable, setNonChargeable] = useState(false);
+  const [isMenuLoading, setIsMenuLoading] = useState(true);
   
   const {
     menuItems,
@@ -41,6 +70,11 @@ const Order = () => {
     handlePlaceOrder
   } = useOrderManagement(location);
 
+  // Set loading state based on menu items
+  useEffect(() => {
+    setIsMenuLoading(menuItems.length === 0);
+  }, [menuItems]);
+
   const categoryFilteredMenu = filteredMenu.filter(item => 
     selectedCategory === '' || item.category === selectedCategory
   );
@@ -49,7 +83,7 @@ const Order = () => {
 
   return (
     <div className="min-h-screen font-sans p-4 sm:p-6 bg-gradient-to-br from-[#f7f5ef] to-[#c3ad6b]/30">
-      <div className="w-full bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-[#c3ad6b]/30">
+      <div className="w-full bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-[#c3ad6b]/30 animate-slideInLeft animate-delay-100">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold text-[#b39b5a]">Create New Order</h2>
@@ -146,7 +180,7 @@ const Order = () => {
       </div>
 
       {/* Search and Filter section */}
-      <div className="w-full bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-[#c3ad6b]/30">
+      <div className="w-full bg-white/90 backdrop-blur-sm shadow-xl rounded-2xl p-6 sm:p-8 mb-8 border border-[#c3ad6b]/30 animate-fadeInUp animate-delay-200">
         <label htmlFor="search-menu" className="block font-bold mb-4 text-lg text-[#b39b5a]">Search & Filter Menu</label>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
@@ -181,9 +215,25 @@ const Order = () => {
       </div>
 
       {/* Menu grid */}
-      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-        {categoryFilteredMenu.map(item => (
-          <div key={item._id} className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border-2 border-[#c3ad6b]/30 hover:border-[#c3ad6b] hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 animate-fadeInUp animate-delay-300">
+        {isMenuLoading ? (
+          // Loading skeleton for menu items
+          Array.from({ length: 8 }).map((_, index) => (
+            <div key={index} className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border-2 border-[#c3ad6b]/30 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded mb-4 w-3/4"></div>
+              <div className="h-5 bg-gray-200 rounded mb-4 w-1/2"></div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+            </div>
+          ))
+        ) : categoryFilteredMenu.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <div className="text-gray-400 text-lg mb-2">🍽️</div>
+            <div className="text-gray-500">No menu items found</div>
+          </div>
+        ) : (
+          categoryFilteredMenu.map((item, index) => (
+          <div key={item._id} className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border-2 border-[#c3ad6b]/30 hover:border-[#c3ad6b] hover:shadow-2xl transition-all duration-300 transform hover:scale-105 animate-scaleIn" style={{animationDelay: `${Math.min(index * 50 + 400, 800)}ms`}}>
             <h3 className="text-xl font-bold truncate text-[#b39b5a] mb-2">{item.name}</h3>
             <p className="text-sm mb-4 text-[#c3ad6b] font-medium">{item.foodType}</p>
             <p className="mb-4 font-bold text-lg text-gray-800">₹{(item.Price || 0).toFixed(2)}</p>
@@ -223,7 +273,8 @@ const Order = () => {
               </button>
             )}
           </div>
-        ))}
+        ))
+        )}
       </div>
 
       {/* Floating Cart Button */}

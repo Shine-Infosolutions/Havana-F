@@ -22,6 +22,86 @@ import BookingCalendar from "./BookingCalendar";
 
 import DashboardLoader from "./DashboardLoader";
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  .animate-fadeInUp {
+    opacity: 0;
+    animation: fadeInUp 0.5s ease-out forwards;
+  }
+  
+  .animate-fadeIn {
+    opacity: 0;
+    animation: fadeIn 0.6s ease-out forwards;
+  }
+  
+  .animate-slideInLeft {
+    opacity: 0;
+    animation: slideInLeft 0.4s ease-out forwards;
+  }
+  
+  .animate-delay-100 {
+    animation-delay: 0.1s;
+  }
+  
+  .animate-delay-200 {
+    animation-delay: 0.2s;
+  }
+  
+  .animate-delay-300 {
+    animation-delay: 0.3s;
+  }
+  
+  .animate-delay-400 {
+    animation-delay: 0.4s;
+  }
+  
+  .animate-delay-500 {
+    animation-delay: 0.5s;
+  }
+  
+  .animate-delay-600 {
+    animation-delay: 0.6s;
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 
 const Dashboard = () => {
   const { axios } = useAppContext();
@@ -874,8 +954,8 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 overflow-auto h-full bg-background">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 mt-4 sm:mt-6 gap-4">
+    <div className="p-4 sm:p-6 overflow-auto h-full bg-background" style={{opacity: loading ? 0 : 1, transition: 'opacity 0.3s ease-in-out'}}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 mt-4 sm:mt-6 gap-4 animate-slideInLeft animate-delay-100">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#1f2937]">
             HAVANA DASHBOARD
@@ -945,7 +1025,7 @@ const Dashboard = () => {
         </button>
       </div>
       {/* Status Summary */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+      <div className="bg-white rounded-lg shadow-md p-4 mb-6 animate-fadeInUp animate-delay-100">
         <div className="flex flex-col sm:flex-row flex-wrap gap-4 items-start sm:items-center">
           <div className="flex items-center">
             <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
@@ -963,16 +1043,17 @@ const Dashboard = () => {
       </div>
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-        {dashboardCards.map((card) => {
+        {dashboardCards.map((card, index) => {
           const IconComponent = getIcon(card.icon);
           return (
             <div
               key={card.id}
-              className={`bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 ${
+              className={`bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 animate-fadeInUp ${
                 activeCard === card.id
                   ? "ring-2 ring-red-500"
                   : "hover:shadow-lg"
               }`}
+              style={{animationDelay: `${Math.min((index + 2) * 100, 600)}ms`}}
               onClick={() => toggleCard(card.id)}
             >
               <div className="p-4 cursor-pointer">
@@ -1004,7 +1085,7 @@ const Dashboard = () => {
       </div>
       {/* Detail Section */}
       {activeCard && (
-        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6 animate-fadeIn">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6 animate-fadeInUp">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
             <h2 className="text-lg sm:text-xl font-extrabold text-[#1f2937]">
               {dashboardCards.find((c) => c.id === activeCard)?.title} Details
@@ -1024,7 +1105,7 @@ const Dashboard = () => {
 
       {/* Room Categories - Hidden for ACCOUNTS role */}
       {!hasRole('ACCOUNTS') || hasRole(['ADMIN', 'GM', 'FRONT DESK']) ? (
-        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6 animate-fadeInUp animate-delay-300">
           <h2 className="text-lg sm:text-xl font-extrabold text-[#1f2937] mb-4">
             Room Categories & Availability
           </h2>
@@ -1032,10 +1113,11 @@ const Dashboard = () => {
             <p className="text-gray-600">Loading rooms...</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {Object.entries(getRoomCategories()).map(([category, data]) => (
+              {Object.entries(getRoomCategories()).map(([category, data], index) => (
                 <div
                   key={category}
-                  className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer border border-gray-200"
+                  className="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer border border-gray-200 animate-fadeInUp"
+                  style={{animationDelay: `${Math.min((index + 4) * 100, 600)}ms`}}
                   onClick={() => {
                     navigate('/bookingform', { state: { category } });
                   }}

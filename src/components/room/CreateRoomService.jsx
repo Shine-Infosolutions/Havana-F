@@ -1,6 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import DashboardLoader from '../DashboardLoader';
+
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 const CreateRoomService = () => {
   const navigate = useNavigate();
@@ -20,11 +49,15 @@ const CreateRoomService = () => {
 
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
-    fetchItems();
-    fetchBookings();
-    fetchCategories();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await Promise.all([fetchItems(), fetchBookings(), fetchCategories()]);
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   useEffect(() => {
@@ -238,10 +271,14 @@ const CreateRoomService = () => {
     }
   };
 
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Create Room Service" />;
+  }
+
   return (
     <div className="min-h-screen" style={{backgroundColor: '#f5f5dc'}}>
       <div className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-slideInLeft animate-delay-100">
           <button
             onClick={() => {
               if (preSelectedBooking) {
@@ -262,9 +299,9 @@ const CreateRoomService = () => {
           <div></div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fadeInUp animate-delay-200">
           {/* Order Form */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-md p-6 animate-scaleIn animate-delay-300">
             <h2 className="text-xl font-semibold mb-4" style={{color: '#B8860B'}}>Order Details</h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -400,7 +437,7 @@ const CreateRoomService = () => {
 
           {/* Available Items */}
           {formData.serviceType && (
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="bg-white rounded-xl shadow-md p-6 animate-scaleIn animate-delay-300">
               <h2 className="text-xl font-semibold mb-4" style={{color: '#B8860B'}}>Available Items</h2>
               
               {formData.serviceType === 'Restaurant' ? (

@@ -2,12 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { Plus, Filter, Download, Eye, Edit, Trash2, Clock, CheckCircle } from 'lucide-react';
 import TaskModal from './TaskModal';
+import DashboardLoader from '../DashboardLoader';
+
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 const Housekeeping = () => {
   const { axios } = useAppContext();
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [filters, setFilters] = useState({
@@ -25,8 +55,12 @@ const Housekeeping = () => {
   });
 
   useEffect(() => {
-    fetchTasks();
-    fetchStats();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await Promise.all([fetchTasks(), fetchStats()]);
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   useEffect(() => {
@@ -157,14 +191,14 @@ const Housekeeping = () => {
     }
   };
 
-  if (loading) {
-    return <div className="p-6">Loading...</div>;
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Housekeeping Management" />;
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6" style={{opacity: loading ? 0 : 1, transition: 'opacity 0.3s ease-in-out'}}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 animate-slideInLeft animate-delay-100">
         <h1 className="text-2xl font-bold">Housekeeping Management</h1>
         <div className="flex gap-4">
           <button
@@ -185,31 +219,31 @@ const Housekeeping = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 animate-fadeInUp animate-delay-200">
+        <div className="bg-white p-4 rounded-lg shadow animate-scaleIn" style={{animationDelay: '300ms'}}>
           <h3 className="text-sm font-medium text-gray-500">Total Tasks</h3>
           <p className="text-2xl font-bold text-blue-600">{stats.totalTasks}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="bg-white p-4 rounded-lg shadow animate-scaleIn" style={{animationDelay: '350ms'}}>
           <h3 className="text-sm font-medium text-gray-500">Pending</h3>
           <p className="text-2xl font-bold text-yellow-600">{stats.pendingTasks}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="bg-white p-4 rounded-lg shadow animate-scaleIn" style={{animationDelay: '400ms'}}>
           <h3 className="text-sm font-medium text-gray-500">In Progress</h3>
           <p className="text-2xl font-bold text-blue-600">{stats.inProgressTasks}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="bg-white p-4 rounded-lg shadow animate-scaleIn" style={{animationDelay: '450ms'}}>
           <h3 className="text-sm font-medium text-gray-500">Completed</h3>
           <p className="text-2xl font-bold text-green-600">{stats.completedTasks}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="bg-white p-4 rounded-lg shadow animate-scaleIn" style={{animationDelay: '500ms'}}>
           <h3 className="text-sm font-medium text-gray-500">Urgent</h3>
           <p className="text-2xl font-bold text-red-600">{stats.urgentTasks}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
+      <div className="bg-white p-4 rounded-lg shadow mb-6 animate-fadeInUp animate-delay-300">
         <div className="flex items-center gap-4 flex-wrap">
           <Filter className="w-5 h-5 text-gray-500" />
           <select
@@ -252,7 +286,7 @@ const Housekeeping = () => {
       </div>
 
       {/* Tasks Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-hidden animate-fadeInUp animate-delay-300">
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead className="bg-gray-50">
@@ -268,8 +302,8 @@ const Housekeeping = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredTasks.map((task) => (
-                <tr key={task._id} className="hover:bg-gray-50">
+              {filteredTasks.map((task, index) => (
+                <tr key={task._id} className="hover:bg-gray-50 animate-fadeInUp" style={{animationDelay: `${Math.min(index * 50 + 400, 800)}ms`}}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{task.roomNumber}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{task.taskType}</td>
                   <td className="px-6 py-4 whitespace-nowrap">

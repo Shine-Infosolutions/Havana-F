@@ -8,6 +8,34 @@ import CategoryForm from "./CategoryForm";
 import Pagination from "../common/Pagination";
 import DashboardLoader from '../DashboardLoader';
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 const CategoryList = () => {
   const { axios } = useAppContext();
   const { hasRole } = useAuth();
@@ -148,8 +176,8 @@ const CategoryList = () => {
   }
 
   return (
-    <div className="p-6 overflow-auto h-full bg-background">
-      <div className="flex justify-between items-center mb-8 mt-6 ">
+    <div className="p-6 overflow-auto h-full bg-background" style={{opacity: isInitialLoading ? 0 : 1, transition: 'opacity 0.3s ease-in-out'}}>
+      <div className="flex justify-between items-center mb-8 mt-6 animate-slideInLeft animate-delay-100">
         <h1 className="text-3xl font-extrabold text-[#1f2937]">
           Room Categories
         </h1>
@@ -166,7 +194,7 @@ const CategoryList = () => {
       ) : error ? (
         <div className="text-center py-8 text-red-600">{error}</div>
       ) : (
-        <div className="bg-white rounded-lg shadow-md overflow-auto">
+        <div className="bg-white rounded-lg shadow-md overflow-auto animate-scaleIn animate-delay-200">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -188,8 +216,8 @@ const CategoryList = () => {
               className="bg-white divide-y divide-gray-200 overflow-auto"
               style={{ scrollbarWidth: "none" }}
             >
-              {paginatedCategories.map((category) => (
-                <tr key={category._id} className="hover:bg-gray-50">
+              {paginatedCategories.map((category, index) => (
+                <tr key={category._id} className="hover:bg-gray-50 animate-fadeInUp" style={{animationDelay: `${Math.min(index * 50 + 300, 600)}ms`}}>
                   <td className="px-6 py-4 whitespace-nowrap font-medium">
                     {category.name}
                   </td>

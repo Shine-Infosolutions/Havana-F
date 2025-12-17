@@ -3,6 +3,35 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, ClipboardList, Eye, Edit, Trash2, X, Filter, Search, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import LossReportModal from './LossReportModal';
+import DashboardLoader from '../DashboardLoader';
+
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 const LaundryOrders = () => {
   const navigate = useNavigate();
@@ -23,10 +52,15 @@ const LaundryOrders = () => {
     endDate: '',
     itemStatus: 'all'
   });
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
-    fetchOrders();
-    fetchLaundryItems();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await Promise.all([fetchOrders(), fetchLaundryItems()]);
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
   
   useEffect(() => {
@@ -277,11 +311,15 @@ const LaundryOrders = () => {
     fetchOrders();
   };
 
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Laundry Orders" />;
+  }
+
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="min-h-screen bg-background p-4" style={{opacity: loading && orders.length === 0 ? 0 : 1, transition: 'opacity 0.3s ease-in-out'}}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4 border border-border">
+        <div className="bg-white rounded-lg shadow p-4 mb-4 border border-border animate-slideInLeft animate-delay-100">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <h1 className="text-2xl font-bold text-text">Laundry Order Management</h1>
@@ -308,7 +346,7 @@ const LaundryOrders = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg p-3 mb-4 shadow border border-border">
+        <div className="bg-white rounded-lg p-3 mb-4 shadow border border-border animate-fadeInUp animate-delay-200">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <Filter size={16} className="text-primary" />
@@ -403,8 +441,8 @@ const LaundryOrders = () => {
         <>
           {/* Mobile Card View */}
           <div className="lg:hidden space-y-4">
-            {orders.map((order) => (
-              <div key={order._id} className="bg-white rounded-2xl shadow-lg p-6 border border-border hover:shadow-xl transition-all duration-200">
+            {orders.map((order, index) => (
+              <div key={order._id} className="bg-white rounded-2xl shadow-lg p-6 border border-border hover:shadow-xl transition-all duration-200 animate-scaleIn" style={{animationDelay: `${Math.min(index * 100 + 300, 700)}ms`}}>
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="font-bold text-gray-900 text-lg">GRC: {order.grcNo}</h3>
@@ -489,7 +527,7 @@ const LaundryOrders = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {orders.map((order, index) => (
-                  <tr key={order._id} className="hover:bg-gray-50 transition-colors duration-150">
+                  <tr key={order._id} className="hover:bg-gray-50 transition-colors duration-150 animate-fadeInUp" style={{animationDelay: `${Math.min(index * 50 + 300, 800)}ms`}}>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center w-8 h-8 bg-accent text-primary rounded-full font-bold text-sm">
                         {index + 1}

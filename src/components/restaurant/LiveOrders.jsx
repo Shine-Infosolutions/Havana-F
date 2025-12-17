@@ -3,13 +3,43 @@ import { useAppContext } from "../../context/AppContext";
 import CountdownTimer from "./CountdownTimer";
 import { useKitchenSocket } from "../../hooks/useOrderSocket";
 import { useSocket } from "../../context/SocketContext";
+import DashboardLoader from '../DashboardLoader';
 
 import { Wifi, WifiOff } from 'lucide-react';
+
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 const LiveOrders = () => {
   const { axios } = useAppContext();
   const [orders, setOrders] = useState([]);
   const [itemStates, setItemStates] = useState({});
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   
   // Real-time socket connection for live updates
   const { isConnected } = useKitchenSocket({
@@ -159,7 +189,12 @@ const LiveOrders = () => {
   };
 
   useEffect(() => {
-    fetchOrders();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await fetchOrders();
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
     
     // Set up more frequent refresh (every 10 seconds) to ensure cancelled orders are removed quickly
     const interval = setInterval(() => {
@@ -209,9 +244,13 @@ const LiveOrders = () => {
     }
   };
 
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Live Orders Dashboard" />;
+  }
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="mb-6">
+      <div className="mb-6 animate-slideInLeft animate-delay-100">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Live Orders Dashboard</h1>
@@ -241,15 +280,15 @@ const LiveOrders = () => {
       </div>
 
       {/* Active Orders Count */}
-      <div className="mb-6">
+      <div className="mb-6 animate-fadeInUp animate-delay-200">
         <div className="bg-white rounded-lg p-4 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-800">Active Orders ({orders.length})</h2>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {orders.map((order) => (
-          <div key={order._id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 min-h-[320px] flex flex-col">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fadeInUp animate-delay-300">
+        {orders.map((order, index) => (
+          <div key={order._id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 min-h-[320px] flex flex-col animate-scaleIn" style={{animationDelay: `${Math.min(index * 100 + 400, 800)}ms`}}>
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3">
               <div className="flex-1">

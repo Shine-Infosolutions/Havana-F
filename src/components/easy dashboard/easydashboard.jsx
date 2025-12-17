@@ -7,6 +7,70 @@ import DashboardLoader from '../DashboardLoader';
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
 const TODAY = new Date().toDateString();
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideInLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .animate-fadeInUp {
+    opacity: 0;
+    animation: fadeInUp 0.5s ease-out forwards;
+  }
+  
+  .animate-slideInLeft {
+    opacity: 0;
+    animation: slideInLeft 0.4s ease-out forwards;
+  }
+  
+  .animate-scaleIn {
+    opacity: 0;
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+  
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+  .animate-delay-400 { animation-delay: 0.4s; }
+  .animate-delay-500 { animation-delay: 0.5s; }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 // --- Utility: Fetch with Exponential Backoff ---
 // This robust function ensures stability by retrying API calls if they fail.
 const fetchWithRetry = async (url, retries = 3) => {
@@ -472,10 +536,10 @@ const EasyDashboard = () => {
     return (
         <div 
             className="min-h-screen p-4 sm:p-10 font-sans" 
-            style={{backgroundColor: 'var(--color-background)'}}
+            style={{backgroundColor: 'var(--color-background)', opacity: isLoading ? 0 : 1, transition: 'opacity 0.3s ease-in-out'}}
         >
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-10 pb-5 border-b gap-4" style={{borderColor: 'var(--color-border)'}}>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-10 pb-5 border-b gap-4 animate-slideInLeft animate-delay-100" style={{borderColor: 'var(--color-border)'}}>
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-wider flex items-center" style={{color: 'var(--color-text)'}}>
                     <Home size={24} className="sm:w-7 sm:h-7 lg:w-8 lg:h-8 mr-2 sm:mr-3" style={{color: 'var(--color-primary)'}} /> 
                     <span className="hidden sm:inline">HOSPITALITY MANAGEMENT</span>
@@ -487,7 +551,7 @@ const EasyDashboard = () => {
 
 
             {/* Floor-wise Room Display - Elegant White Panel */}
-            <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 border" style={{borderColor: 'var(--color-border)'}}>
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 border animate-scaleIn animate-delay-200" style={{borderColor: 'var(--color-border)'}}>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
                     <h2 className="text-xl sm:text-2xl font-light tracking-wider" style={{color: 'var(--color-text)'}}>Rooms Details</h2>
                     <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs">
@@ -512,7 +576,7 @@ const EasyDashboard = () => {
                     }, {});
 
                     return (
-                        <div key={floor} className="mb-6 sm:mb-8 pb-4 border-b border-gray-200 last:border-b-0">
+                        <div key={floor} className="mb-6 sm:mb-8 pb-4 border-b border-gray-200 last:border-b-0 animate-fadeInUp" style={{animationDelay: `${parseInt(floor) * 100 + 300}ms`}}>
                             <h3 className="text-lg sm:text-xl font-medium mb-4 sm:mb-5 flex flex-col sm:flex-row justify-between items-start sm:items-center text-gray-700 gap-2">
                                 <span className="flex items-center tracking-wide" style={{color: 'var(--color-text)'}}>
                                     <ChevronRight size={16} className="sm:w-5 sm:h-5 mr-1" style={{color: 'var(--color-primary)'}}/> 
@@ -537,9 +601,11 @@ const EasyDashboard = () => {
                                             className={`
                                                 ${isBooked ? 'bg-red-200 hover:bg-red-300' : currentStatus === 'available' ? 'bg-green-50 hover:bg-green-100' : 'bg-yellow-100 hover:bg-yellow-200'}
                                                 rounded-lg shadow-md border-t-2 ${isBooked ? 'border-red-700' : currentStatus === 'available' ? 'border-green-500' : 'border-yellow-600'}
-                                                transition-all duration-300 cursor-pointer hover:shadow-lg
+                                                transition-all duration-300 cursor-pointer hover:shadow-lg hover:scale-105
                                                 min-h-[120px] sm:min-h-[140px]
+                                                animate-scaleIn
                                             `}
+                                            style={{ animationDelay: `${Math.min((parseInt(room.room_number) % 10) * 50 + 400, 600)}ms` }}
                                             onClick={() => {
                                                 console.log('🔥 ROOM CLICKED:', room.room_number, 'Status:', currentStatus);
                                                 
@@ -604,8 +670,8 @@ const EasyDashboard = () => {
                 const stayDuration = calculateStayDuration(booking?.checkInDate, booking?.checkOutDate);
                 
                 return (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-2 sm:p-4">
-                        <div className="bg-white rounded-xl shadow-xl w-full max-w-xs sm:max-w-4xl lg:max-w-6xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-2 sm:p-4 animate-fadeInUp">
+                        <div className="bg-white rounded-xl shadow-xl w-full max-w-xs sm:max-w-4xl lg:max-w-6xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden animate-scaleIn">
                             <div className="p-4 sm:p-6 border-b border-gray-200 flex justify-between items-center">
                                 <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-800">
                                     Room {selectedRoom.room_number} - Guest Details
@@ -622,7 +688,7 @@ const EasyDashboard = () => {
                             <div className="p-4 sm:p-6 overflow-y-auto" style={{ maxHeight: "calc(95vh - 80px)" }}>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                                     {/* Guest Information */}
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 animate-slideInLeft animate-delay-100">
                                         <h4 className="text-base sm:text-lg font-semibold text-gray-800 border-b pb-2 flex items-center">
                                             <User className="mr-2" size={18} /> Guest Information
                                         </h4>
@@ -638,7 +704,7 @@ const EasyDashboard = () => {
                                     </div>
                                     
                                     {/* Stay Information */}
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 animate-slideInLeft animate-delay-200">
                                         <h4 className="text-base sm:text-lg font-semibold text-gray-800 border-b pb-2 flex items-center">
                                             <Clock className="mr-2" size={18} /> Stay Details
                                         </h4>
@@ -654,7 +720,7 @@ const EasyDashboard = () => {
                                     </div>
                                     
                                     {/* Food Orders */}
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 animate-slideInLeft animate-delay-300">
                                         <h4 className="text-base sm:text-lg font-semibold text-gray-800 border-b pb-2 flex items-center">
                                             <Package className="mr-2" size={18} /> Food Orders ({guestFoodOrders.length})
                                         </h4>
@@ -683,7 +749,7 @@ const EasyDashboard = () => {
                                 </div>
                                 
                                 {/* Laundry Services - Full Width */}
-                                <div className="mt-4 sm:mt-6 space-y-4">
+                                <div className="mt-4 sm:mt-6 space-y-4 animate-fadeInUp animate-delay-400">
                                     <h4 className="text-base sm:text-lg font-semibold text-gray-800 border-b pb-2 flex items-center">
                                         <MapPin className="mr-2" size={18} /> Laundry Services ({guestLaundry.length})
                                     </h4>

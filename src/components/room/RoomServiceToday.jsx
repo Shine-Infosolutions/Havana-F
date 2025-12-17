@@ -2,6 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Clock, User, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 const RoomServiceToday = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -53,7 +81,7 @@ const RoomServiceToday = () => {
   return (
     <div className="min-h-screen" style={{backgroundColor: '#f5f5dc'}}>
       <div className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 animate-slideInLeft animate-delay-100">
           <button
             onClick={() => navigate('/dashboard')}
             className="flex items-center hover:opacity-80 transition-opacity text-lg"
@@ -66,7 +94,7 @@ const RoomServiceToday = () => {
           <div></div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-6 animate-fadeInUp animate-delay-200">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold" style={{color: '#B8860B'}}>
               Orders ({orders.length})
@@ -82,8 +110,8 @@ const RoomServiceToday = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {orders.map((order) => (
-                <div key={order._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+              {orders.map((order, index) => (
+                <div key={order._id} className={`border rounded-lg p-4 hover:shadow-md transition-shadow animate-scaleIn`} style={{animationDelay: `${Math.min(index * 100 + 300, 800)}ms`}}>
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <h3 className="font-semibold text-lg" style={{color: '#8B4513'}}>

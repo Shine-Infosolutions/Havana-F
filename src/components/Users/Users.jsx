@@ -6,6 +6,34 @@ import Pagination from '../common/Pagination';
 import RegisterForm from '../auth/RegisterForm';
 import DashboardLoader from '../DashboardLoader';
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 const Users = () => {
   const { axios } = useAppContext();
   const { hasRole } = useAuth();
@@ -180,7 +208,7 @@ const Users = () => {
   return (
     <div className="p-6 bg-background min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 animate-slideInLeft animate-delay-100">
           <h1 className="text-3xl font-bold text-text">All Users</h1>
           <button
             onClick={() => setShowRegister(true)}
@@ -192,7 +220,7 @@ const Users = () => {
         
 
         
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden animate-fadeInUp animate-delay-200">
           <div className="p-6">
             <form onSubmit={handleSearch} className="mb-4">
               <div className="flex flex-col sm:flex-row gap-2 max-w-md">
@@ -228,7 +256,7 @@ const Users = () => {
                 </thead>
                 <tbody>
                   {filteredUsers.map((user, index) => (
-                    <tr key={user._id} className={index % 2 === 0 ? 'bg-background' : 'bg-white'}>
+                    <tr key={user._id} className={`${index % 2 === 0 ? 'bg-background' : 'bg-white'} animate-scaleIn`} style={{animationDelay: `${Math.min(index * 50 + 300, 800)}ms`}}>
                       <td className="px-4 py-3 text-sm text-text font-medium">{user.username}</td>
                       <td className="px-4 py-3 text-sm text-text">{user.name || 'N/A'}</td>
                       <td className="px-4 py-3 text-sm text-text">{user.email || 'N/A'}</td>

@@ -3,6 +3,34 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useAppContext } from "../../context/AppContext";
 
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 const RoomServiceBilling = () => {
   const { axios } = useAppContext();
   const navigate = useNavigate();
@@ -108,7 +136,7 @@ const RoomServiceBilling = () => {
     <div className="min-h-screen p-6" style={{backgroundColor: 'var(--color-background)'}}>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 animate-slideInLeft animate-delay-100">
           <div className="flex items-center justify-between">
             <button
               onClick={() => navigate(-1)}
@@ -127,7 +155,7 @@ const RoomServiceBilling = () => {
         </div>
 
         {/* Orders Table */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="bg-white rounded-xl shadow-md overflow-hidden animate-fadeInUp animate-delay-200">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead style={{backgroundColor: 'var(--color-secondary)'}}>
@@ -143,7 +171,7 @@ const RoomServiceBilling = () => {
               </thead>
               <tbody>
                 {orders.map((order, index) => (
-                  <tr key={order._id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <tr key={order._id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} animate-scaleIn`} style={{animationDelay: `${Math.min(index * 100 + 300, 800)}ms`}}>
                     <td className="px-4 py-3 font-mono">{order.orderNumber || order._id.slice(-6)}</td>
                     <td className="px-4 py-3">{order.roomNumber || order.tableNo}</td>
                     <td className="px-4 py-3">{order.guestName || 'Guest'}</td>

@@ -3,6 +3,35 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import Pagination from '../common/Pagination';
+import DashboardLoader from '../DashboardLoader';
+
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 const AllOrders = () => {
   const { axios } = useAppContext();
@@ -10,7 +39,8 @@ const AllOrders = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,8 +50,27 @@ const AllOrders = () => {
   const [allBookings, setAllBookings] = useState([]);
 
   useEffect(() => {
-    fetchOrders();
-    fetchBookings();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      try {
+        // Start both API calls concurrently
+        const [ordersPromise, bookingsPromise] = [
+          fetchOrders(),
+          fetchBookings()
+        ];
+        
+        // Wait for orders first (main data), then bookings
+        await ordersPromise;
+        setIsInitialLoading(false); // Show content as soon as orders are loaded
+        
+        // Continue loading bookings in background
+        await bookingsPromise;
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+        setIsInitialLoading(false);
+      }
+    };
+    loadInitialData();
   }, []);
 
   useEffect(() => {
@@ -38,6 +87,7 @@ const AllOrders = () => {
       setAllBookings(bookingData);
     } catch (error) {
       console.error('Error fetching bookings:', error);
+      setAllBookings([]);
     }
   };
 
@@ -53,6 +103,8 @@ const AllOrders = () => {
       setFilteredOrders(ordersData);
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setOrders([]);
+      setFilteredOrders([]);
     } finally {
       setLoading(false);
     }
@@ -151,8 +203,8 @@ const AllOrders = () => {
     }
   };
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="All Orders" />;
   }
 
   const paginatedOrders = filteredOrders.slice(
@@ -161,14 +213,14 @@ const AllOrders = () => {
   );
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="mb-6">
+    <div className="p-6 bg-gray-50 min-h-screen" style={{opacity: loading ? 0.8 : 1, transition: 'opacity 0.3s ease-in-out'}}>
+      <div className="mb-6 animate-slideInLeft animate-delay-100">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">All Orders</h1>
         <p className="text-gray-600">View and manage all restaurant orders</p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
+      <div className="bg-white p-4 rounded-lg shadow mb-6 animate-fadeInUp animate-delay-200">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
@@ -237,7 +289,7 @@ const AllOrders = () => {
       </div>
 
       {/* Orders Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-hidden animate-fadeInUp animate-delay-300">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -269,8 +321,8 @@ const AllOrders = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedOrders.map((order) => (
-                <tr key={order._id} className="hover:bg-gray-50">
+              {paginatedOrders.map((order, index) => (
+                <tr key={order._id} className="hover:bg-gray-50 animate-fadeInUp" style={{animationDelay: `${Math.min(index * 50 + 400, 800)}ms`}}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">

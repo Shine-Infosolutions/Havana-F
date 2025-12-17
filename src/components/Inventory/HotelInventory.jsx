@@ -11,6 +11,36 @@ import InventoryCategoryForm from './InventoryCategoryForm';
 import StockMovementModal from './StockMovementModal';
 import StockMovementLog from './StockMovementLog';
 import Dashboard from './Dashboard';
+import DashboardLoader from '../DashboardLoader';
+
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+  .animate-delay-400 { animation-delay: 0.4s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 const HotelInventory = () => {
   const [items, setItems] = useState([]);
@@ -31,13 +61,21 @@ const HotelInventory = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [stockOperation, setStockOperation] = useState('in');
   const [categories, setCategories] = useState([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const locations = ['Store Room', 'Kitchen Store', 'Floor Storage', 'Laundry Room', 'Maintenance Room'];
 
   useEffect(() => {
-    fetchItems();
-    fetchLowStockItems();
-    fetchCategories();
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      await Promise.all([
+        fetchItems(),
+        fetchLowStockItems(),
+        fetchCategories()
+      ]);
+      setIsInitialLoading(false);
+    };
+    loadInitialData();
   }, []);
 
   useEffect(() => {
@@ -234,10 +272,14 @@ const HotelInventory = () => {
     toast.success('Inventory exported successfully!');
   };
 
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Hotel Inventory" />;
+  }
+
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 max-w-7xl mx-auto space-y-6" style={{opacity: loading && items.length === 0 ? 0 : 1, transition: 'opacity 0.3s ease-in-out'}}>
       {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 animate-slideInLeft animate-delay-100">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Package className="text-blue-600" />
@@ -279,11 +321,13 @@ const HotelInventory = () => {
       </div>
 
       {/* Dashboard Stats */}
-      <Dashboard items={items} lowStockItems={lowStockItems} />
+      <div className="animate-scaleIn animate-delay-200">
+        <Dashboard items={items} lowStockItems={lowStockItems} />
+      </div>
 
       {/* Low Stock Alert */}
       {lowStockItems.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 animate-fadeInUp animate-delay-300">
           <div className="flex items-center gap-2 text-red-800">
             <AlertTriangle size={20} />
             <span className="font-semibold">Low Stock Alert</span>
@@ -305,7 +349,7 @@ const HotelInventory = () => {
       )}
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-6 animate-scaleIn animate-delay-400">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Search */}
           <div className="lg:col-span-2">
@@ -403,14 +447,16 @@ const HotelInventory = () => {
       </div>
 
       {/* Inventory Table */}
-      <InventoryTable
-        items={filteredItems}
-        loading={loading}
-        onEdit={handleEditItem}
-        onStockIn={(item) => handleStockOperation(item, 'in')}
-        onStockOut={(item) => handleStockOperation(item, 'out')}
-        onRefresh={fetchItems}
-      />
+      <div className="animate-fadeInUp animate-delay-400">
+        <InventoryTable
+          items={filteredItems}
+          loading={loading}
+          onEdit={handleEditItem}
+          onStockIn={(item) => handleStockOperation(item, 'in')}
+          onStockOut={(item) => handleStockOperation(item, 'out')}
+          onRefresh={fetchItems}
+        />
+      </div>
 
       {/* Modals */}
       {showForm && (

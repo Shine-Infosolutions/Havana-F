@@ -3,6 +3,35 @@ import SoundToggle from '../common/SoundToggle';
 import { Printer } from 'lucide-react';
 import { useKOTManagement } from '../../hooks/useKOTManagement';
 import { useAppContext } from '../../context/AppContext';
+import DashboardLoader from '../DashboardLoader';
+
+// Add CSS animations
+const styles = `
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fadeInUp { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-slideInLeft { opacity: 0; animation: slideInLeft 0.4s ease-out forwards; }
+  .animate-scaleIn { opacity: 0; animation: scaleIn 0.3s ease-out forwards; }
+  .animate-delay-100 { animation-delay: 0.1s; }
+  .animate-delay-200 { animation-delay: 0.2s; }
+  .animate-delay-300 { animation-delay: 0.3s; }
+`;
+
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 const KOT = () => {
   const { axios } = useAppContext();
@@ -23,6 +52,7 @@ const KOT = () => {
     menuItems,
     userRole,
     userRestaurantRole,
+    isInitialLoading,
     setActiveTab,
     setKotForm,
     setSearchQuery,
@@ -39,6 +69,10 @@ const KOT = () => {
     handleSearch
   } = useKOTManagement();
 
+  if (isInitialLoading) {
+    return <DashboardLoader pageName="Kitchen Order Tickets" />;
+  }
+
 
 
 
@@ -46,12 +80,12 @@ const KOT = () => {
   return (
     <div className="p-6 bg-background min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 animate-slideInLeft animate-delay-100">
           <h1 className="text-3xl font-bold text-text">Kitchen Order Tickets (KOT)</h1>
           <SoundToggle />
         </div>
         
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden animate-fadeInUp animate-delay-200">
           <div className="border-b border-border">
             <nav className="flex">
               <button
@@ -115,7 +149,7 @@ const KOT = () => {
                     </button>
                   </div>
                 </form>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto animate-fadeInUp animate-delay-300">
                   <table className="w-full min-w-[800px]">
                     <thead style={{ backgroundColor: 'hsl(45, 71%, 69%)' }}>
                       <tr>
@@ -131,7 +165,7 @@ const KOT = () => {
                     </thead>
                     <tbody>
                       {filteredKots.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((kot, index) => (
-                        <tr key={kot._id} className={index % 2 === 0 ? 'bg-background' : 'bg-white'}>
+                        <tr key={kot._id} className={`${index % 2 === 0 ? 'bg-background' : 'bg-white'} animate-fadeInUp`} style={{animationDelay: `${Math.min(index * 50 + 400, 800)}ms`}}>
                           <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm font-mono" style={{ color: 'hsl(45, 100%, 20%)' }}>
                             <div className="font-semibold">{kot.displayNumber || kot.kotNumber?.slice(-3) || kot.orderId?.slice(-6) || 'N/A'}</div>
                           </td>
@@ -225,7 +259,7 @@ const KOT = () => {
             )}
             
             {activeTab === 'create' && (
-              <div className="p-6">
+              <div className="p-6 animate-fadeInUp animate-delay-300">
                 <div className="max-w-2xl mx-auto">
                   <h2 className="text-xl font-bold mb-4" style={{ color: 'hsl(45, 100%, 20%)' }}>Create New KOT</h2>
                   <form onSubmit={createKOT} className="space-y-4">
