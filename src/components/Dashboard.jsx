@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment, useMemo, useCallback } from "react";
+import React, { useState, useEffect, Fragment, useMemo, useCallback, useRef } from "react";
 import { FaIndianRupeeSign } from "react-icons/fa6";
 import { SlCalender } from "react-icons/sl";
 import {
@@ -258,42 +258,23 @@ const Dashboard = () => {
 
 
 
-  const fetchAllServiceData = useCallback(async () => {
+  const fetchServiceData = useCallback(async (service) => {
     const token = localStorage.getItem("token");
     const headers = { Authorization: `Bearer ${token}` };
     
-    // Check cache first
-    const cacheKey = 'serviceData';
-    const cached = sessionStorage.getItem(cacheKey);
-    const cacheTime = sessionStorage.getItem(cacheKey + '_time');
-    
-    if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < 300000) { // 5 minute cache
-      setAllServiceData(JSON.parse(cached));
-      return;
-    }
-    
     try {
-      // Only fetch essential data first
-      const [laundryRes, restaurantRes] = await Promise.allSettled([
-        axios.get("/api/laundry/all", { headers }),
-        axios.get("/api/restaurant-orders/all", { headers })
-      ]);
-      
-      const serviceData = {
-        laundry: laundryRes.status === 'fulfilled' ? (Array.isArray(laundryRes.value.data) ? laundryRes.value.data : laundryRes.value.data.laundry || []) : [],
-        restaurant: restaurantRes.status === 'fulfilled' ? (Array.isArray(restaurantRes.value.data) ? restaurantRes.value.data : restaurantRes.value.data.restaurant || []) : [],
-        pantry: [],
-        banquet: [],
-        reservations: []
-      };
-      
-      setAllServiceData(serviceData);
-      
-      // Cache the data
-      sessionStorage.setItem(cacheKey, JSON.stringify(serviceData));
-      sessionStorage.setItem(cacheKey + '_time', Date.now().toString());
+      let data = [];
+      if (service === 'restaurant') {
+        const res = await axios.get("/api/restaurant-orders/all", { headers });
+        data = Array.isArray(res.data) ? res.data : res.data?.restaurant || [];
+        setAllServiceData(prev => ({ ...prev, restaurant: data }));
+      } else if (service === 'laundry') {
+        const res = await axios.get("/api/laundry/all", { headers });
+        data = Array.isArray(res.data) ? res.data : res.data?.laundry || [];
+        setAllServiceData(prev => ({ ...prev, laundry: data }));
+      }
     } catch (error) {
-      console.error('Service APIs Error:', error);
+      console.error(`${service} API Error:`, error);
     }
   }, [axios]);
 
@@ -391,7 +372,7 @@ const Dashboard = () => {
       {
         id: "restaurant",
         title: "Restaurant Orders",
-        value: (allServiceData.restaurant?.length || 0).toString(),
+        value: (Array.isArray(allServiceData.restaurant) ? allServiceData.restaurant.length : 0).toString(),
         icon: "Users",
         color: "bg-orange-500",
         trend: "+0%",
@@ -400,7 +381,7 @@ const Dashboard = () => {
       {
         id: "laundry",
         title: "Laundry Orders",
-        value: (allServiceData.laundry?.length || 0).toString(),
+        value: (Array.isArray(allServiceData.laundry) ? allServiceData.laundry.length : 0).toString(),
         icon: "Users",
         color: "bg-purple-500",
         trend: "+0%",
@@ -423,11 +404,6 @@ const Dashboard = () => {
             fetchRooms(),
             fetchBookings()
           ]);
-          
-          // Fetch service data last (only when needed)
-          if (activeCard === 'restaurant' || activeCard === 'laundry') {
-            await fetchAllServiceData();
-          }
         }, 100);
       } catch (error) {
         console.error('Dashboard fetch error:', error);
@@ -435,7 +411,7 @@ const Dashboard = () => {
       }
     };
     fetchData();
-  }, [fetchAllServiceData, timeFrame]);
+  }, [timeFrame]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -497,10 +473,11 @@ const Dashboard = () => {
     if (newActiveCard) {
       localStorage.setItem("activeCard", newActiveCard);
       
-      // Fetch service data only when restaurant/laundry cards are clicked
-      if ((newActiveCard === 'restaurant' || newActiveCard === 'laundry') && 
-          (!allServiceData.restaurant.length && !allServiceData.laundry.length)) {
-        fetchAllServiceData();
+      // Fetch specific service data only when needed
+      if (newActiveCard === 'restaurant' && !allServiceData.restaurant.length) {
+        fetchServiceData('restaurant');
+      } else if (newActiveCard === 'laundry' && !allServiceData.laundry.length) {
+        fetchServiceData('laundry');
       }
     } else {
       localStorage.removeItem("activeCard");
@@ -539,37 +516,7 @@ const Dashboard = () => {
     );
   };
 
-  const CounterAnimation = ({ value, duration = 1000 }) => {
-    const [count, setCount] = useState(0);
-    
-    useEffect(() => {
-      const numericValue = parseInt(value.replace(/[^0-9]/g, '')) || 0;
-      if (numericValue === 0) {
-        setCount(0);
-        return;
-      }
-      
-      const increment = numericValue / (duration / 16);
-      let current = 0;
-      
-      const timer = setInterval(() => {
-        current += increment;
-        if (current >= numericValue) {
-          setCount(numericValue);
-          clearInterval(timer);
-        } else {
-          setCount(Math.floor(current));
-        }
-      }, 16);
-      
-      return () => clearInterval(timer);
-    }, [value, duration]);
-    
-    if (value.includes('₹')) {
-      return `₹${count.toLocaleString()}`;
-    }
-    return count.toString();
-  };
+
 
   const getIcon = (iconName) => {
     switch (iconName) {
@@ -1092,15 +1039,15 @@ const Dashboard = () => {
         <div className="flex flex-col sm:flex-row flex-wrap gap-4 items-start sm:items-center">
           <div className="flex items-center">
             <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
-            <span className="text-sm">12 Check-ins Today</span>
+            <span className="text-sm">{dashboardStats?.todayCheckIns || 0} Check-ins Today</span>
           </div>
           <div className="flex items-center">
             <Clock className="w-5 h-5 text-primary mr-2" />
-            <span className="text-sm">8 Check-outs Today</span>
+            <span className="text-sm">{dashboardStats?.todayCheckOuts || 0} Check-outs Today</span>
           </div>
           <div className="flex items-center">
             <AlertTriangle className="w-5 h-5 text-red-600 mr-2" />
-            <span className="text-sm">3 Rooms Need Maintenance</span>
+            <span className="text-sm">{rooms.filter(r => r.status === 'maintenance').length} Rooms Need Maintenance</span>
           </div>
         </div>
       </div>
@@ -1143,7 +1090,7 @@ const Dashboard = () => {
                   </div>
                   <h3 className="text-sm text-text/70">{card.title}</h3>
                   <p className="text-2xl font-bold text-[#1f2937]">
-                    <CounterAnimation value={card.value} duration={1200} />
+                    {card.value}
                   </p>
                 </div>
                 <div
