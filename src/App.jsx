@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AppProvider } from './context/AppContext';
@@ -7,6 +7,7 @@ import { SocketProvider } from './context/SocketContext';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import LoadingScreen from './components/LoadingScreen';
 import Dashboard from './components/Dashboard';
 import EasyDashboard from './components/easy dashboard/easydashboard';
 import RoomList from './components/room/RoomList';
@@ -63,6 +64,20 @@ import Housekeeping from './components/Housekeeping/Housekeeping';
 import './App.css'
 
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500); // 2.5 seconds loading time
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
   return (
     <AuthProvider>
       <AppProvider>
