@@ -372,7 +372,7 @@ const Dashboard = () => {
       {
         id: "restaurant",
         title: "Restaurant Orders",
-        value: (Array.isArray(allServiceData.restaurant) ? allServiceData.restaurant.length : 0).toString(),
+        value: (dashboardStats?.restaurantOrders || 0).toString(),
         icon: "Users",
         color: "bg-orange-500",
         trend: "+0%",
@@ -381,7 +381,7 @@ const Dashboard = () => {
       {
         id: "laundry",
         title: "Laundry Orders",
-        value: (Array.isArray(allServiceData.laundry) ? allServiceData.laundry.length : 0).toString(),
+        value: (dashboardStats?.laundryOrders || 0).toString(),
         icon: "Users",
         color: "bg-purple-500",
         trend: "+0%",
