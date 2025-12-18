@@ -189,7 +189,7 @@ function App() {
             
             {/* Vendor Routes */}
             <Route path="vendors" element={
-              <PrivateRoute requiredRoles={['ADMIN', 'GM']}>
+              <PrivateRoute requiredRoles={['ADMIN', 'GM', 'FRONT DESK']}>
                 <VendorManagement />
               </PrivateRoute>
             } />
