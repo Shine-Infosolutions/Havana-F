@@ -37,6 +37,7 @@ import logoImage from "../assets/hawana golden png.png";
 const Sidebar = () => {
   const [openDropdowns, setOpenDropdowns] = useState(new Set());
   const [showSettingsSlider, setShowSettingsSlider] = useState(false);
+  const [isAnimated, setIsAnimated] = useState(false);
 
 
   const { isSidebarOpen, closeSidebar } = useAppContext();
@@ -48,6 +49,9 @@ const Sidebar = () => {
 
   useEffect(() => {
     setTaskCount(0);
+    // Trigger animation after component mounts
+    const timer = setTimeout(() => setIsAnimated(true), 100);
+    return () => clearTimeout(timer);
   }, []);
 
 
@@ -247,9 +251,11 @@ const Sidebar = () => {
       <aside
         className={`fixed inset-y-0 left-0 bg-[#1f2937] text-[#c2ab65] w-full sm:w-64 max-w-xs transform ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } transition-transform duration-300 ease-in-out md:relative md:translate-x-0 z-30 flex flex-col h-screen overflow-y-auto`}
+        } transition-all duration-500 ease-out md:relative md:translate-x-0 z-30 flex flex-col h-screen overflow-y-auto`}
       >
-      <div className="flex items-center justify-between md:justify-center p-2">
+      <div className={`flex items-center justify-between md:justify-center p-2 transform transition-all duration-700 delay-100 ${
+        isAnimated ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'
+      }`}>
         <img src={logoImage} alt="Havana Hotel" className="h-8 sm:h-10 md:h-12" />
         <button
           onClick={closeSidebar}
@@ -270,11 +276,15 @@ const Sidebar = () => {
           </svg>
         </button>
       </div>
-      <div className="text-center mt-2 font-bold text-base sm:text-lg">{user?.role}</div>
+      <div className={`text-center mt-2 font-bold text-base sm:text-lg transform transition-all duration-700 delay-200 ${
+        isAnimated ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'
+      }`}>{user?.role}</div>
 
       <nav className="flex-1 p-3 sm:p-4 space-y-1 sm:space-y-2">
         {navItems.map((item, index) => (
-          <div key={index}>
+          <div key={index} className={`transform transition-all duration-500 ease-out ${
+            isAnimated ? 'translate-x-0 opacity-100' : '-translate-x-8 opacity-0'
+          }`} style={{ transitionDelay: `${300 + index * 100}ms` }}>
             {item.isDropdown ? (
               <>
                 <button
@@ -350,9 +360,13 @@ const Sidebar = () => {
         ))}
       </nav>
 
-      <div className="p-3 sm:p-4 border-t border-secondary">
+      <div className={`p-3 sm:p-4 border-t border-secondary transform transition-all duration-700 delay-700 ${
+        isAnimated ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+      }`}>
         {bottomNavItems.map((item, index) => (
-          <div key={index}>
+          <div key={index} className={`transform transition-all duration-500 ease-out ${
+            isAnimated ? 'translate-x-0 opacity-100' : '-translate-x-8 opacity-0'
+          }`} style={{ transitionDelay: `${800 + index * 100}ms` }}>
             {item.isSlider ? (
               <button
                 onClick={() => setShowSettingsSlider(true)}
@@ -373,13 +387,17 @@ const Sidebar = () => {
             )}
           </div>
         ))}
-        <button
-          onClick={handleLogout}
-          className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg w-full text-left text-sm sm:text-base hover:bg-red-600 hover:text-white transition-colors duration-200"
-        >
-          <LogOut className="w-4 sm:w-5 h-4 sm:h-5 mr-2 sm:mr-3" />
-          <span className="truncate">Logout</span>
-        </button>
+        <div className={`transform transition-all duration-500 ease-out ${
+          isAnimated ? 'translate-x-0 opacity-100' : '-translate-x-8 opacity-0'
+        }`} style={{ transitionDelay: '1000ms' }}>
+          <button
+            onClick={handleLogout}
+            className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg w-full text-left text-sm sm:text-base hover:bg-red-600 hover:text-white transition-colors duration-200"
+          >
+            <LogOut className="w-4 sm:w-5 h-4 sm:h-5 mr-2 sm:mr-3" />
+            <span className="truncate">Logout</span>
+          </button>
+        </div>
       </div>
 
       </aside>
