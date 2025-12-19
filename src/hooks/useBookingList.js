@@ -66,12 +66,17 @@ export const useBookingList = () => {
 
       const mappedBookings = bookingsArray.map((b) => {
         const room = roomsData.find(r => r.room_number == b.roomNumber || r.roomNumber == b.roomNumber);
-        const category = room ? categoriesData.find(c => 
+        const category = categoriesData.find(c => 
+          c._id == b.categoryId || 
+          c.id == b.categoryId ||
+          c._id == b.categoryId?._id || 
+          c.id == b.categoryId?._id
+        ) || (room ? categoriesData.find(c => 
           c._id == room.categoryId || 
           c.id == room.categoryId || 
           c._id == room.category?._id || 
           c.id == room.category?._id
-        ) : null;
+        ) : null);
         
         let extraBedRooms = [];
         if (b.extraBedRooms && Array.isArray(b.extraBedRooms)) {
@@ -93,7 +98,7 @@ export const useBookingList = () => {
           name: b.name || "N/A",
           mobileNo: b.mobileNo || "N/A",
           roomNumber: b.roomNumber || "N/A",
-          category: category?.name || category?.categoryName || "N/A",
+          category: category?.name || category?.categoryName || b.categoryId?.name || "N/A",
           checkIn: b.checkInDate ? formatDate(b.checkInDate) : "N/A",
           checkOut: b.checkOutDate ? formatDate(b.checkOutDate) : "N/A",
           status: b.status || "N/A",
