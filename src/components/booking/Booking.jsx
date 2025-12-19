@@ -386,43 +386,45 @@ const BookingPage = () => {
           {/* Desktop Table View */}
           <div className="hidden md:block rounded-xl shadow-lg overflow-hidden bg-white animate-scaleIn animate-delay-300" style={{ border: '1px solid hsl(45, 100%, 85%)' }}>
           <div className="overflow-x-auto overflow-y-scroll max-h-[70vh]" style={{scrollbarWidth: 'thin'}}>
-            <table className="min-w-full" style={{ minWidth: '1200px' }}>
+            <table className="w-full">
               <thead className="border-b" style={{ backgroundColor: 'hsl(45, 100%, 90%)', borderColor: 'hsl(45, 100%, 85%)' }}>
                 <tr>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>
-                    GRC No
+                  <th className="px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider w-20" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                    GRC
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>
-                    Invoice No
+                  <th className="px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider w-20" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                    Invoice
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                  <th className="px-1 py-3 text-left text-xs font-semibold uppercase tracking-wider w-32" style={{ color: 'hsl(45, 100%, 20%)' }}>
                     Name
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                  <th className="px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider w-24" style={{ color: 'hsl(45, 100%, 20%)' }}>
                     Room
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                  <th className="px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider w-20 hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
                     Category
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
-                    Extra Bed
+                  <th className="px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider w-20 hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                    Extra
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                  <th className="px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider w-20 hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
                     Check In
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                  <th className="px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider w-20 hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
                     Check Out
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                  <th className="px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider w-24" style={{ color: 'hsl(45, 100%, 20%)' }}>
                     Status
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
-                    Amended
-                  </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                  {paginatedBookings.some(booking => booking._raw?.amendmentHistory && booking._raw.amendmentHistory.length > 0) && (
+                    <th className="px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider w-16 hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                      Amended
+                    </th>
+                  )}
+                  <th className="px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider w-20 hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
                     Payment
                   </th>
-                  <th className="px-2 sm:px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                  <th className="px-2 py-3 text-center text-xs font-semibold uppercase tracking-wider w-32" style={{ color: 'hsl(45, 100%, 20%)' }}>
                     Actions
                   </th>
                 </tr>
@@ -434,53 +436,48 @@ const BookingPage = () => {
                     className="transition-colors duration-200 animate-fadeInUp"
                     style={{animationDelay: `${Math.min(index * 50 + 400, 800)}ms`}}
                   >
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                    <td className="px-2 py-3 whitespace-nowrap text-xs" style={{ color: 'hsl(45, 100%, 20%)' }}>
                       {booking.grcNo}
                     </td>
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
-                      {booking._raw?.invoiceNumber || 'N/A'}
+                    <td className="px-2 py-3 whitespace-nowrap text-xs" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                      <div className="truncate" title={booking._raw?.invoiceNumber}>{booking._raw?.invoiceNumber || 'N/A'}</div>
                     </td>
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
-                      {booking.name}
+                    <td className="px-1 py-3 text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                      <div className="truncate" title={booking.name}>{booking.name}</div>
                     </td>
-                    <td className="px-2 sm:px-4 py-3 text-sm" style={{ color: 'hsl(45, 100%, 20%)' }}>
-                      <div className="max-w-[120px]">
-                        {booking.roomNumber.includes(',') ? (
-                          <div className="flex flex-wrap gap-1">
-                            {booking.roomNumber.split(',').map((room, idx) => (
-                              <span key={idx} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                                {room.trim()}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          booking.roomNumber
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
-                      {booking.category}
-                    </td>
-                    <td className="px-2 sm:px-4 py-3 text-sm hidden lg:table-cell">
-                      {booking.extraBedRooms && booking.extraBedRooms.length > 0 ? (
+                    <td className="px-2 py-3 text-xs" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                      {booking.roomNumber.includes(',') ? (
                         <div className="flex flex-wrap gap-1">
-                          {booking.extraBedRooms.map((room, idx) => (
-                            <span key={idx} className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                              {room}
+                          {booking.roomNumber.split(',').slice(0, 2).map((room, idx) => (
+                            <span key={idx} className="inline-block bg-blue-100 text-blue-800 text-xs px-1 py-0.5 rounded">
+                              {room.trim()}
                             </span>
                           ))}
+                          {booking.roomNumber.split(',').length > 2 && (
+                            <span className="text-xs text-gray-500">+{booking.roomNumber.split(',').length - 2}</span>
+                          )}
                         </div>
                       ) : (
-                        <span className="text-gray-500 text-xs">None</span>
+                        booking.roomNumber
                       )}
                     </td>
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                    <td className="px-2 py-3 whitespace-nowrap text-xs hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                      <div className="truncate" title={booking.category}>{booking.category}</div>
+                    </td>
+                    <td className="px-2 py-3 text-xs hidden lg:table-cell">
+                      {booking.extraBedRooms && booking.extraBedRooms.length > 0 ? (
+                        <span className="text-green-600">{booking.extraBedRooms.length}</span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap text-xs hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
                       {booking.checkIn}
                     </td>
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-sm hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
+                    <td className="px-2 py-3 whitespace-nowrap text-xs hidden lg:table-cell" style={{ color: 'hsl(45, 100%, 20%)' }}>
                       {booking.checkOut}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-2 py-3 whitespace-nowrap">
                       <select
                         value={booking.status}
                         onChange={(e) => {
@@ -489,7 +486,7 @@ const BookingPage = () => {
                           }
                         }}
                         disabled={booking.status === 'Checked Out'}
-                        className={`px-2 py-1 rounded border text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                        className={`px-1 py-1 rounded border text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 w-full ${
                           booking.status === 'Checked Out' ? 'cursor-not-allowed opacity-60' : ''
                         } ${
                           booking.status === "Booked"
@@ -507,29 +504,26 @@ const BookingPage = () => {
                         <option value="Cancelled">Cancelled</option>
                       </select>
                     </td>
-                    <td className="px-2 sm:px-4 py-3 text-sm hidden lg:table-cell">
-                      {booking._raw?.amendmentHistory && booking._raw.amendmentHistory.length > 0 ? (
-                        <div className="flex items-center">
-                          <span className="inline-block bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">
-                            {booking._raw.amendmentHistory.length}x
-                          </span>
+                    {paginatedBookings.some(booking => booking._raw?.amendmentHistory && booking._raw.amendmentHistory.length > 0) && (
+                      <td className="px-2 py-3 text-center text-xs hidden lg:table-cell">
+                        {booking._raw?.amendmentHistory && booking._raw.amendmentHistory.length > 0 ? (
                           <button
                             onClick={() => {
                               alert(`Amendment History:\n${booking._raw.amendmentHistory.map((a, i) => 
                                 `${i+1}. ${new Date(a.amendedOn).toLocaleDateString()}: Extended to ${new Date(a.newCheckOut).toLocaleDateString()} (₹${a.totalAdjustment || 0})`
                               ).join('\n')}`);
                             }}
-                            className="ml-1 text-orange-600 hover:text-orange-800 text-xs"
+                            className="bg-orange-100 text-orange-800 px-1 py-0.5 rounded text-xs hover:bg-orange-200"
                             title="View amendment history"
                           >
-                            ℹ️
+                            {booking._raw.amendmentHistory.length}x
                           </button>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 text-xs">None</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                    )}
+                    <td className="px-2 py-3 whitespace-nowrap hidden lg:table-cell">
                       <select
                         value={booking.status === "Checked Out" ? "Paid" : booking.paymentStatus}
                         onChange={(e) => {
@@ -538,7 +532,7 @@ const BookingPage = () => {
                           }
                         }}
                         disabled={booking.status === 'Checked Out'}
-                        className={`px-2 py-1 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 w-full ${
+                        className={`px-1 py-1 rounded border border-gray-300 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 w-full ${
                           booking.status === 'Checked Out' ? 'cursor-not-allowed opacity-60' : ''
                         }`}
                       >
@@ -548,89 +542,92 @@ const BookingPage = () => {
                         <option value="Partial">Partial</option>
                       </select>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-center">
-                      <div className="flex space-x-1 justify-center items-center">
-                        <button
-                          onClick={() => navigate(`/booking-details/${booking._raw?.bookingNo || booking.id}`)}
-                          title="View Details"
-                          className="p-1.5 rounded-full transition duration-300 text-indigo-600 hover:text-indigo-800"
-                        >
-                          <Eye size={16} />
-                        </button>
+                    <td className="px-2 py-3">
+                      <div className="flex flex-col gap-1 items-center">
+                        <div className="flex gap-1 justify-center">
+                          <button
+                            onClick={() => navigate(`/booking-details/${booking._raw?.bookingNo || booking.id}`)}
+                            title="View"
+                            className="p-1 rounded transition duration-300 text-indigo-600 hover:bg-indigo-50"
+                          >
+                            <Eye size={12} />
+                          </button>
 
-                        <button
-                          onClick={() => navigate(`/edit-booking/${booking._raw?.grcNo || booking.id}`, { state: { editBooking: booking._raw } })}
-                          disabled={booking.status === 'Checked Out'}
-                          title={booking.status === 'Checked Out' ? 'Cannot edit checked out booking' : 'Edit Booking'}
-                          className={`p-1.5 rounded-full transition duration-300 ${
-                            booking.status === 'Checked Out' 
-                              ? 'text-gray-400 cursor-not-allowed' 
-                              : 'text-blue-600 hover:text-blue-800'
-                          }`}
-                        >
-                          <Edit size={16} />
-                        </button>
+                          <button
+                            onClick={() => navigate(`/edit-booking/${booking._raw?.grcNo || booking.id}`, { state: { editBooking: booking._raw } })}
+                            disabled={booking.status === 'Checked Out'}
+                            title="Edit"
+                            className={`p-1 rounded transition duration-300 ${
+                              booking.status === 'Checked Out' 
+                                ? 'text-gray-400 cursor-not-allowed' 
+                                : 'text-blue-600 hover:bg-blue-50'
+                            }`}
+                          >
+                            <Edit size={12} />
+                          </button>
 
-                        <button
-                          onClick={() => openAmendModal(booking.id)}
-                          disabled={booking.status === 'Checked Out'}
-                          title={booking.status === 'Checked Out' ? 'Cannot amend checked out booking' : 'Amend Stay Dates'}
-                          className={`p-1.5 rounded-full transition duration-300 ${
-                            booking.status === 'Checked Out' 
-                              ? 'text-gray-400 cursor-not-allowed' 
-                              : 'text-orange-600 hover:text-orange-800'
-                          }`}
-                        >
-                          <Calendar size={16} />
-                        </button>
+                          <button
+                            onClick={() => openAmendModal(booking.id)}
+                            disabled={booking.status === 'Checked Out'}
+                            title="Amend"
+                            className={`p-1 rounded transition duration-300 ${
+                              booking.status === 'Checked Out' 
+                                ? 'text-gray-400 cursor-not-allowed' 
+                                : 'text-orange-600 hover:bg-orange-50'
+                            }`}
+                          >
+                            <Calendar size={12} />
+                          </button>
 
-                        <button
-                          onClick={() => generateInvoice(booking.id)}
-                          disabled={generatingInvoice}
-                          title={generatingInvoice ? "Generating..." : "Generate Bill"}
-                          className={`p-1.5 rounded-full transition duration-300 ${
-                            generatingInvoice ? 'text-gray-400 cursor-not-allowed' : 'text-green-600'
-                          }`}
-                        >
-                          <FileText size={16} />
-                        </button>
-                        {booking.status === 'Booked' && (
                           <button
-                            onClick={() => {
-                              if (confirm(`CHECK-IN CONFIRMATION\n\nGuest: ${booking.name}\nGRC No: ${booking.grcNo}\nRoom: ${booking.roomNumber}\n\nAre you sure you want to check in this guest?`)) {
-                                updateBookingStatus(booking.id, 'Checked In');
-                              }
-                            }}
-                            className="bg-blue-600 text-white px-2 py-1 rounded text-xs transition duration-300"
+                            onClick={() => generateInvoice(booking.id)}
+                            disabled={generatingInvoice}
+                            title="Bill"
+                            className={`p-1 rounded transition duration-300 ${
+                              generatingInvoice ? 'text-gray-400 cursor-not-allowed' : 'text-green-600 hover:bg-green-50'
+                            }`}
                           >
-                            Check In
+                            <FileText size={12} />
                           </button>
-                        )}
-                        {booking.status === 'Checked In' && (
-                          <button
-                            onClick={() => openCheckout(booking.id)}
-                            className="bg-purple-600 text-white px-2 py-1 rounded text-xs transition duration-300"
-                          >
-                            Checkout
-                          </button>
-                        )}
-                        {booking.status === 'Checked Out' && (
-                          <button
-                            disabled
-                            className="bg-gray-400 text-white px-2 py-1 rounded text-xs cursor-not-allowed"
-                          >
-                            Checked Out
-                          </button>
-                        )}
-                        {hasRole('ADMIN') && (
-                          <button
-                            onClick={() => deleteBooking(booking.id)}
-                            title="Delete Booking"
-                            className="p-1.5 rounded-full text-red-600 transition duration-300"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
+                          
+                          {hasRole('ADMIN') && (
+                            <button
+                              onClick={() => deleteBooking(booking.id)}
+                              title="Delete"
+                              className="p-1 rounded text-red-600 transition duration-300 hover:bg-red-50"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div>
+                          {booking.status === 'Booked' && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`CHECK-IN CONFIRMATION\n\nGuest: ${booking.name}\nGRC No: ${booking.grcNo}\nRoom: ${booking.roomNumber}\n\nAre you sure you want to check in this guest?`)) {
+                                  updateBookingStatus(booking.id, 'Checked In');
+                                }
+                              }}
+                              className="bg-blue-600 text-white px-2 py-1 rounded text-xs transition duration-300 hover:bg-blue-700"
+                            >
+                              Check In
+                            </button>
+                          )}
+                          {booking.status === 'Checked In' && (
+                            <button
+                              onClick={() => openCheckout(booking.id)}
+                              className="bg-purple-600 text-white px-2 py-1 rounded text-xs transition duration-300 hover:bg-purple-700"
+                            >
+                              Checkout
+                            </button>
+                          )}
+                          {booking.status === 'Checked Out' && (
+                            <span className="bg-gray-400 text-white px-2 py-1 rounded text-xs">
+                              Checked Out
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
