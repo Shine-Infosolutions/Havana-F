@@ -239,7 +239,7 @@ const EditBookingForm = () => {
     discountNotes: '',
     nonChargeable: false,
     paymentMode: '',
-    paymentStatus: 'Pending',
+    paymentStatus: false,
     transactionId: '',
     bookingRefNo: '',
     mgmtBlock: 'No',
@@ -340,7 +340,7 @@ const EditBookingForm = () => {
         discountNotes: editBooking.discountNotes || '',
         nonChargeable: editBooking.nonChargeable || false,
         paymentMode: editBooking.paymentMode || '',
-        paymentStatus: editBooking.paymentStatus || 'Pending',
+        paymentStatus: editBooking.paymentStatus || false,
         transactionId: editBooking.transactionId || '',
         bookingRefNo: editBooking.bookingRefNo || '',
         mgmtBlock: editBooking.mgmtBlock || 'No',
@@ -2698,8 +2698,8 @@ const EditBookingForm = () => {
                       value={formData.paymentStatus}
                       onChange={handleChange}
                     >
-                      <option value="Pending">Pending</option>
-                      <option value="Paid">Paid</option>
+                      <option value={false}>Pending</option>
+                      <option value={true}>Paid</option>
                       <option value="Failed">Failed</option>
                       <option value="Partial">Partial</option>
                     </Select>

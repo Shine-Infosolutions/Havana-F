@@ -327,7 +327,7 @@ export const AppProvider = ({ children }) => {
     discountNotes: '',
     nonChargeable: false,
     paymentMode: '',
-    paymentStatus: 'Pending',
+    paymentStatus: false,
     transactionId: '',
     bookingRefNo: '',
     mgmtBlock: 'No',
@@ -464,7 +464,7 @@ export const AppProvider = ({ children }) => {
       taxIncluded: false, serviceCharge: false, arrivedFrom: '',
       destination: '', remark: '', businessSource: '', marketSegment: '',
       purposeOfVisit: '', discountPercent: 0, discountRoomSource: 0, discountNotes: '', paymentMode: '',
-      paymentStatus: 'Pending', bookingRefNo: '', mgmtBlock: 'No', billingInstruction: '',
+      paymentStatus: false, bookingRefNo: '', mgmtBlock: 'No', billingInstruction: '',
       temperature: '', fromCSV: false, epabx: false, vip: false, status: 'Booked',
       extensionHistory: [], invoiceNumber: '',
     });
@@ -2885,8 +2885,8 @@ const App = () => {
                 value={formData.paymentStatus}
                 onChange={handleChange}
               >
-                <option value="Pending">Pending</option>
-                <option value="Paid">Paid</option>
+                <option value={false}>Pending</option>
+                <option value={true}>Paid</option>
                 <option value="Failed">Failed</option>
                 <option value="Partial">Partial</option>
               </Select>
