@@ -850,8 +850,10 @@ export default function Invoice() {
               <p className="font-medium">: {invoiceData.invoiceDetails?.billNo} {invoiceData.invoiceDetails?.billDate}</p>
               <p className="font-bold">GRC No.</p>
               <p className="font-medium">: {invoiceData.invoiceDetails?.grcNo}</p>
-              <p className="font-bold">Room No./Type</p>
-              <p className="font-medium">: {invoiceData.invoiceDetails?.roomNo} {invoiceData.invoiceDetails?.roomType}</p>
+              <p className="font-bold">Room No.</p>
+              <p className="font-medium">: {bookingData?.roomNumber || invoiceData.invoiceDetails?.roomNo}</p>
+              <p className="font-bold">Room Type</p>
+              <p className="font-medium">: {invoiceData.invoiceDetails?.roomType}</p>
               {showPaxDetails && (
                 <>
                   <p className="font-bold">PAX</p>
@@ -866,20 +868,7 @@ export default function Invoice() {
                   </p>
                 </>
               )}
-              <p className="font-bold">Rooms</p>
-              <p className="font-medium">
-                {bookingData?.roomGuestDetails && bookingData.roomGuestDetails.length > 0 ? (
-                  <>
-                    : {bookingData.roomGuestDetails.map((room, index) => (
-                      <span key={index}>
-                        Room {room.roomNumber}{index < bookingData.roomGuestDetails.length - 1 ? ', ' : ''}
-                      </span>
-                    ))}
-                  </>
-                ) : (
-                  `: ${invoiceData.invoiceDetails?.roomNo}`
-                )}
-              </p>
+
               <p className="font-bold">CheckIn Date</p>
               <p className="font-medium">: {bookingData?.checkInDate ? formatDate(bookingData.checkInDate) : (invoiceData.invoiceDetails?.checkInDate && invoiceData.invoiceDetails.checkInDate !== 'N/A' ? invoiceData.invoiceDetails.checkInDate : formatDate())}</p>
               <p className="font-bold">CheckOut Date</p>
