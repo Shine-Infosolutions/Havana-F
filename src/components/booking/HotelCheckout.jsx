@@ -32,47 +32,30 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
       console.log('Charges API response:', chargesResponse.data);
       const charges = chargesResponse.data.charges;
       
-      // Create checkout record first if it doesn't exist
-      let checkoutRecord;
-      try {
-        const existingCheckout = await axios.get(`/api/checkout/booking/${bookingId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        checkoutRecord = existingCheckout.data.checkout;
-      } catch (error) {
-        // Create new checkout if not found
-        const createResponse = await axios.post('/api/checkout/create', {
-          bookingId: bookingId
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        checkoutRecord = createResponse.data.checkout;
-      }
-      
-      // Create checkout data structure
+      // Create checkout data structure using correct values from charges API
       const checkoutData = {
-        _id: checkoutRecord._id,
-        bookingId: bookingId,
         bookingCharges: charges.roomCharges.taxableAmount || 0,
         restaurantCharges: charges.summary.totalRestaurantCharges || 0,
         roomServiceCharges: charges.summary.totalServiceCharges || 0,
         laundryCharges: charges.summary.totalLaundryCharges || 0,
-        inspectionCharges: 0, // Will be added separately if needed
-        totalAmount: charges.summary.grandTotal || 0,
+        inspectionCharges: 0,
         subtotal: charges.summary.subtotal || 0,
-        cgstAmount: charges.summary.cgstAmount || 0,
-        sgstAmount: charges.summary.sgstAmount || 0,
-        totalTax: charges.summary.totalTax || 0,
+        cgstAmount: charges.roomCharges.cgstAmount || 0,
+        sgstAmount: charges.roomCharges.sgstAmount || 0,
+        totalAmount: charges.summary.totalRoomCharges || 0,
         status: 'pending'
       };
       
+      console.log('Raw charges data:', charges);
       console.log('Processed checkout data:', checkoutData);
+      console.log('Subtotal value:', checkoutData.subtotal);
+      console.log('Total amount value:', checkoutData.totalAmount);
       setCheckoutData(checkoutData);
       
-      // Calculate balance due after advance payments
+      // Calculate balance due after advance payments using correct total from backend
       const advancePayments = booking?.advancePayments || [];
       const totalAdvance = advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
-      const balanceDue = Math.max(0, (checkoutData.totalAmount || 0) - totalAdvance);
+      const balanceDue = Math.max(0, checkoutData.totalAmount - totalAdvance);
       
       setPaymentAmount(balanceDue.toString());
       
@@ -241,12 +224,13 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                   const discountNotes = booking?.discountNotes || '';
                   
                   if (discountPercent > 0) {
-                    const roomCharges = checkoutData.bookingCharges || 0;
-                    const discountAmount = roomCharges * (discountPercent / 100);
+                    const baseSubtotal = (checkoutData.bookingCharges || 0) + (checkoutData.restaurantCharges || 0) + (checkoutData.roomServiceCharges || 0) + (checkoutData.laundryCharges || 0) + (checkoutData.inspectionCharges || 0);
+                    const subtotalWithLate = baseSubtotal + lateCheckoutFee;
+                    const discountAmount = subtotalWithLate * (discountPercent / 100);
                     return (
                       <>
                         <div className="flex justify-between py-2 border-b">
-                          <span>Discount ({discountPercent}%) - Room Only:</span>
+                          <span>Discount ({discountPercent}%):</span>
                           <span className="font-medium text-green-600">-₹{discountAmount.toFixed(2)}</span>
                         </div>
                         {discountNotes && (
@@ -259,27 +243,29 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                     );
                   }
                   return null;
-                })()}
+                })()} 
                 <div className="flex justify-between py-2 border-b">
-                  <span>Subtotal:</span>
-                  <span className="font-medium">₹{(checkoutData.subtotal || 0) + lateCheckoutFee}</span>
+                  <span>Subtotal{booking?.discountPercent > 0 ? ' after discount' : ''}:</span>
+                  <span className="font-medium">₹{checkoutData.subtotal}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span>CGST (2.5%):</span>
-                  <span className="font-medium">₹{checkoutData.cgstAmount || 0}</span>
+                  <span className="font-medium">₹{(checkoutData.cgstAmount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span>SGST (2.5%):</span>
-                  <span className="font-medium">₹{checkoutData.sgstAmount || 0}</span>
+                  <span className="font-medium">₹{(checkoutData.sgstAmount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between py-3 border-t-2 border-blue-200 text-lg font-bold">
                   <span>Total with Tax:</span>
-                  <span className="text-blue-600">₹{(checkoutData.totalAmount || 0) + lateCheckoutFee}</span>
+                  <span className="text-blue-600">₹{checkoutData.totalAmount}</span>
                 </div>
                 {(() => {
                   const advancePayments = booking?.advancePayments || [];
                   const totalAdvance = advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
-                  const balanceDue = ((checkoutData.totalAmount || 0) + lateCheckoutFee) - totalAdvance;
+                  
+                  const finalTotal = checkoutData.totalAmount || 0;
+                  const balanceDue = finalTotal - totalAdvance;
                   
                   if (totalAdvance > 0) {
                     return (
@@ -369,13 +355,14 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                   {(() => {
                     const advancePayments = booking?.advancePayments || [];
                     const totalAdvance = advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
-                    const balanceDue = Math.max(0, ((checkoutData?.totalAmount || 0) + lateCheckoutFee) - totalAdvance);
+                    const finalTotal = checkoutData?.totalAmount || 0;
+                    const balanceDue = Math.max(0, finalTotal - totalAdvance);
                     
                     return (
                       <>
                         <div className="flex justify-between text-sm">
                           <span>Total Amount:</span>
-                          <span>₹{(checkoutData?.totalAmount || 0) + lateCheckoutFee}</span>
+                          <span>₹{finalTotal.toFixed(2)}</span>
                         </div>
                         {totalAdvance > 0 && (
                           <div className="flex justify-between text-sm text-green-600">
