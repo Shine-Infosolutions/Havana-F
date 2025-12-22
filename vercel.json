@@ -1,10 +1,16 @@
 {
-  "outputDirectory": "dist",
   "buildCommand": "npm run build",
-  "rewrites": [
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "headers": [
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
     }
   ]
 }
