@@ -1215,25 +1215,18 @@ const App = () => {
   };
 
   const handleRoomSelection = (room) => {
-    console.log('🔍 Room selection clicked:', { id: room._id, room_number: room.room_number, title: room.title });
-    
     setSelectedRooms((prev) => {
       const isSelected = prev.some((r) => r._id === room._id);
       let newSelectedRooms;
       if (isSelected) {
         newSelectedRooms = prev.filter((r) => r._id !== room._id);
-        console.log('❌ Room unselected:', room.room_number);
       } else {
-        // Initialize custom price with the room's default price when selecting
         const roomWithCustomPrice = {
           ...room,
           customPrice: room.customPrice !== undefined ? room.customPrice : room.price || 0
         };
         newSelectedRooms = [...prev, roomWithCustomPrice];
-        console.log(`✅ Room selected: ${room.room_number}, initialized customPrice: ${roomWithCustomPrice.customPrice}`);
       }
-      
-      console.log('📋 All selected rooms:', newSelectedRooms.map(r => ({ id: r._id, room_number: r.room_number })));
       
       // Calculate total rate based on selected rooms and days
       const totalRoomRate = newSelectedRooms.reduce((sum, selectedRoom) => {

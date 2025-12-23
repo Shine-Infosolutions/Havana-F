@@ -65,11 +65,6 @@ export const useBookingList = () => {
       const bookingsArray = Array.isArray(bookingsData) ? bookingsData : bookingsData.bookings || [];
 
       const mappedBookings = bookingsArray.map((b) => {
-        // Debug log to check room number data
-        if (b.roomNumber && b.roomNumber.includes('205')) {
-          console.log('Booking with room 205:', { id: b._id, roomNumber: b.roomNumber, grcNo: b.grcNo });
-        }
-        
         const room = roomsData.find(r => r.room_number == b.roomNumber || r.roomNumber == b.roomNumber);
         const category = categoriesData.find(c => 
           c._id == b.categoryId || 
