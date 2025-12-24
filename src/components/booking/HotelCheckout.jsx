@@ -42,9 +42,9 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
         laundryCharges: charges.summary.totalLaundryCharges || checkout.laundryCharges || 0,
         inspectionCharges: checkout.inspectionCharges || 0,
         subtotal: charges.summary.subtotal || 0,
-        cgstAmount: charges.roomCharges.cgstAmount || 0,
-        sgstAmount: charges.roomCharges.sgstAmount || 0,
-        totalAmount: charges.summary.grandTotal || checkout.totalAmount || 0,
+        cgstAmount: charges.summary.cgstAmount || 0,
+        sgstAmount: charges.summary.sgstAmount || 0,
+        totalAmount: charges.summary.subtotal + charges.summary.cgstAmount + charges.summary.sgstAmount,
         status: checkout.status || 'pending'
       };
       
@@ -54,8 +54,7 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
       // Calculate balance due after advance payments
       const advancePayments = bookingData?.advancePayments || [];
       const totalAdvance = advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
-      const finalTotal = (checkoutData.subtotal || 0) * 1.05;
-      const balanceDue = Math.max(0, finalTotal - totalAdvance);
+      const balanceDue = Math.max(0, checkoutData.totalAmount - totalAdvance);
       
       setPaymentAmount(balanceDue.toString());
       
@@ -255,22 +254,22 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                   <span className="font-medium">₹{checkoutData.subtotal}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <span>CGST (2.5%):</span>
-                  <span className="font-medium">₹{((checkoutData.subtotal || 0) * 0.025).toFixed(2)}</span>
+                  <span>CGST ({((booking?.cgstRate !== undefined ? booking.cgstRate : 0.025) * 100).toFixed(1)}%):</span>
+                  <span className="font-medium">₹{(checkoutData?.cgstAmount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <span>SGST (2.5%):</span>
-                  <span className="font-medium">₹{((checkoutData.subtotal || 0) * 0.025).toFixed(2)}</span>
+                  <span>SGST ({((booking?.sgstRate !== undefined ? booking.sgstRate : 0.025) * 100).toFixed(1)}%):</span>
+                  <span className="font-medium">₹{(checkoutData?.sgstAmount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between py-3 border-t-2 border-blue-200 text-lg font-bold">
                   <span>Total with Tax:</span>
-                  <span className="text-blue-600">₹{((checkoutData.subtotal || 0) * 1.05).toFixed(0)}</span>
+                  <span className="text-blue-600">₹{checkoutData.totalAmount}</span>
                 </div>
                 {(() => {
                   const advancePayments = booking?.advancePayments || [];
                   const totalAdvance = advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
                   
-                  const finalTotal = ((checkoutData.subtotal || 0) * 1.05);
+                  const finalTotal = checkoutData.totalAmount || 0;
                   const balanceDue = finalTotal - totalAdvance;
                   
                   if (totalAdvance > 0) {
@@ -361,7 +360,7 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
                   {(() => {
                     const advancePayments = booking?.advancePayments || [];
                     const totalAdvance = advancePayments.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
-                    const finalTotal = ((checkoutData?.subtotal || 0) * 1.05);
+                    const finalTotal = checkoutData?.totalAmount || 0;
                     const balanceDue = Math.max(0, finalTotal - totalAdvance);
                     
                     return (

@@ -769,7 +769,7 @@ const BookingDetails = () => {
                   })()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">CGST ({((booking.cgstRate || 0.025) * 100).toFixed(1)}%):</span>
+                  <span className="text-gray-600">CGST ({((booking.cgstRate !== undefined ? booking.cgstRate : 0.025) * 100).toFixed(1)}%):</span>
                   <span className="font-medium">₹{(() => {
                     const roomCost = booking.roomRates && booking.roomRates.length > 0 
                       ? (() => {
@@ -820,11 +820,11 @@ const BookingDetails = () => {
                       return sum + chargeableAmount;
                     }, 0);
                     const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + laundryTotal;
-                    return (totalSubtotal * (booking.cgstRate || 0.025)).toFixed(2);
+                    return (totalSubtotal * (booking.cgstRate !== undefined ? booking.cgstRate : 0.025)).toFixed(2);
                   })()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">SGST ({((booking.sgstRate || 0.025) * 100).toFixed(1)}%):</span>
+                  <span className="text-gray-600">SGST ({((booking.sgstRate !== undefined ? booking.sgstRate : 0.025) * 100).toFixed(1)}%):</span>
                   <span className="font-medium">₹{(() => {
                     const roomCost = booking.roomRates && booking.roomRates.length > 0 
                       ? (() => {
@@ -875,7 +875,7 @@ const BookingDetails = () => {
                       return sum + chargeableAmount;
                     }, 0);
                     const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + laundryTotal;
-                    return (totalSubtotal * (booking.sgstRate || 0.025)).toFixed(2);
+                    return (totalSubtotal * (booking.sgstRate !== undefined ? booking.sgstRate : 0.025)).toFixed(2);
                   })()}</span>
                 </div>
 
@@ -931,8 +931,8 @@ const BookingDetails = () => {
                       return sum + chargeableAmount;
                     }, 0);
                     const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + laundryTotal;
-                    const cgstAmount = totalSubtotal * (booking.cgstRate || 0.025);
-                    const sgstAmount = totalSubtotal * (booking.sgstRate || 0.025);
+                    const cgstAmount = totalSubtotal * (booking.cgstRate !== undefined ? booking.cgstRate : 0.025);
+                    const sgstAmount = totalSubtotal * (booking.sgstRate !== undefined ? booking.sgstRate : 0.025);
                     const exactTotal = totalSubtotal + cgstAmount + sgstAmount;
                     const roundedTotal = Math.round(exactTotal);
                     const roundOff = (roundedTotal - exactTotal);
@@ -994,8 +994,8 @@ const BookingDetails = () => {
                       }, 0);
                       const lateCheckoutFee = (booking.lateCheckoutFine?.applied && booking.lateCheckoutFine.amount > 0 && !booking.lateCheckoutFine.waived) ? booking.lateCheckoutFine.amount : 0;
                       const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + laundryTotal + lateCheckoutFee;
-                      const cgstAmount = totalSubtotal * (booking.cgstRate || 0.025);
-                      const sgstAmount = totalSubtotal * (booking.sgstRate || 0.025);
+                      const cgstAmount = totalSubtotal * (booking.cgstRate !== undefined ? booking.cgstRate : 0.025);
+                      const sgstAmount = totalSubtotal * (booking.sgstRate !== undefined ? booking.sgstRate : 0.025);
                       const exactTotal = totalSubtotal + cgstAmount + sgstAmount;
                       const roundedTotal = Math.round(exactTotal);
                       return roundedTotal.toString();
@@ -1065,8 +1065,8 @@ const BookingDetails = () => {
                       }, 0);
                       const lateCheckoutFee = (booking.lateCheckoutFine?.applied && booking.lateCheckoutFine.amount > 0 && !booking.lateCheckoutFine.waived) ? booking.lateCheckoutFine.amount : 0;
                       const totalSubtotal = afterDiscount + serviceTotal + restaurantTotal + laundryTotal + lateCheckoutFee;
-                      const cgstAmount = totalSubtotal * (booking.cgstRate || 0.025);
-                      const sgstAmount = totalSubtotal * (booking.sgstRate || 0.025);
+                      const cgstAmount = totalSubtotal * (booking.cgstRate !== undefined ? booking.cgstRate : 0.025);
+                      const sgstAmount = totalSubtotal * (booking.sgstRate !== undefined ? booking.sgstRate : 0.025);
                       const exactTotal = totalSubtotal + cgstAmount + sgstAmount;
                       const roundedTotal = Math.round(exactTotal);
                       const totalAdvance = booking.advancePayments?.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0) || 0;
