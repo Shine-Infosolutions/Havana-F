@@ -98,6 +98,26 @@ export default function Invoice() {
     }
   };
 
+  // Calculate days between dates
+  const calculateDays = (checkInDate, checkOutDate) => {
+    try {
+      const checkIn = checkInDate && checkInDate.$date 
+        ? new Date(checkInDate.$date) 
+        : new Date(checkInDate);
+      const checkOut = checkOutDate && checkOutDate.$date 
+        ? new Date(checkOutDate.$date) 
+        : new Date(checkOutDate);
+      
+      if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
+        return 1;
+      }
+      
+      return Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24)) || 1;
+    } catch (error) {
+      return 1;
+    }
+  };
+
   useEffect(() => {
     if (activeInvoice === 'hotel') {
       const checkoutId = location.state?.checkoutId || bookingData?._id;
@@ -908,51 +928,77 @@ export default function Invoice() {
           <table className="items-table w-full text-xs border-collapse">
             <thead>
               <tr className="border border-black bg-gray-200">
-                <th className="p-1 border border-black whitespace-nowrap">Date</th>
+                <th className="p-1 border border-black" style={{width: '150px', fontSize: '10px'}}>Date</th>
                 <th className="p-1 border border-black whitespace-nowrap">Particulars</th>
+                <th className="p-1 border border-black text-right whitespace-nowrap">Room Rate</th>
                 <th className="p-1 border border-black text-right whitespace-nowrap">Declared Rate</th>
                 <th className="p-1 border border-black text-center whitespace-nowrap">HSN/SAC Code</th>
                 <th className="p-1 border border-black text-right whitespace-nowrap">Amount</th>
               </tr>
             </thead>
             <tbody>
-              {invoiceData.items?.map((item, index) => (
-                <tr key={index} className="border border-black">
-                  <td className="p-1 border border-black">{typeof item === 'object' ? (item.date || 'N/A') : 'N/A'}</td>
-                  <td className="p-1 border border-black">{typeof item === 'object' ? (item.particulars || 'N/A') : String(item)}</td>
-                  <td className="p-1 border border-black text-right">
-                    {item.isFree ? (
-                      <div>
-                        <span className="line-through text-gray-400">₹{typeof item === 'object' ? (item.declaredRate?.toFixed(2) || '0.00') : '0.00'}</span>
-                        <div className="text-green-600 font-bold text-xs">FREE</div>
-                      </div>
-                    ) : (
-                      <span>₹{typeof item === 'object' ? (item.declaredRate?.toFixed(2) || '0.00') : '0.00'}</span>
-                    )}
-                  </td>
-                  <td className="p-1 border border-black text-center">{(() => {
-                    if (typeof item === 'object' && item.particulars) {
-                      const particulars = item.particulars.toLowerCase();
-                      if (particulars.includes('room') && !particulars.includes('service') && !particulars.includes('dining')) return '996311';
-                      if (particulars.includes('room service') || particulars.includes('dining') || particulars.includes('restaurant')) return '996332';
-                      if (particulars.includes('banquet') || particulars.includes('hall')) return '996334';
-                      if (particulars.includes('mini bar') || particulars.includes('minibar')) return '996331';
-                      if (particulars.includes('laundry') || particulars.includes('laundary')) return '996337';
-                      return item.hsn || '996311';
-                    }
-                    return 'N/A';
-                  })()}</td>
-                  <td className="p-1 border border-black text-right font-bold">
-                    {item.isFree ? (
-                      <span className="text-green-600">FREE</span>
-                    ) : (
-                      <span>₹{typeof item === 'object' ? (item.amount?.toFixed(2) || '0.00') : '0.00'}</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {invoiceData.items?.map((item, index) => {
+                // Calculate date range for room items
+                const getDateRange = () => {
+                  if (item.particulars && item.particulars.toLowerCase().includes('room rent')) {
+                    const checkIn = bookingData?.checkInDate ? formatDate(bookingData.checkInDate) : formatDate();
+                    const checkOut = bookingData?.checkOutDate ? formatDate(bookingData.checkOutDate) : formatDate();
+                    return `${checkIn} - ${checkOut}`;
+                  }
+                  return typeof item === 'object' ? (item.date || 'N/A') : 'N/A';
+                };
+                
+                // Calculate room rate per night
+                const getRoomRate = () => {
+                  if (item.particulars && item.particulars.toLowerCase().includes('room rent')) {
+                    const days = calculateDays(bookingData?.checkInDate, bookingData?.checkOutDate) || 1;
+                    const totalAmount = typeof item === 'object' ? (item.amount || 0) : 0;
+                    return (totalAmount / days).toFixed(2);
+                  }
+                  return '-';
+                };
+                
+                return (
+                  <tr key={index} className="border border-black">
+                    <td className="p-1 border border-black" style={{width: '150px', fontSize: '10px'}}>{getDateRange()}</td>
+                    <td className="p-1 border border-black">{typeof item === 'object' ? (item.particulars || 'N/A') : String(item)}</td>
+                    <td className="p-1 border border-black text-right">
+                      {getRoomRate() !== '-' ? `₹${getRoomRate()}` : '-'}
+                    </td>
+                    <td className="p-1 border border-black text-right">
+                      {item.isFree ? (
+                        <div>
+                          <span className="line-through text-gray-400">₹{typeof item === 'object' ? (item.declaredRate?.toFixed(2) || '0.00') : '0.00'}</span>
+                          <div className="text-green-600 font-bold text-xs">FREE</div>
+                        </div>
+                      ) : (
+                        <span>₹{typeof item === 'object' ? (item.declaredRate?.toFixed(2) || '0.00') : '0.00'}</span>
+                      )}
+                    </td>
+                    <td className="p-1 border border-black text-center">{(() => {
+                      if (typeof item === 'object' && item.particulars) {
+                        const particulars = item.particulars.toLowerCase();
+                        if (particulars.includes('room') && !particulars.includes('service') && !particulars.includes('dining')) return '996311';
+                        if (particulars.includes('room service') || particulars.includes('dining') || particulars.includes('restaurant')) return '996332';
+                        if (particulars.includes('banquet') || particulars.includes('hall')) return '996334';
+                        if (particulars.includes('mini bar') || particulars.includes('minibar')) return '996331';
+                        if (particulars.includes('laundry') || particulars.includes('laundary')) return '996337';
+                        return item.hsn || '996311';
+                      }
+                      return 'N/A';
+                    })()}</td>
+                    <td className="p-1 border border-black text-right font-bold">
+                      {item.isFree ? (
+                        <span className="text-green-600">FREE</span>
+                      ) : (
+                        <span>₹{typeof item === 'object' ? (item.amount?.toFixed(2) || '0.00') : '0.00'}</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               <tr className="border border-black bg-gray-100">
-                <td colSpan="2" className="p-1 text-right font-bold border border-black">SUB TOTAL :</td>
+                <td colSpan="3" className="p-1 text-right font-bold border border-black">SUB TOTAL :</td>
                 <td className="p-1 text-right border border-black font-bold">₹{(() => {
                   if (!invoiceData?.items) return '0.00';
                   const declaredRateTotal = invoiceData.items.reduce((sum, item) => {
@@ -1196,7 +1242,7 @@ export default function Invoice() {
                       <td className="p-0.5 border-l border-black text-right font-bold text-xs">₹{(() => {
                         const netTotal = parseFloat(calculateNetTotal());
                         const totalAdvance = bookingData?.advancePayments?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
-                        return (netTotal - totalAdvance).toString();
+                        return (netTotal - totalAdvance).toFixed(2);
                       })()}</td>
                     </tr>
 
