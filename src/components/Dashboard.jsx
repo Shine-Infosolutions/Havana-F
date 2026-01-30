@@ -209,16 +209,8 @@ const Dashboard = () => {
   const [selectedYear, setSelectedYear] = useState(2025);
 
   const fetchRooms = async () => {
-    try {
-      const { data } = await axios.get("/api/rooms/all", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      const roomsData = Array.isArray(data) ? data : (data.rooms || data.data || []);
-      setRooms(roomsData);
-    } catch (error) {
-      console.log('Rooms API Error:', error);
-      setRooms([]);
-    }
+    // Rooms data now comes from dashboard stats - no separate API call needed
+    return;
   };
 
   const fetchDashboardStats = async (filter = 'today', startDate = null, endDate = null) => {
@@ -234,6 +226,10 @@ const Dashboard = () => {
       
       if (data.success) {
         setDashboardStats(data.stats);
+        // Set rooms from dashboard response
+        if (data.rooms) {
+          setRooms(Array.isArray(data.rooms) ? data.rooms : []);
+        }
       }
     } catch (error) {
       console.log('Dashboard Stats API Error:', error);
@@ -401,7 +397,6 @@ const Dashboard = () => {
         // Fetch other data in background after UI renders
         setTimeout(async () => {
           await Promise.all([
-            fetchRooms(),
             fetchBookings()
           ]);
         }, 100);
