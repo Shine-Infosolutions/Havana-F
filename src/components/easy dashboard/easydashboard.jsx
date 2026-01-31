@@ -167,18 +167,105 @@ const StatusLegend = () => {
     );
 };
 
-// --- Sub-Component: StatsCard for Restaurant/Laundry ---
-const ServiceStatsCard = ({ title, icon: Icon, count, color = 'blue' }) => (
-    <div className={`bg-${color}-50 rounded-lg p-4 border border-${color}-200`}>
-        <div className="flex items-center justify-between">
-            <div>
-                <p className="text-sm font-medium text-gray-600">{title}</p>
-                <p className={`text-2xl font-bold text-${color}-600 mt-1`}>{count}</p>
+// --- Sub-Component: FoodOrderCard ---
+const FoodOrderCard = ({ foodOrders, onRefresh }) => {
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'pending': return 'bg-yellow-100 text-yellow-800';
+            case 'preparing': return 'bg-blue-100 text-blue-800';
+            case 'ready': return 'bg-green-100 text-green-800';
+            case 'completed': return 'bg-gray-100 text-gray-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    const stats = {
+        total: foodOrders.length,
+        pending: foodOrders.filter(order => order.status === 'pending').length,
+        preparing: foodOrders.filter(order => order.status === 'preparing').length,
+        ready: foodOrders.filter(order => order.status === 'ready').length,
+        completed: foodOrders.filter(order => order.status === 'completed').length
+    };
+
+    return (
+        <div className="bg-white rounded-2xl shadow-2xl p-6 border mb-8" style={{borderColor: 'var(--color-border)'}}>
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-light tracking-wider flex items-center" style={{color: 'var(--color-text)'}}>
+                    <ChefHat className="mr-3" size={24} style={{color: 'var(--color-primary)'}} />
+                    Food Orders ({stats.total})
+                </h3>
+                <button 
+                    onClick={onRefresh}
+                    className="flex items-center px-4 py-2 text-sm rounded-lg transition-colors"
+                    style={{backgroundColor: 'var(--color-primary)', color: 'white'}}
+                >
+                    <RefreshCw size={16} className="mr-2" />
+                    Refresh
+                </button>
             </div>
-            <Icon className={`w-8 h-8 text-${color}-600`} />
+
+            {/* Stats Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <Clock className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+                    <div className="text-sm text-yellow-600 uppercase tracking-wide">Pending</div>
+                </div>
+                <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <ChefHat className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-blue-600">{stats.preparing}</div>
+                    <div className="text-sm text-blue-600 uppercase tracking-wide">Preparing</div>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                    <AlertTriangle className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-green-600">{stats.ready}</div>
+                    <div className="text-sm text-green-600 uppercase tracking-wide">Ready</div>
+                </div>
+                <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <CalendarCheck className="w-6 h-6 text-gray-600 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-gray-600">{stats.completed}</div>
+                    <div className="text-sm text-gray-600 uppercase tracking-wide">Completed</div>
+                </div>
+            </div>
+
+            {/* Recent Orders */}
+            <div className="space-y-4">
+                <h4 className="text-lg font-medium text-gray-700 border-b pb-2">Recent Orders</h4>
+                {foodOrders.length > 0 ? (
+                    <div className="max-h-80 overflow-y-auto space-y-3">
+                        {foodOrders.slice(0, 10).map((order) => (
+                            <div key={order._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:shadow-md transition-shadow">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className="font-semibold text-gray-800">
+                                            Order #{order._id.slice(-6)}
+                                        </span>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                                            {order.status || 'pending'}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm text-gray-600 space-y-1">
+                                        <div>Table {order.tableNo || 'N/A'} • {order.customerName || 'Guest'}</div>
+                                        <div>{order.items?.length || 0} items • ₹{order.advancePayment || order.amount || 0}</div>
+                                        <div className="text-xs text-gray-500">
+                                            {new Date(order.createdAt || order.orderDate).toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-12 text-gray-500">
+                        <ChefHat className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-lg">No food orders found</p>
+                        <p className="text-sm">Orders will appear here when customers place them</p>
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 
 // --- Main Component: EasyDashboard (Themed Classy UI) ---
@@ -187,7 +274,11 @@ const EasyDashboard = () => {
     
     // --- State for Live Data ---
     const [rooms, setRooms] = useState([]);
-    const [dashboardStats, setDashboardStats] = useState(null);
+    const [bookings, setBookings] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [laundryData, setLaundryData] = useState([]);
+    const [pantryOrders, setPantryOrders] = useState([]);
+    const [foodOrders, setFoodOrders] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedRoom, setSelectedRoom] = useState(null);
@@ -200,12 +291,23 @@ const EasyDashboard = () => {
             setError(null);
             
             try {
-                // Single API call - dashboard stats now contains all needed data including rooms
-                const statsData = await fetchWithRetry(`${BACKEND_URL}/api/dashboard/stats`);
+                // Fetch all data concurrently
+                const [roomsData, bookingsData, categoriesData, laundryData, pantryData, foodOrdersData] = await Promise.all([
+                    fetchWithRetry(`${BACKEND_URL}/api/rooms/all`),
+                    fetchWithRetry(`${BACKEND_URL}/api/bookings/all`),
+                    fetchWithRetry(`${BACKEND_URL}/api/categories/all`),
+                    fetchWithRetry(`${BACKEND_URL}/api/laundry/all`).catch(() => []),
+                    fetchWithRetry(`${BACKEND_URL}/api/pantry/orders`).catch(() => []),
+                    fetchWithRetry(`${BACKEND_URL}/api/restaurant-orders/all`).catch(() => [])
+                ]);
 
-                // Set data from single response
-                setRooms(Array.isArray(statsData?.rooms) ? statsData.rooms : []);
-                setDashboardStats(statsData?.stats || null);
+                // Filter out non-array responses
+                setRooms(Array.isArray(roomsData) ? roomsData : []);
+                setBookings(Array.isArray(bookingsData) ? bookingsData : []);
+                setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+                setLaundryData(Array.isArray(laundryData) ? laundryData : laundryData?.data || []);
+                setPantryOrders(Array.isArray(pantryData) ? pantryData : pantryData?.data || []);
+                setFoodOrders(Array.isArray(foodOrdersData) ? foodOrdersData : []);
 
             } catch (err) {
                 console.error("Data loading error:", err);
@@ -223,18 +325,52 @@ const EasyDashboard = () => {
 
     // Memoize utility functions using useCallback for better performance
     const getRoomCategory = useCallback((room) => {
-        // Use room's built-in category or fallback
+        // First check if categoryId is already populated with category object
         if (typeof room.categoryId === 'object' && room.categoryId?.name) {
             return room.categoryId.name;
         }
-        return room.title || room.category?.name || 'Standard Room';
-    }, []);
+        
+        // Handle categoryId as string/ObjectId - match with categories array
+        const categoryId = room.categoryId || room.category;
+        
+        if (categoryId && categories.length > 0) {
+            const category = categories.find(cat => 
+                cat._id === categoryId || 
+                cat._id.toString() === categoryId.toString()
+            );
+            if (category) {
+                return category.name;
+            }
+        }
+        
+        // Fallback to room title or default
+        return room.title || 'Standard Room';
+    }, [categories]);
 
     const getRoomBooking = useCallback((roomNumber) => {
-        // Since we're not fetching individual bookings anymore, 
-        // we'll rely on room status from the rooms API
-        return null;
-    }, []);
+        return bookings.find(booking => {
+            const isValidStatus = booking.status === 'Confirmed' || booking.status === 'Booked' || booking.status === 'CheckedIn' || booking.status === 'Checked In';
+            
+            // Handle comma-separated room numbers in booking
+            if (booking.roomNumber && booking.roomNumber.includes(',')) {
+                const roomNumbers = booking.roomNumber.split(',').map(num => num.trim());
+                const roomMatch = roomNumbers.includes(roomNumber.toString()) || roomNumbers.includes(roomNumber);
+                return roomMatch && isValidStatus;
+            }
+            
+            // Check multiple possible field names for room number
+            const roomMatch = booking.roomNumber === roomNumber || 
+                             booking.roomNumber === roomNumber.toString() ||
+                             booking.room_number === roomNumber ||
+                             booking.room_number === roomNumber.toString() ||
+                             booking.roomNo === roomNumber ||
+                             booking.roomNo === roomNumber.toString() ||
+                             booking.room === roomNumber ||
+                             booking.room === roomNumber.toString();
+            
+            return roomMatch && isValidStatus;
+        });
+    }, [bookings]);
     
     const getRoomStatus = useCallback((room) => {
         // First check the room's own status from the API
@@ -284,61 +420,63 @@ const EasyDashboard = () => {
         return roomsByFloor;
     }, [rooms]);
 
-    // Simplified guest service functions - data will be fetched on demand
-    const getGuestLaundry = useCallback(async (roomNumber, guestName) => {
-        try {
-            const response = await fetchWithRetry(`${BACKEND_URL}/api/laundry/all`);
-            const laundryData = Array.isArray(response) ? response : response?.data || [];
+    // Get laundry data for a specific room/guest
+    const getGuestLaundry = useCallback((roomNumber, guestName) => {
+        console.log(`Looking for laundry for room ${roomNumber}, guest: ${guestName}`);
+        
+        const matchingLaundry = laundryData.filter(laundry => {
+            // Check room number match (multiple field variations)
+            const roomMatch = laundry.roomNumber === roomNumber || 
+                             laundry.roomNumber === roomNumber.toString() ||
+                             laundry.room_number === roomNumber ||
+                             laundry.room_number === roomNumber.toString() ||
+                             laundry.roomNo === roomNumber ||
+                             laundry.roomNo === roomNumber.toString();
             
-            return laundryData.filter(laundry => {
-                const roomMatch = laundry.roomNumber === roomNumber || 
-                                 laundry.roomNumber === roomNumber.toString() ||
-                                 laundry.room_number === roomNumber ||
-                                 laundry.room_number === roomNumber.toString() ||
-                                 laundry.roomNo === roomNumber ||
-                                 laundry.roomNo === roomNumber.toString();
-                
-                const nameMatch = guestName && laundry.guestName && 
-                                 (laundry.guestName.toLowerCase().includes(guestName.toLowerCase()) ||
-                                  guestName.toLowerCase().includes(laundry.guestName.toLowerCase()));
-                
-                return roomMatch || nameMatch;
-            });
-        } catch (error) {
-            console.error('Error fetching laundry data:', error);
-            return [];
-        }
-    }, []);
+            // Check guest name match (case insensitive)
+            const nameMatch = guestName && laundry.guestName && 
+                             (laundry.guestName.toLowerCase().includes(guestName.toLowerCase()) ||
+                              guestName.toLowerCase().includes(laundry.guestName.toLowerCase()));
+            
+            return roomMatch || nameMatch;
+        });
+        
+        console.log(`Found ${matchingLaundry.length} matching laundry services:`, matchingLaundry);
+        return matchingLaundry;
+    }, [laundryData]);
 
-    const getGuestFoodOrders = useCallback(async (roomNumber, guestName) => {
-        try {
-            const response = await fetchWithRetry(`${BACKEND_URL}/api/restaurant-orders/all`);
-            const foodOrders = Array.isArray(response) ? response : [];
+    // Get food orders for a specific room/guest
+    const getGuestFoodOrders = useCallback((roomNumber, guestName) => {
+        console.log(`Looking for food orders for room ${roomNumber}, guest: ${guestName}`);
+        console.log('Available food orders:', foodOrders);
+        
+        const matchingOrders = foodOrders.filter(order => {
+            // Check room number match (multiple field variations)
+            const roomMatch = order.roomNumber === roomNumber || 
+                             order.roomNumber === roomNumber.toString() ||
+                             order.room_number === roomNumber ||
+                             order.room_number === roomNumber.toString() ||
+                             order.roomNo === roomNumber ||
+                             order.roomNo === roomNumber.toString() ||
+                             order.tableNo === roomNumber ||
+                             order.tableNo === roomNumber.toString();
             
-            return foodOrders.filter(order => {
-                const roomMatch = order.roomNumber === roomNumber || 
-                                 order.roomNumber === roomNumber.toString() ||
-                                 order.room_number === roomNumber ||
-                                 order.room_number === roomNumber.toString() ||
-                                 order.roomNo === roomNumber ||
-                                 order.roomNo === roomNumber.toString() ||
-                                 order.tableNo === roomNumber ||
-                                 order.tableNo === roomNumber.toString();
-                
-                const nameMatch = guestName && (
-                    (order.guestName && (order.guestName.toLowerCase().includes(guestName.toLowerCase()) ||
-                     guestName.toLowerCase().includes(order.guestName.toLowerCase()))) ||
-                    (order.customerName && (order.customerName.toLowerCase().includes(guestName.toLowerCase()) ||
-                     guestName.toLowerCase().includes(order.customerName.toLowerCase())))
-                );
-                
-                return roomMatch || nameMatch;
-            });
-        } catch (error) {
-            console.error('Error fetching restaurant orders:', error);
-            return [];
-        }
-    }, []);
+            // Check guest name match (case insensitive)
+            const nameMatch = guestName && (
+                (order.guestName && (order.guestName.toLowerCase().includes(guestName.toLowerCase()) ||
+                 guestName.toLowerCase().includes(order.guestName.toLowerCase()))) ||
+                (order.customerName && (order.customerName.toLowerCase().includes(guestName.toLowerCase()) ||
+                 guestName.toLowerCase().includes(order.customerName.toLowerCase())))
+            );
+            
+            console.log(`Order ${order._id}: roomMatch=${roomMatch}, nameMatch=${nameMatch}`, order);
+            
+            return roomMatch || nameMatch;
+        });
+        
+        console.log(`Found ${matchingOrders.length} matching orders:`, matchingOrders);
+        return matchingOrders;
+    }, [foodOrders]);
 
     // Calculate stay duration
     const calculateStayDuration = useCallback((checkIn, checkOut) => {
@@ -351,16 +489,27 @@ const EasyDashboard = () => {
     }, []);
     // -----------------------------------------------------------------
 
-    // Debug: Console log essential data
-    console.log('Rooms data:', rooms.length, 'rooms loaded');
-    console.log('Dashboard stats:', dashboardStats);
+    // Debug: Console log all data
+    console.log('All rooms data:', rooms);
+    console.log('All bookings data:', bookings);
+    console.log('All laundry data:', laundryData);
+    console.log('All pantry orders:', pantryOrders);
+    
+    // Console log all rooms with their calculated status
+    rooms.forEach(room => {
+        const status = getRoomStatus(room);
+        const booking = getRoomBooking(room.room_number);
+        console.log(`Room ${room.room_number}: Status = ${status}, Booking = `, booking);
+    });
     
     const roomStats = getRoomStats();
     const roomsByFloor = getRoomsByFloor();
     
-    // Stats from dashboard API
-    const totalRevenue = dashboardStats?.totalRevenue || 0;
-    const todayCheckins = dashboardStats?.todayCheckIns || 0;
+    // Stats for cards calculations
+    // NOTE: Total revenue is still a static placeholder as it's not available in the provided APIs
+    const totalRevenue = 15000000; 
+    
+    const todayCheckins = bookings.filter(b => b.status === 'Confirmed' && new Date(b.checkInDate).toDateString() === TODAY).length;
     
     // Find occupied rooms and calculate occupancy
     const bookedRoomsCount = rooms.filter(room => getRoomStatus(room) === 'booked').length;
@@ -399,33 +548,6 @@ const EasyDashboard = () => {
 
             </div>
 
-            {/* Service Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-fadeInUp animate-delay-200">
-                <ServiceStatsCard 
-                    title="Restaurant Orders" 
-                    icon={ChefHat} 
-                    count={dashboardStats?.restaurantOrders || 0}
-                    color="orange"
-                />
-                <ServiceStatsCard 
-                    title="Laundry Orders" 
-                    icon={Package} 
-                    count={dashboardStats?.laundryOrders || 0}
-                    color="purple"
-                />
-                <ServiceStatsCard 
-                    title="Today Check-ins" 
-                    icon={CalendarCheck} 
-                    count={dashboardStats?.todayCheckIns || 0}
-                    color="green"
-                />
-                <ServiceStatsCard 
-                    title="Today Check-outs" 
-                    icon={DoorOpen} 
-                    count={dashboardStats?.todayCheckOuts || 0}
-                    color="blue"
-                />
-            </div>
 
 
             {/* Floor-wise Room Display - Elegant White Panel */}
@@ -543,31 +665,9 @@ const EasyDashboard = () => {
             {/* Guest Details Modal */}
             {showGuestDetails && selectedRoom && (() => {
                 const booking = selectedRoom.booking;
-                const [guestLaundry, setGuestLaundry] = useState([]);
-                const [guestFoodOrders, setGuestFoodOrders] = useState([]);
-                const [loadingServices, setLoadingServices] = useState(true);
+                const guestLaundry = getGuestLaundry(selectedRoom.room_number, booking?.name);
+                const guestFoodOrders = getGuestFoodOrders(selectedRoom.room_number, booking?.name);
                 const stayDuration = calculateStayDuration(booking?.checkInDate, booking?.checkOutDate);
-                
-                // Fetch guest services when modal opens
-                useEffect(() => {
-                    const fetchGuestServices = async () => {
-                        setLoadingServices(true);
-                        try {
-                            const [laundry, foodOrders] = await Promise.all([
-                                getGuestLaundry(selectedRoom.room_number, booking?.name),
-                                getGuestFoodOrders(selectedRoom.room_number, booking?.name)
-                            ]);
-                            setGuestLaundry(laundry);
-                            setGuestFoodOrders(foodOrders);
-                        } catch (error) {
-                            console.error('Error fetching guest services:', error);
-                        } finally {
-                            setLoadingServices(false);
-                        }
-                    };
-                    
-                    fetchGuestServices();
-                }, [selectedRoom.room_number, booking?.name]);
                 
                 return (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-2 sm:p-4 animate-fadeInUp">
@@ -625,9 +725,7 @@ const EasyDashboard = () => {
                                             <Package className="mr-2" size={18} /> Food Orders ({guestFoodOrders.length})
                                         </h4>
                                         <div className="space-y-2 max-h-64 overflow-y-auto">
-                                            {loadingServices ? (
-                                                <p className="text-gray-500 italic">Loading guest services...</p>
-                                            ) : guestFoodOrders.length > 0 ? (
+                                            {guestFoodOrders.length > 0 ? (
                                                 guestFoodOrders.map((order, index) => (
                                                     <div key={order._id || index} className="bg-blue-50 p-3 rounded border-l-4 border-blue-400">
                                                         <p><span className="font-medium">Order #{order._id?.slice(-6) || index + 1}</span></p>
@@ -656,9 +754,7 @@ const EasyDashboard = () => {
                                         <MapPin className="mr-2" size={18} /> Laundry Services ({guestLaundry.length})
                                     </h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-64 overflow-y-auto">
-                                        {loadingServices ? (
-                                            <p className="text-gray-500 italic col-span-full">Loading guest services...</p>
-                                        ) : guestLaundry.length > 0 ? (
+                                        {guestLaundry.length > 0 ? (
                                             guestLaundry.map((service, index) => (
                                                 <div key={index} className="bg-green-50 p-3 rounded border-l-4 border-green-400">
                                                     <p><span className="font-medium">Service #{service.serviceNumber || index + 1}</span></p>
