@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, Fragment, useMemo, useCallback, useRef, memo } from "react";
 import { FaIndianRupeeSign } from "react-icons/fa6";
 import { SlCalender } from "react-icons/sl";
 import {
@@ -20,9 +20,11 @@ import { useNavigate } from "react-router-dom";
 
 // Lazy load heavy components
 const BookingCalendar = React.lazy(() => import("./BookingCalendar"));
+const DashboardLoader = React.lazy(() => import("./DashboardLoader"));
 
-
-import DashboardLoader from "./DashboardLoader";
+// Cache for API responses
+const apiCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Add CSS animations
 const styles = `
@@ -213,11 +215,25 @@ const Dashboard = () => {
     return;
   };
 
-  const fetchDashboardStats = async (filter = 'today', startDate = null, endDate = null) => {
+  const fetchDashboardStats = useCallback(async (filter = 'today', startDate = null, endDate = null) => {
     try {
       let url = `/api/dashboard/stats?filter=${filter}`;
       if (filter === 'range' && startDate && endDate) {
         url += `&startDate=${startDate}&endDate=${endDate}`;
+      }
+      
+      // Check cache first
+      const cacheKey = `dashboard-${url}`;
+      const cached = apiCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        setDashboardStats(cached.data.stats);
+        if (cached.data.rooms) {
+          setRooms(Array.isArray(cached.data.rooms) ? cached.data.rooms : []);
+        }
+        if (cached.data.bookings) {
+          setBookings(Array.isArray(cached.data.bookings) ? cached.data.bookings : []);
+        }
+        return;
       }
       
       const { data } = await axios.get(url, {
@@ -225,6 +241,9 @@ const Dashboard = () => {
       });
       
       if (data.success) {
+        // Cache the response
+        apiCache.set(cacheKey, { data, timestamp: Date.now() });
+        
         setDashboardStats(data.stats);
         if (data.rooms) {
           setRooms(Array.isArray(data.rooms) ? data.rooms : []);
@@ -237,7 +256,7 @@ const Dashboard = () => {
       console.log('Dashboard Stats API Error:', error);
       setDashboardStats(null);
     }
-  };
+  }, [axios]);
 
   const fetchBookings = async () => {
     // Bookings now come from dashboard stats - no separate API call needed
@@ -254,13 +273,23 @@ const Dashboard = () => {
     
     try {
       let data = [];
+      const cacheKey = `service-${service}`;
+      const cached = apiCache.get(cacheKey);
+      
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        setAllServiceData(prev => ({ ...prev, [service]: cached.data }));
+        return;
+      }
+      
       if (service === 'restaurant') {
         const res = await axios.get("/api/restaurant-orders/all", { headers });
         data = Array.isArray(res.data) ? res.data : res.data?.restaurant || [];
+        apiCache.set(cacheKey, { data, timestamp: Date.now() });
         setAllServiceData(prev => ({ ...prev, restaurant: data }));
       } else if (service === 'laundry') {
         const res = await axios.get("/api/laundry/all", { headers });
         data = Array.isArray(res.data) ? res.data : res.data?.laundry || [];
+        apiCache.set(cacheKey, { data, timestamp: Date.now() });
         setAllServiceData(prev => ({ ...prev, laundry: data }));
       }
     } catch (error) {
@@ -428,8 +457,7 @@ const Dashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Only fetch dashboard stats initially for fastest load
-        await fetchDashboardStats(timeFrame);
+        await fetchDashboardStats(timeFrame, startDate, endDate);
         setLoading(false);
       } catch (error) {
         console.error('Dashboard fetch error:', error);
@@ -437,7 +465,7 @@ const Dashboard = () => {
       }
     };
     fetchData();
-  }, [timeFrame]);
+  }, []); // Only run once on mount
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -449,7 +477,7 @@ const Dashboard = () => {
     }, 300); // Debounce API calls
     
     return () => clearTimeout(timeoutId);
-  }, [timeFrame, startDate, endDate]);
+  }, [timeFrame, startDate, endDate, fetchDashboardStats]);
 
 
 
@@ -538,7 +566,7 @@ const Dashboard = () => {
     }
   };
 
-  const Pagination = ({ currentPage, totalItems, itemsPerPage, onPageChange }) => {
+  const Pagination = memo(({ currentPage, totalItems, itemsPerPage, onPageChange }) => {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     if (totalPages <= 1) return null;
 
@@ -568,7 +596,7 @@ const Dashboard = () => {
         </div>
       </div>
     );
-  };
+  });
 
 
 
@@ -1028,7 +1056,11 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return <DashboardLoader />;
+    return (
+      <React.Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+        <DashboardLoader />
+      </React.Suspense>
+    );
   }
 
   return (
