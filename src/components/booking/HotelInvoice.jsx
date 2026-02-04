@@ -218,9 +218,17 @@ export default function Invoice() {
 
   // Fetch invoice data from checkout API or use restaurant order data
   const fetchInvoiceData = async (checkoutId) => {
-    // Load current GST rates
-    const savedRates = localStorage.getItem('defaultGstRates');
-    const currentGstRates = savedRates ? JSON.parse(savedRates) : { cgstRate: 2.5, sgstRate: 2.5 };
+    // Load GST rates from booking data first, then fallback to saved rates
+    let currentGstRates = { cgstRate: 0, sgstRate: 0 }; // Default to 0
+    if (bookingData?.cgstRate !== undefined && bookingData?.sgstRate !== undefined) {
+      currentGstRates = {
+        cgstRate: bookingData.cgstRate * 100, // Convert from decimal to percentage
+        sgstRate: bookingData.sgstRate * 100
+      };
+    } else {
+      const savedRates = localStorage.getItem('defaultGstRates');
+      currentGstRates = savedRates ? JSON.parse(savedRates) : { cgstRate: 0, sgstRate: 0 };
+    }
     setGstRates(currentGstRates);
     try {
       setLoading(true);
