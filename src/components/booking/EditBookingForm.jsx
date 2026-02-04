@@ -257,8 +257,25 @@ const EditBookingForm = () => {
   useEffect(() => {
     if (!editBooking) {
       navigate('/booking');
+    } else {
+      // Fetch complete booking data if GST fields are missing
+      if (!editBooking.cgstRate && !editBooking.sgstRate) {
+        fetchCompleteBookingData();
+      }
     }
   }, [editBooking, navigate]);
+
+  const fetchCompleteBookingData = async () => {
+    try {
+      const response = await axios.get(`/api/bookings/details/${editBooking._id}`);
+      const completeBooking = response.data;
+      setEditBooking(completeBooking);
+      // Reset form initialization flag to trigger re-initialization with complete data
+      setFormInitialized(false);
+    } catch (error) {
+      console.error('Error fetching complete booking data:', error);
+    }
+  };
 
   useEffect(() => {
     if (editBooking && !formInitialized) {
