@@ -102,7 +102,11 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
       await axios.put(`/api/checkout/${checkoutData._id}/payment`, {
         status: 'paid',
         paidAmount: parseFloat(paymentAmount),
-        lateCheckoutFee: lateCheckoutFee
+        lateCheckoutFee: lateCheckoutFee,
+        paymentMode: paymentMethod === 'cash' ? 'Cash' : 
+                    paymentMethod === 'upi' ? 'UPI' : 
+                    paymentMethod === 'card' ? 'Card' : 
+                    paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 'Cash'
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });

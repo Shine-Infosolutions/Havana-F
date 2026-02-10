@@ -210,10 +210,41 @@ const Dashboard = () => {
   };
   const [selectedYear, setSelectedYear] = useState(2025);
 
-  const fetchRooms = async () => {
-    // Rooms data now comes from dashboard stats - no separate API call needed
-    return;
-  };
+  const fetchBookingsAndRooms = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const cacheKey = 'bookings-rooms-all';
+      const cached = apiCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        if (cached.data.bookings) {
+          setBookings(Array.isArray(cached.data.bookings) ? cached.data.bookings : []);
+          setRooms(Array.isArray(cached.data.rooms) ? cached.data.rooms : []);
+        } else {
+          setBookings(Array.isArray(cached.data) ? cached.data : []);
+        }
+        return;
+      }
+      
+      const response = await axios.get("/api/bookings/all", { headers });
+      
+      // Handle both response formats
+      if (response.data.bookings) {
+        setBookings(Array.isArray(response.data.bookings) ? response.data.bookings : []);
+        setRooms(Array.isArray(response.data.rooms) ? response.data.rooms : []);
+      } else {
+        setBookings(Array.isArray(response.data) ? response.data : []);
+      }
+      
+      // Cache the response
+      apiCache.set(cacheKey, { data: response.data, timestamp: Date.now() });
+    } catch (error) {
+      console.error('Bookings and Rooms API Error:', error);
+      setBookings([]);
+      setRooms([]);
+    }
+  }, [axios]);
 
   const fetchDashboardStats = useCallback(async (filter = 'today', startDate = null, endDate = null) => {
     try {
@@ -222,46 +253,18 @@ const Dashboard = () => {
         url += `&startDate=${startDate}&endDate=${endDate}`;
       }
       
-      // Check cache first
-      const cacheKey = `dashboard-${url}`;
-      const cached = apiCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        setDashboardStats(cached.data.stats);
-        if (cached.data.rooms) {
-          setRooms(Array.isArray(cached.data.rooms) ? cached.data.rooms : []);
-        }
-        if (cached.data.bookings) {
-          setBookings(Array.isArray(cached.data.bookings) ? cached.data.bookings : []);
-        }
-        return;
-      }
-      
       const { data } = await axios.get(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       
       if (data.success) {
-        // Cache the response
-        apiCache.set(cacheKey, { data, timestamp: Date.now() });
-        
         setDashboardStats(data.stats);
-        if (data.rooms) {
-          setRooms(Array.isArray(data.rooms) ? data.rooms : []);
-        }
-        if (data.bookings) {
-          setBookings(Array.isArray(data.bookings) ? data.bookings : []);
-        }
       }
     } catch (error) {
       console.log('Dashboard Stats API Error:', error);
       setDashboardStats(null);
     }
   }, [axios]);
-
-  const fetchBookings = async () => {
-    // Bookings now come from dashboard stats - no separate API call needed
-    return;
-  };
 
 
 
@@ -273,29 +276,35 @@ const Dashboard = () => {
     
     try {
       let data = [];
-      const cacheKey = `service-${service}`;
-      const cached = apiCache.get(cacheKey);
-      
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        setAllServiceData(prev => ({ ...prev, [service]: cached.data }));
-        return;
-      }
+      let url = '';
       
       if (service === 'restaurant') {
-        const res = await axios.get("/api/restaurant-orders/all", { headers });
+        url = "/api/restaurant-orders/all";
+        // Add filter parameters
+        url += `?filter=${timeFrame}`;
+        if (timeFrame === 'range' && startDate && endDate) {
+          url += `&startDate=${startDate}&endDate=${endDate}`;
+        }
+        
+        const res = await axios.get(url, { headers });
         data = Array.isArray(res.data) ? res.data : res.data?.restaurant || [];
-        apiCache.set(cacheKey, { data, timestamp: Date.now() });
         setAllServiceData(prev => ({ ...prev, restaurant: data }));
       } else if (service === 'laundry') {
-        const res = await axios.get("/api/laundry/all", { headers });
+        url = "/api/laundry/all";
+        // Add filter parameters
+        url += `?filter=${timeFrame}`;
+        if (timeFrame === 'range' && startDate && endDate) {
+          url += `&startDate=${startDate}&endDate=${endDate}`;
+        }
+        
+        const res = await axios.get(url, { headers });
         data = Array.isArray(res.data) ? res.data : res.data?.laundry || [];
-        apiCache.set(cacheKey, { data, timestamp: Date.now() });
         setAllServiceData(prev => ({ ...prev, laundry: data }));
       }
     } catch (error) {
       console.error(`${service} API Error:`, error);
     }
-  }, [axios]);
+  }, [axios, timeFrame, startDate, endDate]);
 
   const calculateTrends = useMemo(() => {
     const now = new Date();
@@ -369,11 +378,11 @@ const Dashboard = () => {
     const activeCount = filteredBookings.filter(b => b.status === 'Checked In').length;
     const cancelledCount = filteredBookings.filter(b => b.status === 'Cancelled').length;
     const onlineCount = filteredBookings.filter(b => 
-      b.paymentMode === 'UPI' || 
+      b.paymentMode && (b.paymentMode.includes('UPI') || b.paymentMode.includes('Card') || b.paymentMode.toLowerCase().includes('online')) ||
       (b.advancePayments && b.advancePayments.some(ap => ap.paymentMode && (ap.paymentMode.toLowerCase().includes('upi') || ap.paymentMode.toLowerCase().includes('online') || ap.paymentMode.toLowerCase().includes('card'))))
     ).length;
     const cashCount = filteredBookings.filter(b => 
-      b.paymentMode === 'Cash' || 
+      b.paymentMode && b.paymentMode.includes('Cash') ||
       (b.advancePayments && b.advancePayments.some(ap => ap.paymentMode && ap.paymentMode.toLowerCase().includes('cash')))
     ).length;
     
@@ -435,7 +444,7 @@ const Dashboard = () => {
       {
         id: "restaurant",
         title: "Restaurant Orders",
-        value: (dashboardStats?.restaurantOrders || 0).toString(),
+        value: allServiceData.restaurant?.length?.toString() || "0",
         icon: "Users",
         color: "bg-orange-500",
         trend: "+0%",
@@ -444,7 +453,7 @@ const Dashboard = () => {
       {
         id: "laundry",
         title: "Laundry Orders",
-        value: (dashboardStats?.laundryOrders || 0).toString(),
+        value: allServiceData.laundry?.length?.toString() || "0",
         icon: "Users",
         color: "bg-purple-500",
         trend: "+0%",
@@ -457,7 +466,10 @@ const Dashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        await fetchDashboardStats(timeFrame, startDate, endDate);
+        await Promise.all([
+          fetchBookingsAndRooms(),
+          fetchDashboardStats(timeFrame, startDate, endDate)
+        ]);
         setLoading(false);
       } catch (error) {
         console.error('Dashboard fetch error:', error);
@@ -465,19 +477,34 @@ const Dashboard = () => {
       }
     };
     fetchData();
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchBookingsAndRooms();
+      fetchDashboardStats(timeFrame, startDate, endDate);
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []); // Only run once on mount
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
+      apiCache.clear(); // Clear cache on filter change
       if (timeFrame === 'range' && startDate && endDate) {
         fetchDashboardStats(timeFrame, startDate, endDate);
       } else if (timeFrame !== 'range') {
         fetchDashboardStats(timeFrame);
       }
-    }, 300); // Debounce API calls
-    
+      
+      // Refresh service data if restaurant or laundry card is active
+      if (activeCard === 'restaurant') {
+        fetchServiceData('restaurant');
+      } else if (activeCard === 'laundry') {
+        fetchServiceData('laundry');
+      }
+    }, 300);
     return () => clearTimeout(timeoutId);
-  }, [timeFrame, startDate, endDate, fetchDashboardStats]);
+  }, [timeFrame, startDate, endDate, fetchDashboardStats, activeCard, fetchServiceData]);
 
 
 
@@ -555,10 +582,13 @@ const Dashboard = () => {
     if (newActiveCard) {
       localStorage.setItem("activeCard", newActiveCard);
       
-      // Fetch specific service data only when needed
-      if (newActiveCard === 'restaurant' && !allServiceData.restaurant.length) {
+      // Fetch bookings and rooms data for detail view
+      fetchBookingsAndRooms();
+      
+      // Always fetch fresh service data when card is clicked
+      if (newActiveCard === 'restaurant') {
         fetchServiceData('restaurant');
-      } else if (newActiveCard === 'laundry' && !allServiceData.laundry.length) {
+      } else if (newActiveCard === 'laundry') {
         fetchServiceData('laundry');
       }
     } else {
@@ -828,7 +858,7 @@ const Dashboard = () => {
         );
       case 'online':
         const onlinePayments = filteredBookings.filter(b => 
-          b.paymentMode === 'UPI' || 
+          b.paymentMode && (b.paymentMode.includes('UPI') || b.paymentMode.includes('Card') || b.paymentMode.toLowerCase().includes('online')) ||
           (b.advancePayments && b.advancePayments.some(ap => ap.paymentMode && (ap.paymentMode.toLowerCase().includes('upi') || ap.paymentMode.toLowerCase().includes('online') || ap.paymentMode.toLowerCase().includes('card'))))
         );
         return (
@@ -868,7 +898,7 @@ const Dashboard = () => {
         );
       case 'cash':
         const cashPayments = filteredBookings.filter(b => 
-          b.paymentMode === 'Cash' || 
+          b.paymentMode && b.paymentMode.includes('Cash') ||
           (b.advancePayments && b.advancePayments.some(ap => ap.paymentMode && ap.paymentMode.toLowerCase().includes('cash')))
         );
         return (
