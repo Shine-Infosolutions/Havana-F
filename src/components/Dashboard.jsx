@@ -17,14 +17,11 @@ import {
 import { useAppContext } from "../context/AppContext";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { sessionCache } from "../utils/sessionCache";
 
 // Lazy load heavy components
 const BookingCalendar = React.lazy(() => import("./BookingCalendar"));
 const DashboardLoader = React.lazy(() => import("./DashboardLoader"));
-
-// Cache for API responses
-const apiCache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Add CSS animations
 const styles = `
@@ -212,33 +209,32 @@ const Dashboard = () => {
 
   const fetchBookingsAndRooms = useCallback(async () => {
     try {
-      const token = localStorage.getItem("token");
-      const headers = { Authorization: `Bearer ${token}` };
-      
       const cacheKey = 'bookings-rooms-all';
-      const cached = apiCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        if (cached.data.bookings) {
-          setBookings(Array.isArray(cached.data.bookings) ? cached.data.bookings : []);
-          setRooms(Array.isArray(cached.data.rooms) ? cached.data.rooms : []);
+      const cached = sessionCache.get(cacheKey);
+      
+      if (cached) {
+        if (cached.bookings) {
+          setBookings(Array.isArray(cached.bookings) ? cached.bookings : []);
+          setRooms(Array.isArray(cached.rooms) ? cached.rooms : []);
         } else {
-          setBookings(Array.isArray(cached.data) ? cached.data : []);
+          setBookings(Array.isArray(cached) ? cached : []);
         }
         return;
       }
       
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
       const response = await axios.get("/api/bookings/all", { headers });
       
       // Handle both response formats
       if (response.data.bookings) {
         setBookings(Array.isArray(response.data.bookings) ? response.data.bookings : []);
         setRooms(Array.isArray(response.data.rooms) ? response.data.rooms : []);
+        sessionCache.set(cacheKey, response.data);
       } else {
         setBookings(Array.isArray(response.data) ? response.data : []);
+        sessionCache.set(cacheKey, response.data);
       }
-      
-      // Cache the response
-      apiCache.set(cacheKey, { data: response.data, timestamp: Date.now() });
     } catch (error) {
       console.error('Bookings and Rooms API Error:', error);
       setBookings([]);
@@ -253,12 +249,21 @@ const Dashboard = () => {
         url += `&startDate=${startDate}&endDate=${endDate}`;
       }
       
+      const cacheKey = `dashboard-stats-${filter}-${startDate}-${endDate}`;
+      const cached = sessionCache.get(cacheKey);
+      
+      if (cached) {
+        setDashboardStats(cached);
+        return;
+      }
+      
       const { data } = await axios.get(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       
       if (data.success) {
         setDashboardStats(data.stats);
+        sessionCache.set(cacheKey, data.stats);
       }
     } catch (error) {
       console.log('Dashboard Stats API Error:', error);
@@ -275,31 +280,37 @@ const Dashboard = () => {
     const headers = { Authorization: `Bearer ${token}` };
     
     try {
-      let data = [];
       let url = '';
+      const cacheKey = `service-${service}-${timeFrame}-${startDate}-${endDate}`;
+      const cached = sessionCache.get(cacheKey);
+      
+      if (cached) {
+        setAllServiceData(prev => ({ ...prev, [service]: cached }));
+        return;
+      }
       
       if (service === 'restaurant') {
         url = "/api/restaurant-orders/all";
-        // Add filter parameters
         url += `?filter=${timeFrame}`;
         if (timeFrame === 'range' && startDate && endDate) {
           url += `&startDate=${startDate}&endDate=${endDate}`;
         }
         
         const res = await axios.get(url, { headers });
-        data = Array.isArray(res.data) ? res.data : res.data?.restaurant || [];
+        const data = Array.isArray(res.data) ? res.data : res.data?.restaurant || [];
         setAllServiceData(prev => ({ ...prev, restaurant: data }));
+        sessionCache.set(cacheKey, data);
       } else if (service === 'laundry') {
         url = "/api/laundry/all";
-        // Add filter parameters
         url += `?filter=${timeFrame}`;
         if (timeFrame === 'range' && startDate && endDate) {
           url += `&startDate=${startDate}&endDate=${endDate}`;
         }
         
         const res = await axios.get(url, { headers });
-        data = Array.isArray(res.data) ? res.data : res.data?.laundry || [];
+        const data = Array.isArray(res.data) ? res.data : res.data?.laundry || [];
         setAllServiceData(prev => ({ ...prev, laundry: data }));
+        sessionCache.set(cacheKey, data);
       }
     } catch (error) {
       console.error(`${service} API Error:`, error);
@@ -489,7 +500,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      apiCache.clear(); // Clear cache on filter change
+      sessionCache.clear(); // Clear cache on filter change
       if (timeFrame === 'range' && startDate && endDate) {
         fetchDashboardStats(timeFrame, startDate, endDate);
       } else if (timeFrame !== 'range') {

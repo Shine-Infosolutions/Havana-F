@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { sessionCache } from '../utils/sessionCache';
 
 const AuthContext = createContext();
 
@@ -68,6 +69,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    sessionCache.clear(); // Clear all cached data on logout
     setUser(null);
   };
 

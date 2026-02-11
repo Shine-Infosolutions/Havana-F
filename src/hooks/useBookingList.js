@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import { sessionCache } from '../utils/sessionCache';
 
 // Utility function to format dates from MongoDB
 const formatDate = (dateValue) => {
@@ -48,22 +49,29 @@ export const useBookingList = () => {
     setError(null);
 
     try {
+      const cacheKey = 'bookings-list-data';
+      const cached = sessionCache.get(cacheKey);
+      
+      if (cached) {
+        setRooms(cached.rooms || []);
+        setCategories(cached.categories || []);
+        setBookings(cached.bookings || []);
+        setLoading(false);
+        return;
+      }
+
       const token = getAuthToken();
-      // Single API call to get all data
       const response = await axios.get("/api/bookings/all", { 
         headers: { Authorization: `Bearer ${token}` } 
       });
       
-      // Handle both old and new response formats
       let bookingsData, roomsData, categoriesData;
       
       if (response.data.bookings) {
-        // New optimized format
         bookingsData = response.data.bookings;
         roomsData = response.data.rooms || [];
         categoriesData = response.data.categories || [];
       } else {
-        // Old format fallback
         bookingsData = response.data;
         roomsData = [];
         categoriesData = [];
@@ -120,7 +128,6 @@ export const useBookingList = () => {
         };
       });
 
-      // Sort bookings by creation date (latest first)
       const sortedBookings = mappedBookings.sort((a, b) => {
         const dateA = new Date(a._raw.createdAt || a._raw.bookingDate || 0);
         const dateB = new Date(b._raw.createdAt || b._raw.bookingDate || 0);
@@ -128,6 +135,13 @@ export const useBookingList = () => {
       });
       
       setBookings(sortedBookings);
+      
+      // Cache the processed data
+      sessionCache.set(cacheKey, {
+        bookings: sortedBookings,
+        rooms: roomsData,
+        categories: categoriesData
+      });
     } catch (err) {
       setError(err.message);
       console.error("Error fetching data:", err);
@@ -146,7 +160,6 @@ export const useBookingList = () => {
         paymentStatus: newPaymentStatus,
       };
       
-      // If payment status is set to "Paid", set balance due to 0
       if (newPaymentStatus === "Paid") {
         updateData.balanceAmount = 0;
       }
@@ -170,6 +183,8 @@ export const useBookingList = () => {
         )
       );
 
+      // Clear cache to ensure fresh data on next fetch
+      sessionCache.remove('bookings-list-data');
       setError(null);
     } catch (err) {
       console.error("Error updating payment status:", err);
@@ -186,7 +201,8 @@ export const useBookingList = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Refresh data to ensure all related updates are reflected
+      // Clear cache and refresh data
+      sessionCache.remove('bookings-list-data');
       await fetchData();
       setError(null);
     } catch (error) {
@@ -205,6 +221,9 @@ export const useBookingList = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setBookings(prev => prev.filter(b => b.id !== bookingId));
+      
+      // Clear cache to ensure fresh data
+      sessionCache.remove('bookings-list-data');
       setError(null);
     } catch (err) {
       console.error("Error deleting booking:", err);
