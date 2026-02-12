@@ -555,13 +555,8 @@ const BookingPage = () => {
 
                           <button
                             onClick={() => navigate(`/edit-booking/${booking._raw?.grcNo || booking.id}`, { state: { editBooking: booking._raw } })}
-                            disabled={booking.status === 'Checked Out'}
                             title="Edit"
-                            className={`p-1 rounded transition duration-300 ${
-                              booking.status === 'Checked Out' 
-                                ? 'text-gray-400 cursor-not-allowed' 
-                                : 'text-blue-600 hover:bg-blue-50'
-                            }`}
+                            className="p-1 rounded transition duration-300 text-blue-600 hover:bg-blue-50"
                           >
                             <Edit size={12} />
                           </button>
@@ -770,18 +765,9 @@ const BookingPage = () => {
 
                 <button
                   onClick={() => navigate(`/edit-booking/${booking._raw?.grcNo || booking.id}`, { state: { editBooking: booking._raw } })}
-                  disabled={booking.status === 'Checked Out'}
-                  className={`p-2 rounded-full transition duration-300 ${
-                    booking.status === 'Checked Out' 
-                      ? 'cursor-not-allowed' 
-                      : ''
-                  }`}
-                  style={{ 
-                    color: booking.status === 'Checked Out' 
-                      ? '#9CA3AF' 
-                      : 'hsl(45, 43%, 58%)' 
-                  }}
-                  title={booking.status === 'Checked Out' ? 'Cannot edit checked out booking' : 'Edit'}
+                  className="p-2 rounded-full transition duration-300"
+                  style={{ color: 'hsl(45, 43%, 58%)' }}
+                  title="Edit"
                 >
                   <Edit size={18} />
                 </button>

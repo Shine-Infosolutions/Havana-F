@@ -257,25 +257,10 @@ const EditBookingForm = () => {
   useEffect(() => {
     if (!editBooking) {
       navigate('/booking');
-    } else {
-      // Fetch complete booking data if GST fields are missing
-      if (!editBooking.cgstRate && !editBooking.sgstRate) {
-        fetchCompleteBookingData();
-      }
     }
   }, [editBooking, navigate]);
 
-  const fetchCompleteBookingData = async () => {
-    try {
-      const response = await axios.get(`/api/bookings/details/${editBooking._id}`);
-      const completeBooking = response.data;
-      setEditBooking(completeBooking);
-      // Reset form initialization flag to trigger re-initialization with complete data
-      setFormInitialized(false);
-    } catch (error) {
-      console.error('Error fetching complete booking data:', error);
-    }
-  };
+
 
   useEffect(() => {
     if (editBooking && !formInitialized) {
@@ -540,11 +525,11 @@ const EditBookingForm = () => {
   };
 
   useEffect(() => {
-    if (editBooking) {
+    if (editBooking && !formInitialized) {
       fetchAllData();
       fetchRoomServiceOrders();
     }
-  }, [editBooking]);
+  }, [editBooking, formInitialized]);
 
 
 
@@ -686,7 +671,7 @@ const EditBookingForm = () => {
         setSelectedRooms(updatedRooms);
       }
     }
-  }, [allRooms, editBooking]);
+  }, [allRooms, editBooking, formInitialized]);
 
   useEffect(() => {
     const checkIn = new Date(formData.checkInDate);
@@ -748,7 +733,7 @@ const EditBookingForm = () => {
         rate: roomSubtotal
       }));
     }
-  }, [selectedRooms.map(r => `${r.customPrice}-${r.extraBed}-${r.extraBedStartDate}`).join(','), formData.days, formData.extraBedCharge, formData.checkInDate, formData.checkOutDate, formData.nonChargeable, formData.discountPercent]);
+  }, [selectedRooms.length, formData.days, formData.extraBedCharge, formData.checkInDate, formData.checkOutDate, formData.nonChargeable, formData.discountPercent]);
 
   // Recalculate rate when discount changes
   useEffect(() => {
@@ -1439,16 +1424,17 @@ const EditBookingForm = () => {
                 </div>
               </section>
 
-              {/* Room & Availability Section */}
-              <section className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-full" style={{backgroundColor: 'hsl(45, 100%, 85%)'}}>
-                    <FaHotel className="text-lg" style={{color: 'hsl(45, 43%, 58%)'}} />
+              {/* Room & Availability Section - Disabled for Checked Out bookings */}
+              {formData.status !== 'Checked Out' && (
+                <section className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 rounded-full" style={{backgroundColor: 'hsl(45, 100%, 85%)'}}>
+                      <FaHotel className="text-lg" style={{color: 'hsl(45, 43%, 58%)'}} />
+                    </div>
+                    <h2 className="text-xl font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>
+                      Room & Availability
+                    </h2>
                   </div>
-                  <h2 className="text-xl font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>
-                    Room & Availability
-                  </h2>
-                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="checkInDate">Check-in Date</Label>
@@ -1592,8 +1578,9 @@ const EditBookingForm = () => {
                   </div>
                 )}
               </section>
+              )}
 
-              {/* Stay Information Section */}
+              {/* Stay Information Section - Limited for Checked Out bookings */}
               <section className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 rounded-full" style={{backgroundColor: 'hsl(45, 100%, 85%)'}}>
@@ -1604,6 +1591,21 @@ const EditBookingForm = () => {
                   </h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {formData.status === 'Checked Out' && (
+                    <div className="col-span-full bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-center">
+                        <div className="text-yellow-600 mr-3">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h4 className="text-yellow-800 font-medium">Checked Out Booking</h4>
+                          <p className="text-yellow-700 text-sm">Room rates and charges cannot be modified for checked-out bookings. Only guest details can be updated.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="numberOfRooms">Number of Rooms</Label>
                     <Input
@@ -1791,8 +1793,8 @@ const EditBookingForm = () => {
                       </div>
                     </div>
                   )}
-                  {/* Room Rates */}
-                  {selectedRooms.length > 0 && (
+                  {/* Room Rates - Disabled for Checked Out bookings */}
+                  {selectedRooms.length > 0 && formData.status !== 'Checked Out' && (
                     <div className="space-y-4 col-span-full">
                       <h3 className="text-lg font-medium text-gray-700">Room Rates (Per Night)</h3>
                       <div className="grid gap-4">
@@ -1916,14 +1918,14 @@ const EditBookingForm = () => {
                 </div>
               </section>
 
-              {/* Room Service Orders Section */}
+              {/* Room Service Orders Section - Read-only for Checked Out bookings */}
               <section className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 rounded-full" style={{backgroundColor: 'hsl(45, 100%, 85%)'}}>
                     <FaConciergeBell className="text-lg" style={{color: 'hsl(45, 43%, 58%)'}} />
                   </div>
                   <h2 className="text-xl font-semibold" style={{color: 'hsl(45, 100%, 20%)'}}>
-                    Room Service, Restaurant & Laundry Orders
+                    Room Service, Restaurant & Laundry Orders {formData.status === 'Checked Out' && '(Read Only)'}
                   </h2>
                 </div>
                 
@@ -2408,59 +2410,69 @@ const EditBookingForm = () => {
                 </div>
                 
                 <div className="flex justify-center gap-4">
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setIsNavigating(true);
-                      navigate('/room-service/create', {
-                        state: { 
-                          preSelectedBooking: editBooking
-                        }
-                      });
-                    }}
-                    className="px-6 py-3 rounded-lg font-medium text-white transition-colors"
-                    style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
-                  >
-                    + Create New Room Service Order
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setIsNavigating(true);
-                      navigate('/restaurant/create-order', {
-                        state: { 
-                          preSelectedBooking: editBooking,
-                          isDineIn: true,
-                          returnToEdit: `/edit-booking/${editBooking._id}`,
-                          returnState: { editBooking }
-                        }
-                      });
-                    }}
-                    className="px-6 py-3 rounded-lg font-medium text-white transition-colors"
-                    style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
-                  >
-                    + Create New Restaurant Order
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      setIsNavigating(true);
-                      navigate('/laundry/orders/create', {
-                        state: { 
-                          preSelectedBooking: editBooking
-                        }
-                      });
-                    }}
-                    className="px-6 py-3 rounded-lg font-medium text-white transition-colors"
-                    style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
-                  >
-                    + Create New Laundry Order
-                  </Button>
+                  {formData.status !== 'Checked Out' && (
+                    <>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setIsNavigating(true);
+                          navigate('/room-service/create', {
+                            state: { 
+                              preSelectedBooking: editBooking
+                            }
+                          });
+                        }}
+                        className="px-6 py-3 rounded-lg font-medium text-white transition-colors"
+                        style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
+                      >
+                        + Create New Room Service Order
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setIsNavigating(true);
+                          navigate('/restaurant/create-order', {
+                            state: { 
+                              preSelectedBooking: editBooking,
+                              isDineIn: true,
+                              returnToEdit: `/edit-booking/${editBooking._id}`,
+                              returnState: { editBooking }
+                            }
+                          });
+                        }}
+                        className="px-6 py-3 rounded-lg font-medium text-white transition-colors"
+                        style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
+                      >
+                        + Create New Restaurant Order
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setIsNavigating(true);
+                          navigate('/laundry/orders/create', {
+                            state: { 
+                              preSelectedBooking: editBooking
+                            }
+                          });
+                        }}
+                        className="px-6 py-3 rounded-lg font-medium text-white transition-colors"
+                        style={{backgroundColor: 'hsl(45, 43%, 58%)'}}
+                      >
+                        + Create New Laundry Order
+                      </Button>
+                    </>
+                  )}
+                  {formData.status === 'Checked Out' && (
+                    <div className="text-center py-4">
+                      <p className="text-gray-600">Cannot create new orders for checked-out bookings</p>
+                    </div>
+                  )}
                 </div>
               </section>
 
-              {/* Payment Info Section */}
-              <section className="space-y-4">
+              {/* Payment Info Section - Read-only for Checked Out bookings */}
+              {formData.status !== 'Checked Out' && (
+                <section className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 rounded-full" style={{backgroundColor: 'hsl(45, 100%, 85%)'}}>
                     <FaCreditCard className="text-lg" style={{color: 'hsl(45, 43%, 58%)'}} />
@@ -3027,6 +3039,7 @@ const EditBookingForm = () => {
                   </div>
                 </div>
               </section>
+              )}
 
               <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
                 <Button
