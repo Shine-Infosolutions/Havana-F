@@ -4,6 +4,7 @@ import { showToast } from '../../utils/toaster';
 import { useAuth } from '../../context/AuthContext';
 import { validateEmail, validatePhone, validateRequired, validatePositiveNumber, validateDateRange, validateGST, validatePAN, validateAadhaar } from '../../utils/validation';
 import BackButton from '../common/BackButton';
+import { sessionCache } from '../../utils/sessionCache';
  
 // Apply golden theme
 const themeStyles = `
@@ -1452,6 +1453,11 @@ const App = () => {
       }
       
       resetForm();
+      // Clear cache to ensure fresh data
+      sessionCache.invalidatePattern('bookings');
+      sessionCache.invalidatePattern('rooms');
+      sessionCache.invalidatePattern('dashboard');
+      
       // Navigate to booking page after successful submission
       setTimeout(() => {
         navigate('/booking');

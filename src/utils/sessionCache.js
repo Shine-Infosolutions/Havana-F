@@ -42,5 +42,14 @@ export const sessionCache = {
   // Check if data exists and is valid
   has: (key) => {
     return sessionCache.get(key) !== null;
+  },
+  
+  // Invalidate cache entries matching a pattern
+  invalidatePattern: (pattern) => {
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith(CACHE_PREFIX) && key.includes(pattern)) {
+        sessionStorage.removeItem(key);
+      }
+    });
   }
 };

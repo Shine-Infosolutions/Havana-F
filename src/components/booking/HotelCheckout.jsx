@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { showToast } from '../../utils/toaster';
+import { sessionCache } from '../../utils/sessionCache';
 
 const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
   const { axios } = useAppContext();
@@ -124,6 +125,11 @@ const HotelCheckout = ({ booking, onClose, onCheckoutComplete }) => {
   };
 
   const completeCheckout = () => {
+    // Clear cache to ensure fresh data
+    sessionCache.invalidatePattern('bookings');
+    sessionCache.invalidatePattern('rooms');
+    sessionCache.invalidatePattern('dashboard');
+    
     onCheckoutComplete?.();
     onClose();
     showToast.success('Checkout completed successfully!');
