@@ -897,17 +897,31 @@ export default function Invoice() {
                 </>
               )}
 
-              <p className="font-bold">CheckIn Date</p>
+              <p className="font-bold">CheckIn Date & Time</p>
               <p className="font-medium">: {(() => {
-                const checkInDate = bookingData?.checkInDate ? formatDate(bookingData.checkInDate) : (invoiceData.invoiceDetails?.checkInDate && invoiceData.invoiceDetails.checkInDate !== 'N/A' ? invoiceData.invoiceDetails.checkInDate : formatDate());
-                const checkInTime = bookingData?.actualCheckInTime ? new Date(bookingData.actualCheckInTime).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' }) : (bookingData?.timeIn || '');
-                return `${checkInDate}${checkInTime ? ` ${checkInTime}` : ''}`;
+                const checkInDate = invoiceData.invoiceDetails?.checkInDate || formatDate();
+                let checkInTime = '';
+                
+                if (invoiceData.invoiceDetails?.actualCheckInTime) {
+                  checkInTime = new Date(invoiceData.invoiceDetails.actualCheckInTime).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' });
+                } else if (invoiceData.invoiceDetails?.timeIn) {
+                  checkInTime = invoiceData.invoiceDetails.timeIn;
+                }
+                
+                return `${checkInDate}${checkInTime ? ` at ${checkInTime}` : ''}`;
               })()}</p>
-              <p className="font-bold">CheckOut Date</p>
+              <p className="font-bold">CheckOut Date & Time</p>
               <p className="font-medium">: {(() => {
-                const checkOutDate = bookingData?.checkOutDate ? formatDate(bookingData.checkOutDate) : (invoiceData.invoiceDetails?.checkOutDate && invoiceData.invoiceDetails.checkOutDate !== 'N/A' ? invoiceData.invoiceDetails.checkOutDate : formatDate());
-                const checkOutTime = bookingData?.actualCheckOutTime ? new Date(bookingData.actualCheckOutTime).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' }) : (bookingData?.timeOut || '');
-                return `${checkOutDate}${checkOutTime ? ` ${checkOutTime}` : ''}`;
+                const checkOutDate = invoiceData.invoiceDetails?.checkOutDate || formatDate();
+                let checkOutTime = '';
+                
+                if (invoiceData.invoiceDetails?.actualCheckOutTime) {
+                  checkOutTime = new Date(invoiceData.invoiceDetails.actualCheckOutTime).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' });
+                } else if (invoiceData.invoiceDetails?.timeOut) {
+                  checkOutTime = invoiceData.invoiceDetails.timeOut;
+                }
+                
+                return `${checkOutDate}${checkOutTime ? ` at ${checkOutTime}` : ''}`;
               })()}</p>
               {bookingData?.planPackage && (
                 <>

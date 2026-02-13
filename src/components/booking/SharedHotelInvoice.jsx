@@ -175,10 +175,38 @@ export default function SharedHotelInvoice() {
                 <p className="font-medium">: {invoiceData.invoiceDetails?.roomNo} {invoiceData.invoiceDetails?.roomType}</p>
                 <p className="font-bold">PAX</p>
                 <p className="font-medium">: {invoiceData.invoiceDetails?.pax} Adult: {invoiceData.invoiceDetails?.adult}</p>
-                <p className="font-bold">CheckIn Date</p>
-                <p className="font-medium">: {invoiceData.invoiceDetails?.checkInDate}</p>
-                <p className="font-bold">CheckOut Date</p>
-                <p className="font-medium">: {invoiceData.invoiceDetails?.checkOutDate}</p>
+                <p className="font-bold">CheckIn Date & Time</p>
+                <p className="font-medium">: {(() => {
+                  const checkInDate = invoiceData.invoiceDetails?.checkInDate || 'N/A';
+                  let checkInTime = '';
+                  
+                  // Try to get check-in time from booking data if available
+                  if (invoiceData.bookingData?.actualCheckInTime) {
+                    checkInTime = new Date(invoiceData.bookingData.actualCheckInTime).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' });
+                  } else if (invoiceData.bookingData?.timeIn) {
+                    checkInTime = invoiceData.bookingData.timeIn;
+                  } else if (invoiceData.bookingData?.checkInTime) {
+                    checkInTime = new Date(invoiceData.bookingData.checkInTime).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' });
+                  }
+                  
+                  return `${checkInDate}${checkInTime ? ` at ${checkInTime}` : ''}`;
+                })()}</p>
+                <p className="font-bold">CheckOut Date & Time</p>
+                <p className="font-medium">: {(() => {
+                  const checkOutDate = invoiceData.invoiceDetails?.checkOutDate || 'N/A';
+                  let checkOutTime = '';
+                  
+                  // Try to get check-out time from booking data if available
+                  if (invoiceData.bookingData?.actualCheckOutTime) {
+                    checkOutTime = new Date(invoiceData.bookingData.actualCheckOutTime).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' });
+                  } else if (invoiceData.bookingData?.timeOut) {
+                    checkOutTime = invoiceData.bookingData.timeOut;
+                  } else if (invoiceData.bookingData?.checkOutTime) {
+                    checkOutTime = new Date(invoiceData.bookingData.checkOutTime).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' });
+                  }
+                  
+                  return `${checkOutDate}${checkOutTime ? ` at ${checkOutTime}` : ''}`;
+                })()}</p>
                 {invoiceData.bookingData?.advanceAmount > 0 && (
                   <>
                     <p className="font-bold text-green-600">Advance Paid</p>
