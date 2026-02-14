@@ -179,23 +179,31 @@ const BookingDetails = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      // Single API call to get all booking details and charges
-      const response = await axios.get(`${BASE_URL}/api/bookings/details-with-charges/${bookingId}`, {
+      // Fetch booking details using the standard booking API
+      const response = await axios.get(`${BASE_URL}/api/bookings/all`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
       
-      const { booking, serviceCharges, restaurantCharges, laundryCharges } = response.data;
+      // Find the specific booking by GRC number or ID
+      const bookingsData = response.data.bookings || response.data;
+      const foundBooking = Array.isArray(bookingsData) 
+        ? bookingsData.find(b => b.grcNo === bookingId || b._id === bookingId)
+        : null;
       
-      setBooking(booking);
-      setServiceCharges(serviceCharges || []);
-      setRestaurantCharges(restaurantCharges || []);
-      setLaundryCharges(laundryCharges || []);
+      if (!foundBooking) {
+        throw new Error('Booking not found');
+      }
       
-      // Calculate billing details
-      const billingData = calculateBilling(booking, serviceCharges || [], restaurantCharges || [], laundryCharges || []);
+      setBooking(foundBooking);
+      setServiceCharges([]);
+      setRestaurantCharges([]);
+      setLaundryCharges([]);
+      
+      // Calculate billing details with empty charges for now
+      const billingData = calculateBilling(foundBooking, [], [], []);
       setBilling(billingData);
       
     } catch (err) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, Bed, AlertTriangle, Clock, CalendarCheck, DoorOpen, DollarSign, Users, TrendingUp, ChevronRight, Loader2, User, Package, MapPin, ChefHat, RefreshCw } from 'lucide-react';
 import DashboardLoader from '../DashboardLoader';
@@ -6,6 +6,22 @@ import DashboardLoader from '../DashboardLoader';
 // --- Configuration ---
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
 const TODAY = new Date().toDateString();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Simple cache implementation
+const cache = new Map();
+
+const getCachedData = (key) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+  return null;
+};
+
+const setCachedData = (key, data) => {
+  cache.set(key, { data, timestamp: Date.now() });
+};
 
 // Add CSS animations
 const styles = `
@@ -64,9 +80,10 @@ const styles = `
   .animate-delay-500 { animation-delay: 0.5s; }
 `;
 
-// Inject styles
-if (typeof document !== 'undefined') {
+// Inject styles only once
+if (typeof document !== 'undefined' && !document.getElementById('easy-dashboard-styles')) {
   const styleSheet = document.createElement('style');
+  styleSheet.id = 'easy-dashboard-styles';
   styleSheet.textContent = styles;
   document.head.appendChild(styleSheet);
 }
@@ -75,9 +92,15 @@ if (typeof document !== 'undefined') {
 
 
 
-// --- Utility: Fetch with Exponential Backoff ---
-// This robust function ensures stability by retrying API calls if they fail.
+// --- Utility: Fetch with Cache and Exponential Backoff ---
 const fetchWithRetry = async (url, retries = 3) => {
+    // Check cache first
+    const cacheKey = url;
+    const cachedData = getCachedData(cacheKey);
+    if (cachedData) {
+        return cachedData;
+    }
+
     const token = localStorage.getItem('token');
     const headers = { 'Content-Type': 'application/json' };
     if (token) {
@@ -101,7 +124,10 @@ const fetchWithRetry = async (url, retries = 3) => {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            return await response.json();
+            const data = await response.json();
+            // Cache the successful response
+            setCachedData(cacheKey, data);
+            return data;
         } catch (error) {
             if (i < retries - 1) {
                 const delay = Math.pow(2, i) * 1000;
@@ -277,6 +303,40 @@ const EasyDashboard = () => {
     const [error, setError] = useState(null);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [showGuestDetails, setShowGuestDetails] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Consolidated data fetching function
+    const fetchCoreData = useCallback(async () => {
+        try {
+            const roomsData = await fetchWithRetry(`${BACKEND_URL}/api/rooms/all`);
+            setRooms(Array.isArray(roomsData) ? roomsData : []);
+            
+            const bookingsData = await fetchWithRetry(`${BACKEND_URL}/api/bookings/all`);
+            const bookingsArray = bookingsData.bookings || bookingsData;
+            setBookings(Array.isArray(bookingsArray) ? bookingsArray : []);
+            
+            const categoriesData = await fetchWithRetry(`${BACKEND_URL}/api/categories/all`);
+            setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+        } catch (err) {
+            console.error('Error in fetchCoreData:', err);
+            setError("Failed to load core data");
+            throw err;
+        }
+    }, []);
+
+    // Refresh function for manual data reload
+    const refreshData = useCallback(async () => {
+        setIsRefreshing(true);
+        try {
+            // Clear cache before refreshing
+            cache.clear();
+            await fetchCoreData();
+        } catch (err) {
+            setError("Failed to refresh data");
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, [fetchCoreData]);
 
     // --- Data Fetching Effect ---
     useEffect(() => {
@@ -285,29 +345,23 @@ const EasyDashboard = () => {
             setError(null);
             
             try {
-                // Fetch core data first
-                const [roomsData, bookingsData, categoriesData] = await Promise.all([
-                    fetchWithRetry(`${BACKEND_URL}/api/rooms/all`),
-                    fetchWithRetry(`${BACKEND_URL}/api/bookings/all`),
-                    fetchWithRetry(`${BACKEND_URL}/api/categories/all`)
-                ]);
+                // Fetch core data
+                await fetchCoreData();
 
-                setRooms(Array.isArray(roomsData) ? roomsData : []);
-                setBookings(Array.isArray(bookingsData) ? bookingsData : []);
-                setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+                // Fetch optional data with delays to prevent overwhelming the server
+                setTimeout(async () => {
+                    try {
+                        const laundryData = await fetchWithRetry(`${BACKEND_URL}/api/laundry/all`);
+                        setLaundryData(Array.isArray(laundryData) ? laundryData : laundryData?.data || []);
+                    } catch { setLaundryData([]); }
+                }, 500);
 
-                // Fetch optional data separately to avoid blocking
-                try {
-                    const laundryData = await fetchWithRetry(`${BACKEND_URL}/api/laundry/all`);
-                    setLaundryData(Array.isArray(laundryData) ? laundryData : laundryData?.data || []);
-                } catch { setLaundryData([]); }
-
-                try {
-                    const foodOrdersData = await fetchWithRetry(`${BACKEND_URL}/api/restaurant-orders/all`);
-                    setFoodOrders(Array.isArray(foodOrdersData) ? foodOrdersData : []);
-                } catch { setFoodOrders([]); }
-
-                setPantryOrders([]); // Skip pantry orders as endpoint doesn't exist
+                setTimeout(async () => {
+                    try {
+                        const foodOrdersData = await fetchWithRetry(`${BACKEND_URL}/api/restaurant-orders/all`);
+                        setFoodOrders(Array.isArray(foodOrdersData) ? foodOrdersData : []);
+                    } catch { setFoodOrders([]); }
+                }, 1000);
 
             } catch (err) {
                 setError("Failed to load dashboard data. Please check the backend connection.");
@@ -317,7 +371,7 @@ const EasyDashboard = () => {
         };
 
         fetchAllData();
-    }, []);
+    }, [fetchCoreData]);
 
     
     // --- Utility Functions (Refactored to be safe with async data) ---
@@ -473,18 +527,18 @@ const EasyDashboard = () => {
 
 
     
-    const roomStats = getRoomStats();
-    const roomsByFloor = getRoomsByFloor();
+    const roomStats = useMemo(() => getRoomStats(), [rooms, getRoomStatus]);
+    const roomsByFloor = useMemo(() => getRoomsByFloor(), [rooms]);
     
-    // Stats for cards calculations
-    // NOTE: Total revenue is still a static placeholder as it's not available in the provided APIs
-    const totalRevenue = 15000000; 
-    
-    const todayCheckins = bookings.filter(b => b.status === 'Confirmed' && new Date(b.checkInDate).toDateString() === TODAY).length;
-    
-    // Find occupied rooms and calculate occupancy
-    const bookedRoomsCount = rooms.filter(room => getRoomStatus(room) === 'booked').length;
-    const occupancyPercent = rooms.length > 0 ? ((bookedRoomsCount / rooms.length) * 100).toFixed(1) : 0;
+    // Stats for cards calculations - memoized
+    const dashboardStats = useMemo(() => {
+        const totalRevenue = 15000000; 
+        const todayCheckins = bookings.filter(b => b.status === 'Confirmed' && new Date(b.checkInDate).toDateString() === TODAY).length;
+        const bookedRoomsCount = rooms.filter(room => getRoomStatus(room) === 'booked').length;
+        const occupancyPercent = rooms.length > 0 ? ((bookedRoomsCount / rooms.length) * 100).toFixed(1) : 0;
+        
+        return { totalRevenue, todayCheckins, bookedRoomsCount, occupancyPercent };
+    }, [rooms, bookings, getRoomStatus]);
     
     // --- Render Logic ---
     if (isLoading) {
@@ -525,12 +579,22 @@ const EasyDashboard = () => {
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 border animate-scaleIn animate-delay-200" style={{borderColor: 'var(--color-border)'}}>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
                     <h2 className="text-xl sm:text-2xl font-light tracking-wider" style={{color: 'var(--color-text)'}}>Rooms Details</h2>
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={refreshData}
+                        disabled={isRefreshing}
+                        className="flex items-center px-4 py-2 text-sm rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                    >
+                        <RefreshCw size={16} className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                    </button>
                     <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs">
                         <span className="text-gray-600 font-medium hidden sm:inline">Room Status:</span>
                         <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-green-500 mr-1 sm:mr-2"></div>Available</span>
                         <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-red-700 mr-1 sm:mr-2"></div>Occupied</span>
                         <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-yellow-600 mr-1 sm:mr-2"></div>Maintenance</span>
                     </div>
+                </div>
                 </div>
                 
                 {Object.keys(roomsByFloor).sort((a, b) => {
@@ -577,11 +641,19 @@ const EasyDashboard = () => {
                                                 animate-scaleIn
                                             `}
                                             style={{ animationDelay: `${Math.min((parseInt(room.room_number) % 10) * 50 + 400, 600)}ms` }}
-                                            onClick={() => {
-                                                if (isBooked && booking) {
-                                                    const roomData = { ...room, booking };
-                                                    localStorage.setItem('selectedRoomService', JSON.stringify(roomData));
-                                                    window.location.href = '/room-service';
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                
+                                                // Find booking for this room (any status)
+                                                const roomBooking = bookings.find(b => {
+                                                    if (!b.roomNumber) return false;
+                                                    const roomNumbers = b.roomNumber.split(',').map(n => n.trim());
+                                                    return roomNumbers.includes(room.room_number.toString());
+                                                });
+                                                
+                                                if (roomBooking) {
+                                                    navigate(`/booking-details/${roomBooking.grcNo || roomBooking._id}`);
                                                 } else if (currentStatus === 'available') {
                                                     const roomData = { 
                                                         roomNumber: room.room_number, 
@@ -592,6 +664,9 @@ const EasyDashboard = () => {
                                                     };
                                                     localStorage.setItem('selectedRoomForBooking', JSON.stringify(roomData));
                                                     navigate('/bookingform');
+                                                } else {
+                                                    // Room shows as booked but no booking found - navigate to booking list anyway
+                                                    navigate('/booking');
                                                 }
                                             }}
                                         >
