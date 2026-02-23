@@ -60,6 +60,7 @@ import LaundryCategories from './components/Laundry/LaundryCategories';
 import LossReports from './components/Laundry/LossReports';
 import VendorManagement from './components/Vendor/VendorManagement';
 import Housekeeping from './components/Housekeeping/Housekeeping';
+import QRPopup from './components/common/QRPopup';
 
 import './App.css'
 
@@ -82,6 +83,7 @@ function App() {
     <AuthProvider>
       <AppProvider>
           <Router>
+          <QRPopup />
           <Toaster position="top-right" />
           <Routes>
             {/* Public Routes */}
