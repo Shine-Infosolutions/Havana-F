@@ -83,7 +83,7 @@ function App() {
     <AuthProvider>
       <AppProvider>
           <Router>
-          <QRPopup />
+          {/* <QRPopup /> */}
           <Toaster position="top-right" />
           <Routes>
             {/* Public Routes */}
