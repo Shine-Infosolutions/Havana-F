@@ -653,7 +653,12 @@ const EasyDashboard = () => {
                                                 });
                                                 
                                                 if (roomBooking) {
-                                                    navigate(`/booking-details/${roomBooking.grcNo || roomBooking._id}`);
+                                                    const bookingIdentifier = roomBooking.grcNo || roomBooking._id;
+                                                    if (bookingIdentifier) {
+                                                        navigate(`/booking-details/${bookingIdentifier}`);
+                                                    } else {
+                                                        navigate('/booking');
+                                                    }
                                                 } else if (currentStatus === 'available') {
                                                     const roomData = { 
                                                         roomNumber: room.room_number, 

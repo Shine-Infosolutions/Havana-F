@@ -546,7 +546,7 @@ const BookingPage = () => {
                       <div className="flex flex-col gap-1 items-center">
                         <div className="flex gap-1 justify-center">
                           <button
-                            onClick={() => navigate(`/booking-details/${booking._raw?.bookingNo || booking.id}`)}
+                            onClick={() => navigate(`/booking-details/${booking._raw?.grcNo || booking._raw?._id || booking.id}`)}
                             title="View"
                             className="p-1 rounded transition duration-300 text-indigo-600 hover:bg-indigo-50"
                           >
@@ -755,7 +755,7 @@ const BookingPage = () => {
               
               <div className="flex flex-col sm:flex-row justify-end gap-2 pt-3 border-t" style={{ borderColor: 'hsl(45, 100%, 90%)' }}>
                 <button
-                  onClick={() => navigate(`/booking-details/${booking._raw?.bookingNo || booking.id}`)}
+                  onClick={() => navigate(`/booking-details/${booking._raw?.grcNo || booking._raw?._id || booking.id}`)}
                   className="p-2 rounded-full transition duration-300"
                   style={{ color: '#6366F1' }}
                   title="View Details"

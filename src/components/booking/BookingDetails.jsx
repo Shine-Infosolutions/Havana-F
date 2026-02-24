@@ -21,7 +21,6 @@ const formatDate = (dateValue) => {
     
     return date.toLocaleDateString();
   } catch (error) {
-    console.error('Date formatting error:', error);
     return "Invalid Date";
   }
 };
@@ -42,7 +41,6 @@ const calculateDays = (checkInDate, checkOutDate) => {
     
     return Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
   } catch (error) {
-    console.error('Date calculation error:', error);
     return 0;
   }
 };
@@ -158,7 +156,7 @@ const calculateBilling = (booking, serviceCharges, restaurantCharges, laundryCha
 };
 
 const BookingDetails = () => {
-  const { bookingId } = useParams(); // This will now be bookingNo
+  const { bookingId } = useParams(); // This can be either grcNo or _id
   const navigate = useNavigate();
   const BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const [booking, setBooking] = useState(null);
@@ -187,10 +185,15 @@ const BookingDetails = () => {
         }
       });
       
-      // Find the specific booking by GRC number or ID
+      // Find the specific booking by GRC number or ID only
       const bookingsData = response.data.bookings || response.data;
       const foundBooking = Array.isArray(bookingsData) 
-        ? bookingsData.find(b => b.grcNo === bookingId || b._id === bookingId)
+        ? bookingsData.find(b => 
+            b.grcNo === bookingId || 
+            b._id === bookingId || 
+            b._id?.toString() === bookingId ||
+            b.grcNo?.toString() === bookingId
+          )
         : null;
       
       if (!foundBooking) {
